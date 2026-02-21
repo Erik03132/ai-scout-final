@@ -1,17 +1,5 @@
 
 // Qwen often uses DashScope API format
-interface _QwenMessage {
-    role: 'user' | 'system' | 'assistant';
-    content: string;
-}
-
-interface _QwenResponse {
-    output: {
-        text: string;
-    };
-    usage: any;
-}
-
 export async function askQwen(prompt: string): Promise<string> {
     const apiKey = process.env.QWEN_API_KEY // DASHSCOPE_API_KEY
     if (!apiKey) throw new Error('QWEN_API_KEY missing')

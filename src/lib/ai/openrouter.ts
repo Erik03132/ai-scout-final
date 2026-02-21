@@ -1,17 +1,4 @@
 
-interface _OpenRouterMessage {
-    role: 'user' | 'system' | 'assistant';
-    content: string;
-}
-
-interface _OpenRouterResponse {
-    choices: Array<{
-        message: {
-            content: string;
-        };
-    }>;
-}
-
 // List of reliable models on OpenRouter
 const OR_MODELS = [
     'google/gemini-2.0-flash-001',       // Very cheap/free
@@ -54,7 +41,7 @@ export async function askOpenRouter(prompt: string): Promise<string> {
                 continue // Try next model
             }
 
-            const data: _OpenRouterResponse = await response.json()
+            const data: any = await response.json()
             return data.choices[0].message.content
         } catch (error) {
             console.error(`OpenRouter error with ${model}:`, error)

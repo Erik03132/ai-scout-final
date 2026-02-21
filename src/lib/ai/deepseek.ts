@@ -1,17 +1,4 @@
 
-interface _DeepSeekMessage {
-    role: 'user' | 'system' | 'assistant';
-    content: string;
-}
-
-interface _DeepSeekResponse {
-    choices: Array<{
-        message: {
-            content: string;
-        };
-    }>;
-}
-
 export async function askDeepSeek(prompt: string): Promise<string> {
     const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey) throw new Error('DEEPSEEK_API_KEY missing')
@@ -38,7 +25,7 @@ export async function askDeepSeek(prompt: string): Promise<string> {
             throw new Error(`DeepSeek API error: ${response.status} - ${err}`)
         }
 
-        const data: _DeepSeekResponse = await response.json()
+        const data: any = await response.json()
         return data.choices[0].message.content
     } catch (error) {
         console.error('DeepSeek Call Failed:', error)
