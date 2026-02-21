@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers, Loader2 } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -402,10 +402,15 @@ export default function App() {
 
       setIsLoadingDb(true);
       try {
-        // Загружаем инструменты
-        const { data: toolsData } = await supabase.from('tools').select('*').order('rating', { ascending: false });
-        if (toolsData && toolsData.length > 0) {
-          const formattedTools = toolsData.map(t => ({
+        // Параллельные запросы вместо последовательных для оптимизации загрузки
+        const [toolsResult, postsResult] = await Promise.all([
+          supabase.from('tools').select('*').order('rating', { ascending: false }),
+          supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20)
+        ]);
+
+        // Обрабатываем инструменты
+        if (toolsResult.data && toolsResult.data.length > 0) {
+          const formattedTools = toolsResult.data.map(t => ({
             id: t.id,
             name: t.name,
             category: t.category,
@@ -424,10 +429,9 @@ export default function App() {
           setTools(formattedTools);
         }
 
-        // Загружаем посты
-        const { data: postsData } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20);
-        if (postsData && postsData.length > 0) {
-          const formattedPosts = postsData.map(p => ({
+        // Обрабатываем посты
+        if (postsResult.data && postsResult.data.length > 0) {
+          const formattedPosts = postsResult.data.map(p => ({
             id: typeof p.id === 'string' ? parseInt(p.id.slice(0, 8), 16) : p.id,
             title: p.title,
             summary: p.summary || '',
@@ -453,6 +457,25 @@ export default function App() {
     loadFromSupabase();
   }, []);
 
+  // Функция для извлечения ID видео из YouTube URL
+  const extractVideoId = (url: string): string | null => {
+    // Поддерживаем различные форматы YouTube URL:
+    // - https://www.youtube.com/watch?v=VIDEO_ID
+    // - https://youtu.be/VIDEO_ID
+    // - https://www.youtube.com/embed/VIDEO_ID
+    // - https://www.youtube.com/v/VIDEO_ID
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+      /^([a-zA-Z0-9_-]{11})$/ // Если передан просто ID видео
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
   // Функция для получения последней новости с канала (mock реализация)
   const fetchLatestPost = async (channel: { url: string, source: 'YouTube' | 'Telegram', name: string }): Promise<Partial<Post>> => {
     // Имитация задержки сети
@@ -472,15 +495,46 @@ export default function App() {
       }
     };
 
-    const content = mockContent[channel.source];
+    if (channel.source === 'YouTube') {
+      // Используем YouTube Data API для получения реальной обложки видео
+      const videoId = extractVideoId(channel.url);
+      const thumbnailUrl = videoId
+        ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+        : mockContent.YouTube.image;
+
+      return {
+        ...mockContent.YouTube,
+        image: thumbnailUrl // реальная обложка видео или fallback
+      };
+    }
+
+    if (channel.source === 'Telegram') {
+      // Массив AI-тематических изображений из Unsplash
+      const aiImages = [
+        'https://images.unsplash.com/photo-1677442136019-21780ecad995',
+        'https://images.unsplash.com/photo-1620712943543-bcc4688e7485',
+        'https://images.unsplash.com/photo-1655720828018-edd2daec9349',
+        'https://images.unsplash.com/photo-1655635949384-f737c5133dfe'
+      ];
+
+      // Случайный выбор изображения
+      const randomImage = aiImages[Math.floor(Math.random() * aiImages.length)];
+
+      return {
+        ...mockContent.Telegram,
+        image: `${randomImage}?auto=format&fit=crop&q=80&w=400&h=200`
+      };
+    }
+
+    // Fallback для неизвестных источников
     return {
-      title: content.title,
+      title: `Новый контент из ${channel.name}`,
       url: channel.url,
-      image: content.image,
+      image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200",
       channel: channel.name,
       source: channel.source,
       date: 'Только что',
-      content: content.content
+      content: 'Содержимое недоступно'
     };
   };
 
@@ -549,11 +603,17 @@ export default function App() {
     );
   };
 
-  const filteredTools = selectedCategory === 'All'
-    ? tools
-    : tools.filter(tool => tool.category === selectedCategory);
+  const filteredTools = useMemo(() =>
+    selectedCategory === 'All'
+      ? tools
+      : tools.filter(tool => tool.category === selectedCategory),
+    [tools, selectedCategory]
+  );
 
-  const favoriteTools = tools.filter(tool => favorites.includes(`tool-${tool.id}`));
+  const favoriteTools = useMemo(() =>
+    tools.filter(tool => favorites.includes(`tool-${tool.id}`)),
+    [tools, favorites]
+  );
   const favoritePosts = posts.filter(post => favorites.includes(`post-${post.id}`));
 
   return (
