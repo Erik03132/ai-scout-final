@@ -1,0 +1,19 @@
+{
+    "crons": [
+        {
+            "path": "/api/cron/fetch-youtube",
+            "schedule": "0 */6 * * *",
+            "comment": "Каждые 6 часов для соблюдения квоты YouTube API"
+        },
+        {
+            "path": "/api/cron/analyze-post",
+            "schedule": "0 */2 * * *",
+            "comment": "Каждые 2 часа для анализа постов"
+        },
+        {
+            "path": "/api/cron/cleanup",
+            "schedule": "0 3 * * *",
+            "comment": "Ежедневная очистка в 03:00 UTC"
+        }
+    ]
+}

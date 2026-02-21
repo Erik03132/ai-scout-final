@@ -1,9 +1,29 @@
-import { useState } from 'react';
-import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers, Loader2 } from 'lucide-react';
 import { cn } from './utils/cn';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { getClient } from './lib/supabase/client';
+
+// Types
+interface Post {
+  id: number;
+  title: string;
+  summary: string;
+  source: string;
+  channel: string;
+  date: string;
+  tags: string[];
+  mentions: string[];
+  views: string;
+  image: string;
+  url: string;
+  detailedUsage: string;
+  usageTips: string[];
+  content?: string;
+}
 
 // Mock data
-const mockPosts = [
+const mockPosts: Post[] = [
   {
     id: 1,
     title: "5 AI Tools That Will Change Your Workflow in 2024",
@@ -360,13 +380,153 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'feed' | 'insights' | 'archive' | 'favorites'>('feed');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favorites, setFavorites] = useLocalStorage<string[]>('ai-scout-favorites', []);
   const [isSearching, setIsSearching] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
   const [selectedTool, setSelectedTool] = useState<typeof mockTools[0] | null>(null);
   const [selectedPost, setSelectedPost] = useState<typeof mockPosts[0] | null>(null);
   const [selectedUseCase, setSelectedUseCase] = useState<{ tool: string, case: any } | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<{ title: string, description: string } | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [channels, setChannels] = useLocalStorage<Array<{ id: string, url: string, source: 'YouTube' | 'Telegram', name: string }>>('ai-scout-channels', []);
+  const [posts, setPosts] = useState<Post[]>(mockPosts);
+  const [tools, setTools] = useState<typeof mockTools>(mockTools);
+  const [isLoadingChannel, setIsLoadingChannel] = useState(false);
+  const [isLoadingDb, setIsLoadingDb] = useState(false);
+
+  // Загрузка данных из Supabase
+  useEffect(() => {
+    const loadFromSupabase = async () => {
+      const supabase = getClient();
+      if (!supabase) return;
+
+      setIsLoadingDb(true);
+      try {
+        // Загружаем инструменты
+        const { data: toolsData } = await supabase.from('tools').select('*').order('rating', { ascending: false });
+        if (toolsData && toolsData.length > 0) {
+          const formattedTools = toolsData.map(t => ({
+            id: t.id,
+            name: t.name,
+            category: t.category,
+            description: t.description,
+            icon: t.icon || '🔧',
+            rating: t.rating || 0,
+            dailyCredits: t.daily_credits,
+            monthlyCredits: t.monthly_credits,
+            minPrice: t.min_price,
+            hasApi: t.has_api,
+            hasMcp: t.has_mcp,
+            details: [],
+            pros: t.pros || [],
+            docsUrl: t.docs_url
+          }));
+          setTools(formattedTools);
+        }
+
+        // Загружаем посты
+        const { data: postsData } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20);
+        if (postsData && postsData.length > 0) {
+          const formattedPosts = postsData.map(p => ({
+            id: typeof p.id === 'string' ? parseInt(p.id.slice(0, 8), 16) : p.id,
+            title: p.title,
+            summary: p.summary || '',
+            source: p.source,
+            channel: p.channel,
+            date: p.date ? new Date(p.date).toLocaleDateString() : '',
+            tags: p.tags || [],
+            mentions: p.mentions || [],
+            views: p.views || '0',
+            image: p.image || '',
+            url: p.url,
+            detailedUsage: p.detailed_usage || '',
+            usageTips: p.usage_tips || []
+          }));
+          setPosts(formattedPosts);
+        }
+      } catch (err) {
+        console.error('Error loading from Supabase:', err);
+      }
+      setIsLoadingDb(false);
+    };
+
+    loadFromSupabase();
+  }, []);
+
+  // Функция для получения последней новости с канала (mock реализация)
+  const fetchLatestPost = async (channel: { url: string, source: 'YouTube' | 'Telegram', name: string }): Promise<Partial<Post>> => {
+    // Имитация задержки сети
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Mock данные - в реальном приложении здесь был бы парсинг Telegram/YouTube API
+    const mockContent = {
+      YouTube: {
+        title: `Новое видео на канале ${channel.name}: Полный гайд по AI-инструментам 2024`,
+        content: `В этом видео мы подробно разбираем современные AI-инструменты и их практическое применение в разработке. Рассматриваем новейшие библиотеки и фреймворки для машинного обучения, интеграцию с популярными языками программирования и лучшие практики по оптимизации производительности моделей. Особое внимание уделяем работе с LLM, промпт-инжинирингу и созданию собственных AI-агентов.`,
+        image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=400&h=200"
+      },
+      Telegram: {
+        title: `Новый пост в канале ${channel.name}: Обзор трендов разработки`,
+        content: `Анализируем ключевые тренды в мире разработки программного обеспечения за прошедший месяц. Рассматриваем новые подходы к архитектуре приложений, современные фреймворки и библиотеки, которые набирают популярность в сообществе. Публикуем подборку полезных ресурсов, туториалов и инструментов для ежедневной работы.`,
+        image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200"
+      }
+    };
+
+    const content = mockContent[channel.source];
+    return {
+      title: content.title,
+      url: channel.url,
+      image: content.image,
+      channel: channel.name,
+      source: channel.source,
+      date: 'Только что',
+      content: content.content
+    };
+  };
+
+  // Функция для создания AI-саммари новости
+  const generateAISummary = async (post: Partial<Post>): Promise<{ summary: string; mentions: string[]; tags: string[]; detailedUsage: string; usageTips: string[] }> => {
+    // Имитация AI-обработки
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Генерируем саммари на основе контента
+    const content = post.content || '';
+
+    // Случайный набор тегов и инструментов для демонстрации
+    const allTags = ['AI', 'Automation', 'Productivity', 'Next.js', 'React', 'API', 'Backend', 'Design', 'Tools'];
+    const allMentions = ['Vercel', 'Tailwind CSS', 'Next.js', 'Prisma', 'Supabase', 'Stripe', 'Zustand', 'Figma'];
+
+    const shuffledTags = [...allTags].sort(() => Math.random() - 0.5).slice(0, 3);
+    const shuffledMentions = [...allMentions].sort(() => Math.random() - 0.5).slice(0, 2);
+
+    const detailedUsage = `В этом контенте подробно разбирается использование ${shuffledMentions.join(', ')} для решения актуальных задач. Рассматриваются практические примеры внедрения и лучшие практики.`;
+
+    const usageTips = [
+      `Интегрируйте ${shuffledMentions[0]} для ускорения разработки`,
+      `Используйте ${shuffledMentions[1] || shuffledMentions[0]} для масштабирования проекта`,
+      'Настройте автоматизацию через CI/CD',
+      'Применяйте современные паттерны проектирования',
+      'Следите за обновлениями документации'
+    ];
+
+    if (post.source === 'YouTube') {
+      return {
+        summary: `Обзор ${post.channel}: ${content.substring(0, 150)}... Включает практические примеры внедрения AI в рабочий процесс, разбор современных инструментов и рекомендации по оптимизации.`,
+        mentions: shuffledMentions,
+        tags: shuffledTags,
+        detailedUsage,
+        usageTips
+      };
+    } else {
+      return {
+        summary: `Краткий дайджест от ${post.channel}: ${content.substring(0, 150)}... Анализ ключевых изменений в индустрии и практические советы для разработчиков.`,
+        mentions: shuffledMentions,
+        tags: shuffledTags,
+        detailedUsage,
+        usageTips
+      };
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -390,11 +550,11 @@ export default function App() {
   };
 
   const filteredTools = selectedCategory === 'All'
-    ? mockTools
-    : mockTools.filter(tool => tool.category === selectedCategory);
+    ? tools
+    : tools.filter(tool => tool.category === selectedCategory);
 
-  const favoriteTools = mockTools.filter(tool => favorites.includes(`tool-${tool.id}`));
-  const favoritePosts = mockPosts.filter(post => favorites.includes(`post-${post.id}`));
+  const favoriteTools = tools.filter(tool => favorites.includes(`tool-${tool.id}`));
+  const favoritePosts = posts.filter(post => favorites.includes(`post-${post.id}`));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white selection:bg-cyan-500/30">
@@ -439,7 +599,9 @@ export default function App() {
               ))}
             </nav>
 
-            <button className="hidden md:flex items-center gap-2 bg-white text-black hover:bg-cyan-400 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.1em] transition-all duration-500 shadow-xl hover:shadow-cyan-500/20 active:scale-95 will-change-transform">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="hidden md:flex items-center gap-2 bg-white text-black hover:bg-cyan-400 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.1em] transition-all duration-500 shadow-xl hover:shadow-cyan-500/20 active:scale-95 will-change-transform">
               <Plus size={16} />
               Добавить
             </button>
@@ -455,7 +617,9 @@ export default function App() {
               >
                 <Heart size={20} className={cn(favorites.length > 0 && activeTab !== 'favorites' && "animate-pulse")} />
               </button>
-              <button className="p-2.5 bg-cyan-500 rounded-xl text-black shadow-lg shadow-cyan-500/20 active:scale-90 transition-all">
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="p-2.5 bg-cyan-500 rounded-xl text-black shadow-lg shadow-cyan-500/20 active:scale-90 transition-all">
                 <Plus size={20} />
               </button>
             </div>
@@ -552,7 +716,7 @@ export default function App() {
             </div>
 
             <div className="grid gap-4">
-              {mockPosts.map(post => (
+              {posts.map(post => (
                 <div
                   key={post.id}
                   className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-slate-700 rounded-2xl p-6 mb-4 hover:border-cyan-500/50 hover:bg-slate-800/90 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1"
@@ -603,7 +767,7 @@ export default function App() {
                             <span className="text-xs text-slate-500">Упомянуто:</span>
                             <div className="flex flex-wrap gap-1">
                               {post.mentions.map(toolName => {
-                                const toolObj = mockTools.find(t => t.name === toolName);
+                                const toolObj = tools.find(t => t.name === toolName);
                                 return (
                                   <button
                                     key={toolName}
@@ -1145,7 +1309,10 @@ export default function App() {
                   <Heart className={cn("w-5 h-5", favorites.includes(`tool-${selectedTool.id}`) && "fill-current")} />
                   {favorites.includes(`tool-${selectedTool.id}`) ? "В избранном" : "В избранное"}
                 </button>
-                <button className="flex-1 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2">
+                <button
+                  onClick={() => window.open(selectedTool.docsUrl, '_blank')}
+                  className="flex-1 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
                   Документация <ExternalLink size={18} />
                 </button>
               </div>
@@ -1194,6 +1361,53 @@ export default function App() {
                   </h2>
                 </div>
               </div>
+
+              {/* Mentions Section - Tools mentioned in this post */}
+              {selectedPost.mentions.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                      <Sparkles size={20} className="text-purple-400" />
+                    </div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Упомянутые инструменты</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {selectedPost.mentions.map(toolName => {
+                      const toolObj = tools.find(t => t.name === toolName);
+                      return (
+                        <button
+                          key={toolName}
+                          onClick={() => toolObj && setSelectedTool(toolObj)}
+                          className={cn(
+                            "flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-800/50 rounded-2xl border transition-all group",
+                            toolObj
+                              ? "border-white/10 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer"
+                              : "border-white/5 opacity-50 cursor-default"
+                          )}
+                        >
+                          {toolObj && (
+                            <>
+                              <span className="text-xl">{toolObj.icon}</span>
+                              <div className="text-left">
+                                <p className="text-sm font-black text-white uppercase tracking-tight group-hover:text-purple-400 transition-colors">
+                                  {toolName}
+                                </p>
+                                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                                  {toolObj.category}
+                                </p>
+                              </div>
+                              <ArrowRight size={14} className="text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all ml-2" />
+                            </>
+                          )}
+                          {!toolObj && (
+                            <span className="text-sm text-slate-400 font-medium">{toolName}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
               <div className="space-y-10">
                 <section>
@@ -1323,7 +1537,7 @@ export default function App() {
                     </div>
                   </div>
                   <a
-                    href={mockTools.find(t => t.name === selectedUseCase.tool)?.docsUrl}
+                    href={tools.find(t => t.name === selectedUseCase.tool)?.docsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="h-12 px-6 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center"
@@ -1372,6 +1586,163 @@ export default function App() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Add Channel Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setIsAddModalOpen(false)}
+          />
+          <div className="relative bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setIsAddModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-xl font-bold text-white mb-2">Добавить канал</h2>
+            <p className="text-slate-400 text-sm mb-6">Добавьте @username или URL канала YouTube/Telegram</p>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const url = formData.get('channelUrl') as string;
+                const source = formData.get('source') as 'YouTube' | 'Telegram';
+
+                if (url.trim()) {
+                  // Extract channel name from URL or @username
+                  let name = url.trim();
+                  if (url.startsWith('@')) {
+                    // Telegram @username format
+                    name = url.substring(1);
+                  } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                    const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
+                    if (match) name = match[1];
+                  } else if (url.includes('t.me')) {
+                    const match = url.match(/t\.me\/([^/?]+)/);
+                    if (match) name = match[1];
+                  }
+
+                  const newChannel = {
+                    id: `channel-${Date.now()}`,
+                    url: url.trim(),
+                    source,
+                    name
+                  };
+
+                  setIsLoadingChannel(true);
+
+                  try {
+                    // Получаем последнюю новость с канала
+                    const latestPost = await fetchLatestPost(newChannel);
+
+                    // Генерируем AI-саммари
+                    const aiSummary = await generateAISummary(latestPost);
+
+                    // Создаем новый пост
+                    const newPost: Post = {
+                      id: Date.now(),
+                      title: latestPost.title || 'Без названия',
+                      summary: aiSummary.summary,
+                      source: source,
+                      channel: name,
+                      date: 'Только что',
+                      tags: aiSummary.tags,
+                      mentions: aiSummary.mentions,
+                      views: '0',
+                      image: latestPost.image || 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=400&h=200',
+                      url: latestPost.url || url.trim(),
+                      detailedUsage: aiSummary.detailedUsage,
+                      usageTips: aiSummary.usageTips
+                    };
+
+                    // Добавляем канал и новую новость в начало списка
+                    setChannels(prev => [newChannel, ...prev]);
+                    setPosts(prev => [newPost, ...prev]);
+                  } catch (error) {
+                    console.error('Error fetching channel data:', error);
+                    // Добавляем канал даже если произошла ошибка
+                    setChannels(prev => [newChannel, ...prev]);
+                  } finally {
+                    setIsLoadingChannel(false);
+                    setIsAddModalOpen(false);
+                  }
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">URL канала</label>
+                <input
+                  name="channelUrl"
+                  type="text"
+                  placeholder="@channel или https://t.me/channel"
+                  className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Платформа</label>
+                <div className="flex gap-3">
+                  <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-red-500/50 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-500/10">
+                    <input type="radio" name="source" value="YouTube" className="sr-only" defaultChecked />
+                    <Youtube className="w-5 h-5 text-red-400" />
+                    <span className="text-sm font-medium">YouTube</span>
+                  </label>
+                  <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-500/10">
+                    <input type="radio" name="source" value="Telegram" className="sr-only" />
+                    <MessageCircle className="w-5 h-5 text-blue-400" />
+                    <span className="text-sm font-medium">Telegram</span>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoadingChannel}
+                className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoadingChannel ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Загрузка...
+                  </>
+                ) : (
+                  'Добавить канал'
+                )}
+              </button>
+            </form>
+
+            {channels.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-white/10">
+                <h3 className="text-sm font-medium text-slate-400 mb-3">Добавленные каналы</h3>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {channels.map(channel => (
+                    <div key={channel.id} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        {channel.source === 'YouTube'
+                          ? <Youtube className="w-4 h-4 text-red-400" />
+                          : <MessageCircle className="w-4 h-4 text-blue-400" />
+                        }
+                        <span className="text-sm text-white truncate max-w-[150px]">{channel.name}</span>
+                      </div>
+                      <button
+                        onClick={() => setChannels(prev => prev.filter(c => c.id !== channel.id))}
+                        className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

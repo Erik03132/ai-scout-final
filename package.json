@@ -11,7 +11,8 @@
     "type-check": "tsc --noEmit",
     "pre-deploy": "npm run lint && npm run type-check && npm run build",
     "prepare": "husky",
-    "go": "npx tsx scripts/go-to-stars.ts"
+    "go": "npx tsx scripts/go-to-stars.ts",
+    "go-to-end": "bash scripts/go-to-end.sh"
   },
   "dependencies": {
     "clsx": "2.1.1",
@@ -21,6 +22,7 @@
     "tailwind-merge": "3.4.0"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.97.0",
     "@tailwindcss/vite": "4.1.17",
     "@types/node": "^22.0.0",
     "@types/react": "19.2.7",
