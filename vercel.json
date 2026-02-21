@@ -2,12 +2,11 @@
     "crons": [
         {
             "path": "/api/cron/fetch-youtube",
-            "schedule": "0 */6 * * *",
-            "comment": "Каждые 6 часов для соблюдения квоты YouTube API"
+            "schedule": "0 6 * * *",
         },
         {
             "path": "/api/cron/analyze-post",
-            "schedule": "0 */2 * * *",
+                        "schedule": "0 8 * * *",
             "comment": "Каждые 2 часа для анализа постов"
         },
         {
