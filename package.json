@@ -10,7 +10,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit",
     "pre-deploy": "npm run lint && npm run type-check && npm run build",
-    "prepare": "husky",
+    "prepare": husky || true",
     "go": "npx tsx scripts/go-to-stars.ts",
     "go-to-end": "bash scripts/go-to-end.sh"
   },
