@@ -10,13 +10,11 @@
     },
     {
       "path": "/api/cron/analyze-post",
-      "schedule": "0 8 * * *",
-      "comment": "Каждые 2 часа для анализа постов"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/cleanup",
-      "schedule": "0 3 * * *",
-      "comment": "Ежедневная очистка в 03:00 UTC"
+      "schedule": "0 3 * * *"
     }
   ]
 }
