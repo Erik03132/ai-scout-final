@@ -476,109 +476,179 @@ export default function App() {
     return null;
   };
 
-  // Функция для получения последней новости с канала (mock реализация)
-  const fetchLatestPost = async (channel: { url: string, source: 'YouTube' | 'Telegram', name: string }): Promise<Partial<Post>> => {
-    // Имитация задержки сети
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  // Функция для извлечения идентификатора канала из URL
+  const extractChannelIdOrHandle = (url: string): string => {
+    // @handle формат
+    if (url.includes('/@')) {
+      return url.split('/@')[1]?.split('/')[0] || url;
+    }
+    // /channel/ID формат
+    if (url.includes('/channel/')) {
+      return url.split('/channel/')[1]?.split('/')[0] || url;
+    }
+    // /c/name формат
+    if (url.includes('/c/')) {
+      return url.split('/c/')[1]?.split('/')[0] || url;
+    }
+    // /user/name формат
+    if (url.includes('/user/')) {
+      return url.split('/user/')[1]?.split('/')[0] || url;
+    }
+    // Если передан просто handle или ID
+    return url.replace('https://www.youtube.com/', '').replace('youtube.com/', '');
+  };
 
-    // Mock данные - в реальном приложении здесь был бы парсинг Telegram/YouTube API
-    const mockContent = {
-      YouTube: {
-        title: `Новое видео на канале ${channel.name}: Полный гайд по AI-инструментам 2024`,
-        content: `В этом видео мы подробно разбираем современные AI-инструменты и их практическое применение в разработке. Рассматриваем новейшие библиотеки и фреймворки для машинного обучения, интеграцию с популярными языками программирования и лучшие практики по оптимизации производительности моделей. Особое внимание уделяем работе с LLM, промпт-инжинирингу и созданию собственных AI-агентов.`,
-        image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=400&h=200"
-      },
-      Telegram: {
-        title: `Новый пост в канале ${channel.name}: Обзор трендов разработки`,
-        content: `Анализируем ключевые тренды в мире разработки программного обеспечения за прошедший месяц. Рассматриваем новые подходы к архитектуре приложений, современные фреймворки и библиотеки, которые набирают популярность в сообществе. Публикуем подборку полезных ресурсов, туториалов и инструментов для ежедневной работы.`,
-        image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200"
-      }
-    };
+  // Функция для извлечения имени Telegram канала из URL
+  const extractTelegramChannel = (url: string): string => {
+    if (url.includes('t.me/')) {
+      return url.split('t.me/')[1]?.split('/')[0].replace('@', '') || url;
+    }
+    if (url.startsWith('@')) {
+      return url.substring(1);
+    }
+    return url.replace('https://t.me/', '').replace('@', '');
+  };
+
+  // Функция для получения случайного AI-изображения
+  const getRandomAiImage = (): string => {
+    const aiImages = [
+      'https://images.unsplash.com/photo-1677442136019-21780ecad995',
+      'https://images.unsplash.com/photo-1620712943543-bcc4688e7485',
+      'https://images.unsplash.com/photo-1655720828018-edd2daec9349',
+      'https://images.unsplash.com/photo-1655635949384-f737c5133dfe'
+    ];
+    const random = aiImages[Math.floor(Math.random() * aiImages.length)];
+    return `${random}?auto=format&fit=crop&q=80&w=400&h=200`;
+  };
+
+  // Функция для получения последней новости с канала
+  const fetchLatestPost = async (channel: { url: string, source: 'YouTube' | 'Telegram', name: string }): Promise<Partial<Post>> => {
+    // Fallback данные при ошибке
+    const getFallbackData = () => ({
+      title: `Новый контент из ${channel.name}`,
+      url: channel.url,
+      image: getRandomAiImage(),
+      channel: channel.name,
+      source: channel.source,
+      date: new Date().toISOString(),
+      content: ''
+    });
 
     if (channel.source === 'YouTube') {
-      // Используем YouTube Data API для получения реальной обложки видео
-      const videoId = extractVideoId(channel.url);
-      const thumbnailUrl = videoId
-        ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
-        : mockContent.YouTube.image;
+      try {
+        // Извлекаем идентификатор канала
+        const channelId = extractChannelIdOrHandle(channel.url);
 
-      return {
-        ...mockContent.YouTube,
-        image: thumbnailUrl // реальная обложка видео или fallback
-      };
+        // Вызываем API для получения последнего видео
+        const response = await fetch(`/api/youtube-latest?channel=${encodeURIComponent(channelId)}`);
+
+        if (!response.ok) {
+          console.error('YouTube API error:', response.status);
+          return getFallbackData();
+        }
+
+        const video = await response.json();
+
+        return {
+          title: video.title,
+          url: `https://www.youtube.com/watch?v=${video.videoId}`,
+          image: `https://img.youtube.com/vi/${video.videoId}/maxresdefault.jpg`,
+          channel: video.channelTitle || channel.name,
+          source: 'YouTube',
+          date: video.publishedAt,
+          content: video.description
+        };
+      } catch (error) {
+        console.error('Error fetching YouTube video:', error);
+        return getFallbackData();
+      }
     }
 
     if (channel.source === 'Telegram') {
-      // Массив AI-тематических изображений из Unsplash
-      const aiImages = [
-        'https://images.unsplash.com/photo-1677442136019-21780ecad995',
-        'https://images.unsplash.com/photo-1620712943543-bcc4688e7485',
-        'https://images.unsplash.com/photo-1655720828018-edd2daec9349',
-        'https://images.unsplash.com/photo-1655635949384-f737c5133dfe'
-      ];
+      try {
+        // Извлекаем имя канала
+        const channelName = extractTelegramChannel(channel.url);
 
-      // Случайный выбор изображения
-      const randomImage = aiImages[Math.floor(Math.random() * aiImages.length)];
+        // Вызываем API для получения последнего поста
+        const response = await fetch(`/api/telegram-latest?channel=${encodeURIComponent(channelName)}`);
 
-      return {
-        ...mockContent.Telegram,
-        image: `${randomImage}?auto=format&fit=crop&q=80&w=400&h=200`
-      };
+        if (!response.ok) {
+          console.error('Telegram API error:', response.status);
+          return getFallbackData();
+        }
+
+        const post = await response.json();
+
+        return {
+          title: post.title || `Новый пост в канале ${channel.name}`,
+          url: post.link,
+          image: getRandomAiImage(),
+          channel: channel.name,
+          source: 'Telegram',
+          date: post.date,
+          content: post.text
+        };
+      } catch (error) {
+        console.error('Error fetching Telegram post:', error);
+        return getFallbackData();
+      }
     }
 
-    // Fallback для неизвестных источников
-    return {
-      title: `Новый контент из ${channel.name}`,
-      url: channel.url,
-      image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200",
-      channel: channel.name,
-      source: channel.source,
-      date: 'Только что',
-      content: 'Содержимое недоступно'
-    };
+    return getFallbackData();
   };
 
-  // Функция для создания AI-саммари новости
+  // Функция для создания AI-саммари новости через API
   const generateAISummary = async (post: Partial<Post>): Promise<{ summary: string; mentions: string[]; tags: string[]; detailedUsage: string; usageTips: string[] }> => {
-    // Имитация AI-обработки
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Генерируем саммари на основе контента
     const content = post.content || '';
 
-    // Случайный набор тегов и инструментов для демонстрации
-    const allTags = ['AI', 'Automation', 'Productivity', 'Next.js', 'React', 'API', 'Backend', 'Design', 'Tools'];
-    const allMentions = ['Vercel', 'Tailwind CSS', 'Next.js', 'Prisma', 'Supabase', 'Stripe', 'Zustand', 'Figma'];
-
-    const shuffledTags = [...allTags].sort(() => Math.random() - 0.5).slice(0, 3);
-    const shuffledMentions = [...allMentions].sort(() => Math.random() - 0.5).slice(0, 2);
-
-    const detailedUsage = `В этом контенте подробно разбирается использование ${shuffledMentions.join(', ')} для решения актуальных задач. Рассматриваются практические примеры внедрения и лучшие практики.`;
-
-    const usageTips = [
-      `Интегрируйте ${shuffledMentions[0]} для ускорения разработки`,
-      `Используйте ${shuffledMentions[1] || shuffledMentions[0]} для масштабирования проекта`,
-      'Настройте автоматизацию через CI/CD',
-      'Применяйте современные паттерны проектирования',
-      'Следите за обновлениями документации'
-    ];
-
-    if (post.source === 'YouTube') {
+    // Fallback функция при ошибке API
+    const getFallbackSummary = (post: Partial<Post>) => {
+      const content = post.content || '';
       return {
-        summary: `Обзор ${post.channel}: ${content.substring(0, 150)}... Включает практические примеры внедрения AI в рабочий процесс, разбор современных инструментов и рекомендации по оптимизации.`,
-        mentions: shuffledMentions,
-        tags: shuffledTags,
-        detailedUsage,
-        usageTips
+        summary: content.substring(0, 200) || 'Контент недоступен',
+        tags: ['Tech'],
+        mentions: [],
+        detailedUsage: '',
+        usageTips: [
+          'Изучите официальную документацию',
+          'Попробуйте на практике',
+          'Следите за обновлениями'
+        ]
       };
-    } else {
+    };
+
+    // Проверяем, что контент не пустой
+    if (!content.trim()) {
+      return getFallbackSummary(post);
+    }
+
+    try {
+      // Вызываем backend API для генерации саммари
+      const response = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok) {
+        console.error('Summarize API error:', response.status);
+        return getFallbackSummary(post);
+      }
+
+      const result = await response.json();
+
       return {
-        summary: `Краткий дайджест от ${post.channel}: ${content.substring(0, 150)}... Анализ ключевых изменений в индустрии и практические советы для разработчиков.`,
-        mentions: shuffledMentions,
-        tags: shuffledTags,
-        detailedUsage,
-        usageTips
+        summary: result.summary || content.substring(0, 200),
+        tags: Array.isArray(result.tags) ? result.tags : [],
+        mentions: Array.isArray(result.mentions) ? result.mentions : [],
+        detailedUsage: result.detailedUsage || '',
+        usageTips: Array.isArray(result.usageTips) ? result.usageTips : [],
       };
+    } catch (error) {
+      console.error('Error generating AI summary:', error);
+      return getFallbackSummary(post);
     }
   };
 
@@ -1698,20 +1768,41 @@ export default function App() {
                   setIsLoadingChannel(true);
 
                   try {
-                    // Получаем последнюю новость с канала
+                    // Получаем последнюю новость с канала через API
                     const latestPost = await fetchLatestPost(newChannel);
 
-                    // Генерируем AI-саммари
+                    // Генерируем AI-саммари через API
                     const aiSummary = await generateAISummary(latestPost);
 
-                    // Создаем новый пост
+                    // Форматируем дату
+                    const formatDate = (dateStr: string): string => {
+                      if (!dateStr) return 'Только что';
+                      try {
+                        const date = new Date(dateStr);
+                        const now = new Date();
+                        const diffMs = now.getTime() - date.getTime();
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const diffHours = Math.floor(diffMins / 60);
+                        const diffDays = Math.floor(diffHours / 24);
+
+                        if (diffMins < 1) return 'Только что';
+                        if (diffMins < 60) return `${diffMins} мин. назад`;
+                        if (diffHours < 24) return `${diffHours} ч. назад`;
+                        if (diffDays < 7) return `${diffDays} дн. назад`;
+                        return date.toLocaleDateString('ru-RU');
+                      } catch {
+                        return 'Только что';
+                      }
+                    };
+
+                    // Создаем новый пост с реальными данными
                     const newPost: Post = {
                       id: Date.now(),
                       title: latestPost.title || 'Без названия',
                       summary: aiSummary.summary,
                       source: source,
-                      channel: name,
-                      date: 'Только что',
+                      channel: latestPost.channel || name,
+                      date: formatDate(latestPost.date || ''),
                       tags: aiSummary.tags,
                       mentions: aiSummary.mentions,
                       views: '0',
