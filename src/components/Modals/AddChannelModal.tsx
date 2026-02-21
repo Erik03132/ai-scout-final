@@ -4,7 +4,6 @@
  */
 
 import React, { useState } from 'react';
-import { isYouTubeUrl, extractChannelId } from '../../utils/youtubeApi';
 
 interface AddChannelModalProps {
     isOpen: boolean;
@@ -157,11 +156,6 @@ export const AddChannelModal: React.FC<AddChannelModalProps> = ({
                             }
                             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
                         />
-                        {source === 'YouTube' && url && isYouTubeUrl(url) && (
-                            <p className="text-xs text-green-400 mt-1">
-                                ✓ YouTube канал распознан
-                            </p>
-                        )}
                     </div>
 
                     {/* Ошибка */}

@@ -1,10 +1,10 @@
 
-interface MoonshotMessage {
+interface _MoonshotMessage {
     role: 'user' | 'system' | 'assistant';
     content: string;
 }
 
-interface MoonshotResponse {
+interface _MoonshotResponse {
     choices: Array<{
         message: {
             content: string;
@@ -38,7 +38,7 @@ export async function askMoonshot(prompt: string): Promise<string> {
             throw new Error(`Moonshot API error: ${response.status} - ${err}`)
         }
 
-        const data: MoonshotResponse = await response.json()
+        const data: _MoonshotResponse = await response.json()
         return data.choices[0].message.content
     } catch (error) {
         console.error('Moonshot Call Failed:', error)

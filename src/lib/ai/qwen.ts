@@ -1,11 +1,11 @@
 
 // Qwen often uses DashScope API format
-interface QwenMessage {
+interface _QwenMessage {
     role: 'user' | 'system' | 'assistant';
     content: string;
 }
 
-interface QwenResponse {
+interface _QwenResponse {
     output: {
         text: string;
     };

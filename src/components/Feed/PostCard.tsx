@@ -5,7 +5,6 @@
 
 import React from 'react';
 import { Post } from '../../hooks/usePosts';
-import { getThumbnailUrl, isYouTubeUrl } from '../../utils/youtubeApi';
 
 interface PostCardProps {
     post: Post;

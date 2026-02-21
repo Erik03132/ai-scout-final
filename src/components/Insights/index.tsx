@@ -183,7 +183,7 @@ export const Insights: React.FC<InsightsProps> = ({ onTagClick, onToolClick }) =
                     <span>⭐</span> Топ инструменты
                 </h3>
                 <div className="space-y-3">
-                    {topTools.map((tool, index) => (
+                    {topTools.map((tool) => (
                         <div
                             key={tool.id}
                             onClick={() => onToolClick?.(tool.id)}

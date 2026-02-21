@@ -1,10 +1,10 @@
 
-interface OpenRouterMessage {
+interface _OpenRouterMessage {
     role: 'user' | 'system' | 'assistant';
     content: string;
 }
 
-interface OpenRouterResponse {
+interface _OpenRouterResponse {
     choices: Array<{
         message: {
             content: string;
@@ -54,7 +54,7 @@ export async function askOpenRouter(prompt: string): Promise<string> {
                 continue // Try next model
             }
 
-            const data: OpenRouterResponse = await response.json()
+            const data: _OpenRouterResponse = await response.json()
             return data.choices[0].message.content
         } catch (error) {
             console.error(`OpenRouter error with ${model}:`, error)

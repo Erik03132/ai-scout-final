@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers, Loader2 } from 'lucide-react';
+import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
@@ -392,7 +392,6 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [tools, setTools] = useState<typeof mockTools>(mockTools);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
-  const [isLoadingDb, setIsLoadingDb] = useState(false);
 
   // Загрузка данных из Supabase
   useEffect(() => {
@@ -400,7 +399,6 @@ export default function App() {
       const supabase = getClient();
       if (!supabase) return;
 
-      setIsLoadingDb(true);
       try {
         // Параллельные запросы вместо последовательных для оптимизации загрузки
         const [toolsResult, postsResult] = await Promise.all([
@@ -451,30 +449,10 @@ export default function App() {
       } catch (err) {
         console.error('Error loading from Supabase:', err);
       }
-      setIsLoadingDb(false);
     };
 
     loadFromSupabase();
   }, []);
-
-  // Функция для извлечения ID видео из YouTube URL
-  const extractVideoId = (url: string): string | null => {
-    // Поддерживаем различные форматы YouTube URL:
-    // - https://www.youtube.com/watch?v=VIDEO_ID
-    // - https://youtu.be/VIDEO_ID
-    // - https://www.youtube.com/embed/VIDEO_ID
-    // - https://www.youtube.com/v/VIDEO_ID
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
-      /^([a-zA-Z0-9_-]{11})$/ // Если передан просто ID видео
-    ];
-
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) return match[1];
-    }
-    return null;
-  };
 
   // Функция для извлечения идентификатора канала из URL
   const extractChannelIdOrHandle = (url: string): string => {

@@ -1,41 +1,53 @@
 "use client";
 
 import { Archive, Layers, Plus, Search } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 
-export default function MobileNav() {
-    const pathname = usePathname();
+interface MobileNavProps {
+    activeTab: string;
+    onTabChange: (tab: string) => void;
+}
 
-    const isActive = (path: string) => pathname === path;
+export default function MobileNav({ activeTab, onTabChange }: MobileNavProps) {
+    const isActive = (tab: string) => activeTab === tab;
 
     return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10 px-6 py-4 flex items-center justify-between safe-area-bottom">
-            <Link href="/" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-gold' : 'text-white/40'}`}>
+        <div className="md:hidden fixed bottom-6 left-4 right-4 z-50 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-2.5 flex items-center justify-around shadow-2xl shadow-black/50 safe-area-bottom">
+            <button
+                onClick={() => onTabChange('feed')}
+                className={`flex flex-col items-center gap-1 ${isActive('feed') ? 'text-cyan-400 bg-cyan-500/10' : 'text-slate-500'} rounded-2xl p-3 transition-all`}
+            >
                 <Layers size={20} />
-                <span className="text-[10px] font-medium">Лента</span>
-            </Link>
+                <span className="text-[10px] font-black uppercase tracking-widest">Лента</span>
+            </button>
 
-            <Link href="/archive" className={`flex flex-col items-center gap-1 ${isActive('/archive') ? 'text-gold' : 'text-white/40'}`}>
+            <button
+                onClick={() => onTabChange('archive')}
+                className={`flex flex-col items-center gap-1 ${isActive('archive') ? 'text-cyan-400 bg-cyan-500/10' : 'text-slate-500'} rounded-2xl p-3 transition-all`}
+            >
                 <Archive size={20} />
-                <span className="text-[10px] font-medium">Архив</span>
-            </Link>
+                <span className="text-[10px] font-black uppercase tracking-widest">Архив</span>
+            </button>
 
-            <Link href="/test-add-source" className="relative -top-5">
-                <div className="w-12 h-12 bg-gold text-black rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.4)] border-4 border-black">
+            <button
+                onClick={() => onTabChange('add')}
+                className="relative -top-2"
+            >
+                <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/25 border-4 border-slate-900">
                     <Plus size={24} />
                 </div>
-            </Link>
+            </button>
 
-            <Link href="/discover" className={`flex flex-col items-center gap-1 ${isActive('/discover') ? 'text-gold' : 'text-white/40'}`}>
+            <button
+                onClick={() => onTabChange('discover')}
+                className={`flex flex-col items-center gap-1 ${isActive('discover') ? 'text-cyan-400 bg-cyan-500/10' : 'text-slate-500'} rounded-2xl p-3 transition-all`}
+            >
                 <Search size={20} />
-                <span className="text-[10px] font-medium">Обзор</span>
-            </Link>
+                <span className="text-[10px] font-black uppercase tracking-widest">Обзор</span>
+            </button>
 
-            <div className="flex flex-col items-center gap-1 text-white/40 pointer-events-none opacity-50">
-                {/* Placeholder for Profile/Settings if needed later */}
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-gold to-gold-light" />
-                <span className="text-[10px] font-medium">Профиль</span>
+            <div className="flex flex-col items-center gap-1 text-slate-500 opacity-50 pointer-events-none">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-slate-700 to-slate-800" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Профиль</span>
             </div>
         </div>
     );

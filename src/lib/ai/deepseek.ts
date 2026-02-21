@@ -1,10 +1,10 @@
 
-interface DeepSeekMessage {
+interface _DeepSeekMessage {
     role: 'user' | 'system' | 'assistant';
     content: string;
 }
 
-interface DeepSeekResponse {
+interface _DeepSeekResponse {
     choices: Array<{
         message: {
             content: string;
@@ -38,7 +38,7 @@ export async function askDeepSeek(prompt: string): Promise<string> {
             throw new Error(`DeepSeek API error: ${response.status} - ${err}`)
         }
 
-        const data: DeepSeekResponse = await response.json()
+        const data: _DeepSeekResponse = await response.json()
         return data.choices[0].message.content
     } catch (error) {
         console.error('DeepSeek Call Failed:', error)

@@ -10,7 +10,7 @@ interface ImageOptimizationParams {
     width?: number;
     height?: number;
     quality?: number;
-    format?: 'auto' | 'webp' | 'jpg' | 'png';
+    _format?: 'auto' | 'webp' | 'jpg' | 'png';
     fit?: 'crop' | 'fill' | 'scale';
 }
 
@@ -24,7 +24,7 @@ export const optimizeUnsplashImage = (
     url: string,
     params: ImageOptimizationParams = {}
 ): string => {
-    const { width = 400, height = 200, quality = 80, format = 'auto', fit = 'crop' } = params;
+    const { width = 400, height = 200, quality = 80, _format = 'auto', fit = 'crop' } = params;
 
     // Если URL уже содержит параметры, добавляем к существующим
     const separator = url.includes('?') ? '&' : '?';
