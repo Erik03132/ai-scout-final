@@ -11,6 +11,7 @@ interface YouTubeVideo {
   videoId: string;
   title: string;
   description: string;
+  summary: string;
   channelTitle: string;
   publishedAt: string;
 }
@@ -185,11 +186,91 @@ async function getVideoDetails(videoId: string, apiKey: string): Promise<YouTube
   }
 
   const snippet = data.items[0].snippet;
+
+  // Генерируем саммари через Gemini
+  const summary = await generateSummary(snippet.title, snippet.description);
+
   return {
     videoId,
     title: snippet.title,
     description: snippet.description,
+    summary,
     channelTitle: snippet.channelTitle,
     publishedAt: snippet.publishedAt,
   };
+}
+
+/**
+ * Генерация саммари через Gemini API
+ */
+async function generateSummary(title: string, description: string): Promise<string> {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+
+  if (!geminiApiKey) {
+    // Fallback: обрезаем description
+    return createFallbackSummary(description);
+  }
+
+  try {
+    const content = `${title}\n${description}`.substring(0, 4000);
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Ты — редактор новостей. Напиши краткое саммари (1-2 предложения) на РУССКОМ языке. 
+Без ссылок, без url, без эмодзи. Только суть: о чём контент.
+Верни ТОЛЬКО текст саммари без JSON и без markdown.
+
+Текст: ${content}`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 200
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      return createFallbackSummary(description);
+    }
+
+    const data = await response.json();
+    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    return summary.trim() || createFallbackSummary(description);
+  } catch (error) {
+    console.error('Gemini summarization failed:', error);
+    return createFallbackSummary(description);
+  }
+}
+
+/**
+ * Fallback генерация саммари
+ */
+function createFallbackSummary(description: string): string {
+  // Фильтруем строки с ссылками и слишком короткие
+  const sentences = description
+    .split(/[.!?]+/)
+    .map(s => s.trim())
+    .filter(s => {
+      if (/https?:\/\/|bit\.ly|t\.me/i.test(s)) return false;
+      if (s.length < 30) return false;
+      return true;
+    });
+
+  let summary = sentences[0] || '';
+  if (summary.length > 150) {
+    summary = summary.substring(0, 150).trim() + '...';
+  }
+
+  return summary || 'Описание недоступно';
 }

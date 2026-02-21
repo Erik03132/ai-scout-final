@@ -556,7 +556,8 @@ export default function App() {
           channel: video.channelTitle || channel.name,
           source: 'YouTube',
           date: video.publishedAt,
-          content: video.description
+          content: video.description,
+          summary: video.summary // Используем саммари из API
         };
       } catch (error) {
         console.error('Error fetching YouTube video:', error);
@@ -586,7 +587,8 @@ export default function App() {
           channel: channel.name,
           source: 'Telegram',
           date: post.date,
-          content: post.text
+          content: post.text,
+          summary: post.summary // Используем саммари из API
         };
       } catch (error) {
         console.error('Error fetching Telegram post:', error);
@@ -1771,8 +1773,21 @@ export default function App() {
                     // Получаем последнюю новость с канала через API
                     const latestPost = await fetchLatestPost(newChannel);
 
-                    // Генерируем AI-саммари через API
-                    const aiSummary = await generateAISummary(latestPost);
+                    // Если summary уже есть из API - используем его, иначе генерируем через AI
+                    let aiSummary;
+                    if (latestPost.summary) {
+                      // API уже вернул саммари
+                      aiSummary = {
+                        summary: latestPost.summary,
+                        tags: [] as string[],
+                        mentions: [] as string[],
+                        detailedUsage: '',
+                        usageTips: [] as string[]
+                      };
+                    } else {
+                      // Генерируем AI-саммари через API
+                      aiSummary = await generateAISummary(latestPost);
+                    }
 
                     // Форматируем дату
                     const formatDate = (dateStr: string): string => {

@@ -1,9 +1,18 @@
 /**
  * Vercel Serverless Function: Telegram Latest Post
  * Endpoint: GET /api/telegram-latest?channel={nameOrLink}
- * 
+ *
  * Получает последний пост из Telegram канала
  * Использует Telegram Bot API
+ *
+ * ⚠️ ЛИМИТЫ VERCEL CRON JOBS (Hobby Plan):
+ * - Максимум 1 запуск в день (Daily execution limit)
+ * - Schedule выражения типа "0 * * * *" (каждый час) НЕ работают
+ * - Используйте только ежедневное расписание: "0 6 * * *" (в 06:00 UTC)
+ *
+ * Для более частых обновлений требуется Pro план или альтернативное решение:
+ * - Supabase Edge Functions + pg_cron (без ограничений)
+ * - Внешний cron-сервис (cron-job.org, EasyCron)
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -11,6 +20,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 interface TelegramPost {
     title: string | null;
     text: string;
+    summary: string;
     link: string;
     date: string;
 }
@@ -102,10 +112,15 @@ async function getLatestPost(channel: string, botToken: string): Promise<Telegra
     }
 
     const latestMessage = messages[0];
+    const text = latestMessage.text || latestMessage.caption || '';
+
+    // Генерируем саммари
+    const summary = await generateSummary(text);
 
     return {
-        title: extractTitle(latestMessage.text || latestMessage.caption || ''),
-        text: latestMessage.text || latestMessage.caption || '',
+        title: extractTitle(text),
+        text,
+        summary,
         link: `https://t.me/${channelUsername}/${latestMessage.message_id}`,
         date: new Date(latestMessage.date * 1000).toISOString(),
     };
@@ -202,4 +217,78 @@ function extractTitle(text: string): string | null {
     }
 
     return firstLine;
+}
+
+/**
+ * Генерация саммари через Gemini API
+ */
+async function generateSummary(text: string): Promise<string> {
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+
+    if (!geminiApiKey) {
+        return createFallbackSummary(text);
+    }
+
+    try {
+        const content = text.substring(0, 4000);
+
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: `Ты — редактор новостей. Напиши краткое саммари (1-2 предложения) на РУССКОМ языке. 
+Без ссылок, без url, без эмодзи. Только суть: о чём контент.
+Верни ТОЛЬКО текст саммари без JSON и без markdown.
+
+Текст: ${content}`
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 200
+                    }
+                })
+            }
+        );
+
+        if (!response.ok) {
+            return createFallbackSummary(text);
+        }
+
+        const data = await response.json();
+        const summary = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        return summary.trim() || createFallbackSummary(text);
+    } catch (error) {
+        console.error('Gemini summarization failed:', error);
+        return createFallbackSummary(text);
+    }
+}
+
+/**
+ * Fallback генерация саммари
+ */
+function createFallbackSummary(text: string): string {
+    // Фильтруем строки с ссылками и слишком короткие
+    const sentences = text
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => {
+            if (/https?:\/\/|bit\.ly|t\.me/i.test(s)) return false;
+            if (s.length < 30) return false;
+            return true;
+        });
+
+    let summary = sentences[0] || '';
+    if (summary.length > 150) {
+        summary = summary.substring(0, 150).trim() + '...';
+    }
+
+    return summary || 'Описание недоступно';
 }

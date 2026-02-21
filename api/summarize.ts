@@ -120,15 +120,16 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
             messages: [
                 {
                     role: 'system',
-                    content: `Ты - аналитик контента. Анализируй текст и возвращай JSON:
+                    content: `Ты — редактор новостей. Прочитай текст и напиши краткое саммари (1-2 предложения) на РУССКОМ языке. 
+Без ссылок, без url, без эмодзи. Только суть: о чём контент.
+Верни ТОЛЬКО JSON без markdown:
 {
-  "summary": "краткое саммари 2-3 предложения на русском",
-  "tags": ["тег1", "тег2"], // 1-5 тегов из списка: ${KNOWN_TAGS.join(', ')}
-  "mentions": ["инструмент1", "инструмент2"], // конкретные инструменты из текста
-  "detailedUsage": "осмысленный абзац о применении (3-4 предложения)",
-  "usageTips": ["совет 1", "совет 2", "совет 3"] // 3-5 практических советов
-}
-Возвращай ТОЛЬКО JSON без markdown.`
+  "summary": "1-2 предложения на русском",
+  "tags": ["тег1", "тег2"],
+  "mentions": ["инструмент1"],
+  "detailedUsage": "2-3 предложения на русском о применении",
+  "usageTips": ["совет 1", "совет 2", "совет 3"]
+}`
                 },
                 {
                     role: 'user',
@@ -164,12 +165,14 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `Проанализируй текст и верни JSON:
+                        text: `Ты — редактор новостей. Прочитай текст и напиши краткое саммари (1-2 предложения) на РУССКОМ языке. 
+Без ссылок, без url, без эмодзи. Только суть: о чём контент.
+Верни ТОЛЬКО JSON без markdown:
 {
-  "summary": "краткое саммари 2-3 предложения на русском",
+  "summary": "1-2 предложения на русском",
   "tags": ["тег1", "тег2"],
-  "mentions": ["инструмент1", "инструмент2"],
-  "detailedUsage": "осмысленный абзац о применении",
+  "mentions": ["инструмент1"],
+  "detailedUsage": "2-3 предложения на русском о применении",
   "usageTips": ["совет 1", "совет 2", "совет 3"]
 }
 
@@ -239,16 +242,30 @@ function generateFallbackSummary(content: string): SummarizeResponse {
         content.toLowerCase().includes(tag.toLowerCase())
     ).slice(0, 3);
 
-    // Создаём простое саммари
-    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    const summary = sentences.slice(0, 3).join('. ').trim() + '.';
+    // Создаём саммари: фильтруем строки с ссылками и слишком короткие
+    const sentences = content
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => {
+            // Пропускаем строки с ссылками
+            if (/https?:\/\/|bit\.ly|t\.me/i.test(s)) return false;
+            // Пропускаем слишком короткие строки
+            if (s.length < 30) return false;
+            return true;
+        });
+
+    // Берём первое нормальное предложение и обрезаем до 150 символов
+    let summary = sentences[0] || '';
+    if (summary.length > 150) {
+        summary = summary.substring(0, 150).trim() + '...';
+    }
 
     return {
-        summary: summary.substring(0, 300) || content.substring(0, 200),
+        summary: summary || 'Контент недоступен для саммари',
         tags: tags.length > 0 ? tags : ['Tech'],
         mentions,
         detailedUsage: mentions.length > 0
-            ? `В контенте рассматривается использование ${mentions.join(', ')}. Рекомендуется изучить документацию для более глубокого понимания.`
+            ? `В контенте рассматривается использование ${mentions.join(', ')}.`
             : '',
         usageTips: [
             'Изучите официальную документацию',
