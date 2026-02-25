@@ -1748,20 +1748,12 @@ export default function App() {
                     // Получаем последнюю новость с канала через API
                     const latestPost = await fetchLatestPost(newChannel);
 
-                    // Если summary уже есть из API - используем его, иначе генерируем через AI
-                    let aiSummary;
-                    if (latestPost.summary) {
-                      // API уже вернул саммари
-                      aiSummary = {
-                        summary: latestPost.summary,
-                        tags: [] as string[],
-                        mentions: [] as string[],
-                        detailedUsage: '',
-                        usageTips: [] as string[]
-                      };
-                    } else {
-                      // Генерируем AI-саммари через API
-                      aiSummary = await generateAISummary(latestPost);
+                    // Всегда генерируем полное AI-саммари через API, чтобы получить теги и упомянутые сервисы
+                    const aiSummary = await generateAISummary(latestPost);
+                    
+                    // Если API канала уже вернуло хорошее саммари, а у нас заглушка, берем API саммари
+                    if (latestPost.summary && aiSummary.summary === 'Контент недоступен') {
+                      aiSummary.summary = latestPost.summary;
                     }
 
                     // Форматируем дату
