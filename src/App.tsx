@@ -375,15 +375,35 @@ const mockTools = [
     ],
     pros: ["Безопасность", "API-first", "Глобальность"],
     docsUrl: "https://stripe.com/docs"
+  },
+  {
+    id: 9,
+    name: "Kimi",
+    category: "AI",
+    description: "Умный помощник для дизайнеров и разработчиков, способный генерировать полноценные проекты, макеты и код по текстовому описанию.",
+    icon: "🤖",
+    rating: 4.9,
+    dailyCredits: "Free",
+    monthlyCredits: "Pro",
+    minPrice: "$0",
+    hasApi: true,
+    hasMcp: false,
+    details: [
+      { title: "Генерация проектов", description: "Создание комплексных решений и прототипов с нуля за считанные секунды." },
+      { title: "Умный контекст", description: "Понимание сложных инструкций и удержание огромного окна контекста для масштабных задач." },
+      { title: "Помощь в дизайне", description: "Разработка структуры, архитектуры и визуального стиля различных типов проектов." }
+    ],
+    pros: ["Огромный контекст", "Высокое качество", "Универсальность"],
+    docsUrl: "https://kimi.moonshot.cn"
   }
 ];
 
-const categories = ["All", "Deployment", "Database", "Design", "ORM", "CSS", "State", "Framework", "Payments"];
+const categories = ["All", "AI", "Deployment", "Database", "Design", "ORM", "CSS", "State", "Framework", "Payments"];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'feed' | 'insights' | 'archive' | 'favorites'>('feed');
   const [searchQuery, setSearchQuery] = useState('');
-    const [favorites, setFavorites] = useLocalStorage<string[]>('ai-scout-favorites', []);
+  const [favorites, setFavorites] = useLocalStorage<string[]>('ai-scout-favorites', []);
   const [isSearching, setIsSearching] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
   const [selectedTool, setSelectedTool] = useState<typeof mockTools[0] | null>(null);
@@ -656,7 +676,7 @@ export default function App() {
     );
   };
 
-  
+
   const favoriteTools = useMemo(() =>
     tools.filter(tool => favorites.includes(`tool-${tool.id}`)),
     [tools, favorites]
@@ -1750,7 +1770,7 @@ export default function App() {
 
                     // Всегда генерируем полное AI-саммари через API, чтобы получить теги и упомянутые сервисы
                     const aiSummary = await generateAISummary(latestPost);
-                    
+
                     // Если API канала уже вернуло хорошее саммари, а у нас заглушка, берем API саммари
                     if (latestPost.summary && aiSummary.summary === 'Контент недоступен') {
                       aiSummary.summary = latestPost.summary;
