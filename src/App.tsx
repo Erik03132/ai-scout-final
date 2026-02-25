@@ -1367,46 +1367,71 @@ export default function App() {
                   </p>
                 </section>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-800/50 rounded-[1.5rem] p-5 border border-white/5">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                      <Zap size={14} className="text-cyan-400" /> Daily Limit
-                    </p>
-                    <p className="text-lg font-black text-white">{selectedTool.dailyCredits}</p>
-                  </div>
-                  <div className="bg-slate-800/50 rounded-[1.5rem] p-5 border border-white/5">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                      <Clock size={14} className="text-blue-400" /> Monthly Credits
-                    </p>
-                    <p className="text-lg font-black text-white">{selectedTool.monthlyCredits}</p>
-                  </div>
-                </div>
-
-                <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[1.5rem] p-6 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Минимальный тариф</p>
-                    <p className="text-3xl font-black text-emerald-400 tracking-tighter">{selectedTool.minPrice}</p>
-                  </div>
-                  <button className="h-14 px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
-                    Подписаться
-                  </button>
-                </div>
-
-                <section>
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 ml-1">Ключевые особенности (кликабельно)</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {selectedTool.details?.map((detail: any, i: number) => (
+                {selectedTool.id.toString().startsWith('dyn-') ? (
+                  <div className="bg-gradient-to-br from-purple-500/10 via-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-[2rem] p-8 text-center relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+                      <Sparkles size={120} className="text-cyan-400" />
+                    </div>
+                    <div className="relative z-10">
+                      <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-cyan-500/30">
+                        <Zap className="w-8 h-8 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Мы уже собираем досье!</h3>
+                      <p className="text-base text-slate-300 max-w-md mx-auto mb-8 leading-relaxed">
+                        Эксперты упоминают <b>{selectedTool.name}</b>. Прямо сейчас наши AI-агенты сканируют интернет, чтобы подготовить детальный разбор тарифов, API и реальных бизнес-кейсов.
+                      </p>
                       <button
-                        key={i}
-                        onClick={() => setSelectedFeature(detail)}
-                        className="flex items-center gap-3 p-3 bg-slate-800/30 rounded-xl border border-white/5 text-sm text-slate-300 font-semibold hover:text-white hover:border-cyan-500/30 transition-all text-left group/feature"
+                        onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTool.name + ' AI tool')}`, '_blank')}
+                        className="inline-flex items-center gap-2 bg-white hover:bg-slate-200 text-black px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg active:scale-95"
                       >
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 group-hover/feature:shadow-[0_0_8px_rgba(6,182,212,0.8)] transition-all" />
-                        {detail.title}
+                        Поискать в Google <ExternalLink size={16} />
                       </button>
-                    ))}
+                    </div>
                   </div>
-                </section>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-800/50 rounded-[1.5rem] p-5 border border-white/5">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          <Zap size={14} className="text-cyan-400" /> Daily Limit
+                        </p>
+                        <p className="text-lg font-black text-white">{selectedTool.dailyCredits}</p>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-[1.5rem] p-5 border border-white/5">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          <Clock size={14} className="text-blue-400" /> Monthly Credits
+                        </p>
+                        <p className="text-lg font-black text-white">{selectedTool.monthlyCredits}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[1.5rem] p-6 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Минимальный тариф</p>
+                        <p className="text-3xl font-black text-emerald-400 tracking-tighter">{selectedTool.minPrice}</p>
+                      </div>
+                      <button className="h-14 px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
+                        Подписаться
+                      </button>
+                    </div>
+
+                    <section>
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 ml-1">Ключевые особенности (кликабельно)</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {selectedTool.details?.map((detail: any, i: number) => (
+                          <button
+                            key={i}
+                            onClick={() => setSelectedFeature(detail)}
+                            className="flex items-center gap-3 p-3 bg-slate-800/30 rounded-xl border border-white/5 text-sm text-slate-300 font-semibold hover:text-white hover:border-cyan-500/30 transition-all text-left group/feature"
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 group-hover/feature:shadow-[0_0_8px_rgba(6,182,212,0.8)] transition-all" />
+                            {detail.title}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  </>
+                )}
 
                 {(selectedTool as any).useCases && (
                   <section id="use-cases-section" className="scroll-mt-8">
