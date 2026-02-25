@@ -414,7 +414,44 @@ export default function App() {
   const [channels, setChannels] = useLocalStorage<Array<{ id: string, url: string, source: 'YouTube' | 'Telegram', name: string }>>('ai-scout-channels', []);
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [tools, setTools] = useState<typeof mockTools>(mockTools);
+  const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
+
+  useEffect(() => {
+    setCachedDynamicTools(prev => {
+      const allMentions = Array.from(new Set(posts.flatMap(p => p.mentions || [])));
+      const newDynamicTools = [...prev];
+      let hasChanges = false;
+
+      allMentions.forEach(mention => {
+        const existsInTools = tools.some(t => t.name.toLowerCase() === mention.toLowerCase() || mention.toLowerCase().includes(t.name.toLowerCase()));
+        const existsInCached = newDynamicTools.some(t => t.name.toLowerCase() === mention.toLowerCase() || mention.toLowerCase().includes(t.name.toLowerCase()));
+
+        if (!existsInTools && !existsInCached) {
+          newDynamicTools.push({
+            id: `dyn-${mention}` as any,
+            name: mention,
+            category: "AI/Tech",
+            description: `Инструмент ${mention} был упомянут в этом посте. Детальная информация и обзоры для него пока собираются нашей системой.`,
+            icon: "⚙️",
+            rating: 4.5,
+            dailyCredits: "Н/Д",
+            monthlyCredits: "Н/Д",
+            minPrice: "Н/Д",
+            hasApi: false,
+            hasMcp: false,
+            details: [],
+            pros: ["Упоминается экспертами"],
+            docsUrl: `https://www.google.com/search?q=${encodeURIComponent(mention + ' AI tool')}`
+          });
+          hasChanges = true;
+        }
+      });
+      return hasChanges ? newDynamicTools : prev;
+    });
+  }, [posts, tools, setCachedDynamicTools]);
+
+  const allTools = [...tools, ...cachedDynamicTools];
 
   // Загрузка данных из Supabase
   useEffect(() => {
@@ -678,8 +715,8 @@ export default function App() {
 
 
   const favoriteTools = useMemo(() =>
-    tools.filter(tool => favorites.includes(`tool-${tool.id}`)),
-    [tools, favorites]
+    allTools.filter(tool => favorites.includes(`tool-${tool.id}`)),
+    [allTools, favorites]
   );
   const favoritePosts = posts.filter(post => favorites.includes(`post-${post.id}`));
 
@@ -894,7 +931,7 @@ export default function App() {
                             <span className="text-xs text-slate-500">Упомянуто:</span>
                             <div className="flex flex-wrap gap-1">
                               {post.mentions.map((toolName: string) => {
-                                const existingToolObj = tools.find((t) =>
+                                const existingToolObj = allTools.find((t) =>
                                   t.name.toLowerCase() === toolName.toLowerCase() ||
                                   toolName.toLowerCase().includes(t.name.toLowerCase())
                                 );
@@ -1549,7 +1586,7 @@ export default function App() {
                   </div>
                   <div className="flex flex-wrap gap-3">
                     {selectedPost.mentions.map(toolName => {
-                      const toolObj = tools.find(t => t.name === toolName);
+                      const toolObj = allTools.find(t => t.name.toLowerCase() === toolName.toLowerCase() || toolName.toLowerCase().includes(t.name.toLowerCase()));
                       return (
                         <button
                           key={toolName}
@@ -1713,7 +1750,7 @@ export default function App() {
                     </div>
                   </div>
                   <a
-                    href={tools.find(t => t.name === selectedUseCase.tool)?.docsUrl}
+                    href={allTools.find(t => t.name === selectedUseCase.tool)?.docsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="h-12 px-6 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center"
