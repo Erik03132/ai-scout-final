@@ -1,13 +1,16 @@
 /**
  * Vercel Cron Job: Сбор YouTube видео
- * Запускается каждые 6 часов для соблюдения квоты YouTube API
+ * Запускается 1 раз в сутки (в 06:00 по UTC) для соблюдения квоты и лимитов
  * 
  * Квота YouTube API: 10,000 units/day (бесплатно)
- * Один поиск = 100 units, одно видео = 1 unit
- * Сбор 4 раза в день = безопасно для квоты
+ * Сбор 50 каналов 1 раз в день абсолютно безопасен для бесплатной квоты.
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+// Устанавливаем 60 секунд (максимум для бесплатного Hobby плана Vercel)
+// Иначе крон может прерваться с ошибкой 504 Timeout через 10 секунд при 50+ каналах
+export const maxDuration = 60;
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
