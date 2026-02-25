@@ -175,8 +175,8 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
   "summary": "1-2 предложения на русском, только суть контента",
   "tags": ["тег1", "тег2"],
   "mentions": ["инструмент1", "инструмент2"],
-  "detailedUsage": "2-3 предложения на русском о применении",
-  "usageTips": ["совет 1", "совет 2", "совет 3"]
+  "detailedUsage": "Развернутый аналитический обзор контента (3-5 емких предложений). Опиши ГЛАВНУЮ ИДЕЮ технического решения, решаемую проблему и предложенную архитектуру/подход. Пиши профессиональным языком для разработчиков.",
+  "usageTips": ["Практичный и конкретный совет 1 (основанный на тексте)", "Практичный совет 2", "Практичный совет 3", "Практичный совет 4", "Практичный совет 5"]
 }
 
 Текст: ${content.substring(0, 4000)}`
@@ -205,16 +205,11 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
  */
 function parseLLMResponse(text: string): SummarizeResponse {
     try {
-        // Удаляем markdown-обёртку если есть
-        let jsonStr = text.trim();
-        if (jsonStr.startsWith('```json')) {
-            jsonStr = jsonStr.slice(7);
-        }
-        if (jsonStr.startsWith('```')) {
-            jsonStr = jsonStr.slice(3);
-        }
-        if (jsonStr.endsWith('```')) {
-            jsonStr = jsonStr.slice(0, -3);
+        let jsonStr = text;
+        // Извлекаем JSON из текста с помощью регулярного выражения
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) {
+            jsonStr = match[0];
         }
 
         const parsed = JSON.parse(jsonStr.trim());

@@ -61,11 +61,11 @@ serve(async (req) => {
 Список известных инструментов в системе: ${toolNames.join(", ")}
 
 Ты должен вернуть JSON с полями:
-1. "mentions" - массив названий инструментов из списка, которые упоминаются в посте
-2. "detailedUsage" - подробное описание как использовать это в реальной работе (2-3 предложения)
-3. "usageTips" - массив из 5 конкретных советов
+1. "mentions" - массив ТОЛЬКО AI-инструментов, LLM и специализированных сервисов (например: ChatGPT, Claude, Vercel v0, Kimi). Строго игнорируй обычные языки/фреймворки.
+2. "detailedUsage" - Развернутый аналитический обзор контента (3-5 емких предложений). Опиши ГЛАВНУЮ ИДЕЮ технического решения, решаемую проблему и предложенную архитектуру/подход. Пиши профессиональным языком разработчика.
+3. "usageTips" - массив из 5 КОНКРЕТНЫХ и ПРАКТИЧНЫХ советов, извлеченных прямо из текста, которые можно сразу применить.
 
-Верни только JSON, без дополнительного текста.
+Верни только JSON без markdown:
 `;
 
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
@@ -86,7 +86,12 @@ serve(async (req) => {
 
                 if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                     try {
-                        const aiResult = JSON.parse(data.candidates[0].content.parts[0].text);
+                        let textParams = data.candidates[0].content.parts[0].text;
+                        const match = textParams.match(/\{[\s\S]*\}/);
+                        if (match) {
+                            textParams = match[0];
+                        }
+                        const aiResult = JSON.parse(textParams);
                         mentions = aiResult.mentions || [];
                         detailedUsage = aiResult.detailedUsage || "";
                         usageTips = aiResult.usageTips || [];

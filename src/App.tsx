@@ -890,6 +890,16 @@ export default function App() {
                       src={post.image}
                       alt={post.title}
                       loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (target.src.includes('maxresdefault.jpg')) {
+                          target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
+                        } else if (target.src.includes('hqdefault.jpg')) {
+                          target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
+                        } else if (!target.src.includes('unsplash.com')) {
+                          target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                        }
+                      }}
                       className="w-full sm:w-40 h-48 sm:h-28 object-cover rounded-xl flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
@@ -1302,7 +1312,16 @@ export default function App() {
                           className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-slate-700 rounded-2xl p-6"
                         >
                           <div className="flex flex-col sm:flex-row gap-4">
-                            <img src={post.image} alt={post.title} loading="lazy" className="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-xl flex-shrink-0" />
+                            <img src={post.image} alt={post.title} loading="lazy" onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              if (target.src.includes('maxresdefault.jpg')) {
+                                target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
+                              } else if (target.src.includes('hqdefault.jpg')) {
+                                target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
+                              } else if (!target.src.includes('unsplash.com')) {
+                                target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                              }
+                            }} className="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-xl flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-white mb-1">{post.title}</h3>
                               <p className="text-sm text-slate-400 line-clamp-1">{post.summary}</p>
@@ -1556,6 +1575,16 @@ export default function App() {
                 <img
                   src={selectedPost.image}
                   alt={selectedPost.title}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (target.src.includes('maxresdefault.jpg')) {
+                      target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
+                    } else if (target.src.includes('hqdefault.jpg')) {
+                      target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
+                    } else if (!target.src.includes('unsplash.com')) {
+                      target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                    }
+                  }}
                   className="w-48 h-32 object-cover rounded-2xl shadow-xl border-2 border-slate-800"
                 />
                 <div className="flex-1">
@@ -1634,9 +1663,13 @@ export default function App() {
                     <div className="absolute top-0 right-0 p-8 opacity-5">
                       <Sparkles size={120} />
                     </div>
-                    <p className="text-slate-300 leading-relaxed text-lg font-medium relative z-10">
-                      {selectedPost.detailedUsage}
-                    </p>
+                    <div className="text-slate-300 leading-relaxed text-lg font-medium relative z-10">
+                      {selectedPost.detailedUsage?.split('\n').map((paragraph, idx) => (
+                        <span key={idx} className="block mb-3 last:mb-0">
+                          {paragraph}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </section>
 
@@ -1899,6 +1932,37 @@ export default function App() {
                       detailedUsage: aiSummary.detailedUsage,
                       usageTips: aiSummary.usageTips
                     };
+
+                    // Сохраняем в Supabase
+                    const supabase = getClient();
+                    if (supabase) {
+                      try {
+                        const { data: insertedPost, error } = await supabase.from('posts').insert([{
+                          title: newPost.title,
+                          summary: newPost.summary,
+                          source: newPost.source,
+                          channel: newPost.channel,
+                          date: new Date().toISOString(), // Используем ISO формат для БД
+                          tags: newPost.tags,
+                          mentions: newPost.mentions,
+                          views: newPost.views || '0',
+                          image: newPost.image,
+                          url: newPost.url,
+                          detailed_usage: newPost.detailedUsage,
+                          usage_tips: newPost.usageTips,
+                          is_analyzed: true
+                        }]).select().single();
+
+                        if (error) {
+                          console.error('Error saving post to Supabase:', error);
+                        } else if (insertedPost) {
+                          // Используем ID из базы для корректного отображения и хранения
+                          newPost.id = typeof insertedPost.id === 'string' ? parseInt(insertedPost.id.slice(0, 8), 16) : insertedPost.id;
+                        }
+                      } catch (dbError) {
+                        console.error('Exception saving to DB:', dbError);
+                      }
+                    }
 
                     // Добавляем канал и новую новость в начало списка
                     setChannels(prev => [newChannel, ...prev]);
