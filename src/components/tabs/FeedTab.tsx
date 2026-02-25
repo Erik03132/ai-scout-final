@@ -86,17 +86,41 @@ export const FeedTab: React.FC<FeedTabProps> = ({
                                             <span className="text-xs text-slate-500">Упомянуто:</span>
                                             <div className="flex flex-wrap gap-1">
                                                 {post.mentions.map((toolName: string) => {
-                                                    const toolObj = tools.find((t) => t.name === toolName);
+                                                    const existingToolObj = tools.find((t) =>
+                                                        t.name.toLowerCase() === toolName.toLowerCase() ||
+                                                        toolName.toLowerCase().includes(t.name.toLowerCase())
+                                                    );
+
+                                                    const toolObj = existingToolObj || {
+                                                        id: `dyn-${toolName}`,
+                                                        name: toolName,
+                                                        category: "AI/Tech",
+                                                        description: `Инструмент ${toolName} был упомянут в этом посте. Детальная информация и обзоры для него пока собираются нашей системой.`,
+                                                        icon: "⚙️",
+                                                        rating: 4.5,
+                                                        dailyCredits: "Н/Д",
+                                                        monthlyCredits: "Н/Д",
+                                                        minPrice: "Н/Д",
+                                                        hasApi: false,
+                                                        hasMcp: false,
+                                                        details: [],
+                                                        pros: ["Упоминается экспертами"],
+                                                        docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName)}`
+                                                    };
+
+                                                    const displayName = existingToolObj ? existingToolObj.name : toolName;
+
                                                     return (
                                                         <button
                                                             key={toolName}
-                                                            onClick={() => toolObj && setSelectedTool(toolObj)}
+                                                            onClick={() => setSelectedTool(toolObj)}
                                                             className={cn(
-                                                                "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all",
-                                                                toolObj ? "hover:border-cyan-400 hover:scale-105 cursor-pointer" : "opacity-50 cursor-default"
+                                                                "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
                                                             )}
+                                                            title="Нажмите для подробностей"
                                                         >
-                                                            {toolObj?.icon} {toolName}
+                                                            <span>{toolObj.icon}</span>
+                                                            {displayName}
                                                         </button>
                                                     );
                                                 })}

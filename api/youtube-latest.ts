@@ -7,6 +7,8 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+export const maxDuration = 60; // Set max duration for Hobby plan limit
+
 interface YouTubeVideo {
   videoId: string;
   title: string;

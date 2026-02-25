@@ -411,7 +411,7 @@ export default function App() {
   const [selectedUseCase, setSelectedUseCase] = useState<{ tool: string, case: any } | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<{ title: string, description: string } | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [channels, setChannels] = useLocalStorage<Array<{ id: string, url: string, source: 'YouTube' | 'Telegram', name: string }>>('ai-scout-channels', []);
+  const [channels, setChannels] = useState<Array<{ id: string, url: string, source: 'YouTube' | 'Telegram', name: string }>>([]);
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [tools, setTools] = useState<typeof mockTools>(mockTools);
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
@@ -461,9 +461,10 @@ export default function App() {
 
       try {
         // Параллельные запросы вместо последовательных для оптимизации загрузки
-        const [toolsResult, postsResult] = await Promise.all([
+        const [toolsResult, postsResult, channelsResult] = await Promise.all([
           supabase.from('tools').select('*').order('rating', { ascending: false }),
-          supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20)
+          supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20),
+          supabase.from('channels').select('*').order('created_at', { ascending: false })
         ]);
 
         // Обрабатываем инструменты
@@ -505,6 +506,17 @@ export default function App() {
             usageTips: p.usage_tips || []
           }));
           setPosts(formattedPosts);
+        }
+
+        // Обрабатываем каналы
+        if (channelsResult.data && channelsResult.data.length > 0) {
+          const formattedChannels = channelsResult.data.map(c => ({
+            id: c.id,
+            url: c.url,
+            source: c.source as 'YouTube' | 'Telegram',
+            name: c.name
+          }));
+          setChannels(formattedChannels);
         }
       } catch (err) {
         console.error('Error loading from Supabase:', err);
@@ -1884,6 +1896,20 @@ export default function App() {
                   setIsLoadingChannel(true);
 
                   try {
+                    // Сохраняем канал в БД
+                    const supabase = getClient();
+                    if (supabase) {
+                      const { data: insertedChannel, error: channelError } = await supabase.from('channels').upsert([{
+                        name: newChannel.name,
+                        source: newChannel.source,
+                        url: newChannel.url
+                      }], { onConflict: 'url' }).select().single();
+
+                      if (!channelError && insertedChannel) {
+                        newChannel.id = insertedChannel.id;
+                      }
+                    }
+
                     // Получаем последнюю новость с канала через API
                     const latestPost = await fetchLatestPost(newChannel);
 
@@ -1934,10 +1960,9 @@ export default function App() {
                     };
 
                     // Сохраняем в Supabase
-                    const supabase = getClient();
                     if (supabase) {
                       try {
-                        const { data: insertedPost, error } = await supabase.from('posts').insert([{
+                        const { data: insertedPost, error } = await supabase.from('posts').upsert([{
                           title: newPost.title,
                           summary: newPost.summary,
                           source: newPost.source,
@@ -1951,7 +1976,7 @@ export default function App() {
                           detailed_usage: newPost.detailedUsage,
                           usage_tips: newPost.usageTips,
                           is_analyzed: true
-                        }]).select().single();
+                        }], { onConflict: 'url' }).select().single();
 
                         if (error) {
                           console.error('Error saving post to Supabase:', error);

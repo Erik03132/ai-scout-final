@@ -12,6 +12,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+export const maxDuration = 60; // Set max duration for Hobby plan limit
+
 interface SummarizeRequest {
     content: string;
 }
@@ -184,7 +186,8 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
                 }],
                 generationConfig: {
                     temperature: 0.7,
-                    maxOutputTokens: 1000
+                    maxOutputTokens: 1000,
+                    responseMimeType: "application/json"
                 }
             })
         }

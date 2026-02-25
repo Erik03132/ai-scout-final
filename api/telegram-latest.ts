@@ -14,8 +14,9 @@
  * - Supabase Edge Functions + pg_cron (без ограничений)
  * - Внешний cron-сервис (cron-job.org, EasyCron)
  */
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+export const maxDuration = 60; // Set max duration for Hobby plan limit
 
 interface TelegramPost {
     title: string | null;
