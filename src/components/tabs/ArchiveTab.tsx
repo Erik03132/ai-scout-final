@@ -1,54 +1,30 @@
-/**
- * ArchiveTab Component
- * Вкладка с архивом инструментов
- */
-
-import React from 'react';
-import { ExternalLink, Heart, Zap, Clock } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Heart, Zap, Clock, ExternalLink } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-export interface Tool {
-    id: number | string;
-    name: string;
-    category: string;
-    description: string;
-    icon: string;
-    rating: number;
-    dailyCredits: string;
-    monthlyCredits: string;
-    minPrice: string;
-    hasApi: boolean;
-    hasMcp: boolean;
-    details?: Array<{ title: string; description: string }>;
-    docsUrl?: string;
-}
+const categories = ["All", "Deployment", "Database", "Design", "ORM", "CSS", "State", "Framework", "Payments"];
 
 interface ArchiveTabProps {
-    tools: Tool[];
+    tools: any[];
     favorites: string[];
-    onToggleFavorite: (id: string) => void;
-    onSelectTool: (tool: Tool) => void;
-    selectedCategory: string;
-    onCategoryChange: (category: string) => void;
-    searchQuery: string;
-    onSearchChange: (query: string) => void;
+    toggleFavorite: (id: string) => void;
+    setSelectedTool?: (tool: any) => void;
 }
-
-const categories = ["All", "Deployment", "Database", "Design", "ORM", "CSS", "State", "Framework", "Payments"];
 
 export const ArchiveTab: React.FC<ArchiveTabProps> = ({
     tools,
     favorites,
-    onToggleFavorite,
-    onSelectTool,
-    selectedCategory,
-    onCategoryChange,
-    searchQuery,
-    onSearchChange
+    toggleFavorite,
+    setSelectedTool
 }) => {
-    const filteredTools = selectedCategory === 'All'
-        ? tools
-        : tools.filter(tool => tool.category === selectedCategory);
+    const [selectedCategory, setSelectedCategory] = useState('All');
+
+    const filteredTools = useMemo(() =>
+        selectedCategory === 'All'
+            ? tools
+            : tools.filter(tool => tool.category === selectedCategory),
+        [tools, selectedCategory]
+    );
 
     return (
         <div className="space-y-6">
@@ -57,24 +33,16 @@ export const ArchiveTab: React.FC<ArchiveTabProps> = ({
                     <h2 className="text-2xl font-bold text-white">Архив инструментов</h2>
                     <p className="text-slate-400 text-sm mt-1">Каталог технологий и сервисов с AI-анализом</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        placeholder="Поиск инструментов..."
-                        className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 transition-colors text-sm"
-                    />
+                <div className="flex items-center gap-2">
                     <span className="text-sm text-slate-400">{filteredTools.length} инструментов</span>
                 </div>
             </div>
 
-            {/* Categories */}
             <div className="flex flex-wrap gap-2 mb-6">
                 {categories.map(cat => (
                     <button
                         key={cat}
-                        onClick={() => onCategoryChange(cat)}
+                        onClick={() => setSelectedCategory(cat)}
                         className={cn(
                             "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
                             selectedCategory === cat
@@ -87,13 +55,12 @@ export const ArchiveTab: React.FC<ArchiveTabProps> = ({
                 ))}
             </div>
 
-            {/* Tools Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredTools.map(tool => (
                     <div
                         key={tool.id}
-                        onClick={() => onSelectTool(tool)}
-                        className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:border-cyan-500/40 hover:bg-slate-800/60 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 cursor-pointer flex flex-col h-full relative overflow-hidden"
+                        onClick={() => setSelectedTool?.(tool)}
+                        className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:border-cyan-500/40 hover:bg-slate-800/60 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 flex flex-col h-full relative overflow-hidden"
                     >
                         <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                             <div className="w-20 h-20 bg-cyan-500/10 blur-3xl rounded-full" />
@@ -106,7 +73,7 @@ export const ArchiveTab: React.FC<ArchiveTabProps> = ({
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onToggleFavorite(`tool-${tool.id}`);
+                                    toggleFavorite(`tool-${tool.id}`);
                                 }}
                                 className={cn(
                                     "p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md",
@@ -153,7 +120,7 @@ export const ArchiveTab: React.FC<ArchiveTabProps> = ({
                         </div>
 
                         <div className="space-y-2.5 mb-8">
-                            {tool.details?.slice(0, 3).map((detail, i) => (
+                            {tool.details?.slice(0, 3).map((detail: any, i: number) => (
                                 <div key={i} className="flex items-center gap-3 text-xs text-slate-300 font-semibold group-hover:text-white transition-colors">
                                     <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-sm" />
                                     {detail.title}
@@ -185,5 +152,3 @@ export const ArchiveTab: React.FC<ArchiveTabProps> = ({
         </div>
     );
 };
-
-export default ArchiveTab;

@@ -91,7 +91,7 @@ async function handleCommand(chatId: number, text: string) {
         case '/favorites':
             await sendMessage(chatId, '⭐ Избранное скоро появится');
             break;
-        default:
+        default: {
             // Обычный текст = поиск
             const res = await fetch(
                 `${SUPABASE_URL}/rest/v1/tools?select=*&or=(name.ilike.*${text}*,description.ilike.*${text}*)&limit=5`,
@@ -105,6 +105,8 @@ async function handleCommand(chatId: number, text: string) {
             let msg = `🔍 *Результаты:*\n\n`;
             results.forEach((t: any) => { msg += `*${t.name}*\n${t.description?.slice(0, 80) || ''}...\n\n`; });
             await sendMessage(chatId, msg);
+            break;
+        }
     }
 }
 

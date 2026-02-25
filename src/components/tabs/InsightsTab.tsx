@@ -1,16 +1,8 @@
-/**
- * InsightsTab Component
- * Вкладка с AI аналитикой
- */
-
 import React from 'react';
-import { TrendingUp, ArrowRight } from 'lucide-react';
+import { TrendingUp, ArrowRight, Brain } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-interface InsightsTabProps {
-}
-
-export const InsightsTab: React.FC<InsightsTabProps> = ({ onToolClick }) => {
+export const InsightsTab: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="mb-6">
@@ -18,7 +10,6 @@ export const InsightsTab: React.FC<InsightsTabProps> = ({ onToolClick }) => {
                 <p className="text-slate-400 text-sm mt-1">Интеллектуальный анализ трендов и инструментов</p>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {[
                     { label: "Рост AI-инструментов", value: "+234%", change: "+12% за месяц", color: "from-cyan-500 to-blue-600" },
@@ -38,9 +29,7 @@ export const InsightsTab: React.FC<InsightsTabProps> = ({ onToolClick }) => {
                 ))}
             </div>
 
-            {/* Trends & Recommendations */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Trends */}
                 <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
                     <h3 className="font-semibold text-white mb-4">🔥 Тренды недели</h3>
                     <div className="space-y-3">
@@ -70,7 +59,6 @@ export const InsightsTab: React.FC<InsightsTabProps> = ({ onToolClick }) => {
                     </div>
                 </div>
 
-                {/* AI Recommendations */}
                 <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
                     <h3 className="font-semibold text-white mb-4">💡 AI Рекомендации</h3>
                     <div className="space-y-3">
@@ -97,5 +85,3 @@ export const InsightsTab: React.FC<InsightsTabProps> = ({ onToolClick }) => {
         </div>
     );
 };
-
-export default InsightsTab;

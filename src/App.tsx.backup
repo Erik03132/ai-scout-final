@@ -3,28 +3,10 @@ import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Hea
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
-import { FeedTab } from './components/Tabs/FeedTab';
-import { InsightsTab } from './components/Tabs/InsightsTab';
-import { ArchiveTab } from './components/Tabs/ArchiveTab';
-import { FavoritesTab } from './components/Tabs/FavoritesTab';
-
-// Types
-interface Post {
-  id: number;
-  title: string;
-  summary: string;
-  source: string;
-  channel: string;
-  date: string;
-  tags: string[];
-  mentions: string[];
-  views: string;
-  image: string;
-  url: string;
-  detailedUsage: string;
-  usageTips: string[];
-  content?: string;
-}
+import { FeedTab, type Post, type Tool as FeedTool } from './components/tabs/FeedTab';
+import { InsightsTab } from './components/tabs/InsightsTab';
+import { ArchiveTab, type Tool } from './components/tabs/ArchiveTab';
+import { FavoritesTab } from './components/tabs/FavoritesTab';
 
 // Mock data
 const mockPosts: Post[] = [
@@ -383,7 +365,8 @@ const categories = ["All", "Deployment", "Database", "Design", "ORM", "CSS", "St
 export default function App() {
   const [activeTab, setActiveTab] = useState<'feed' | 'insights' | 'archive' | 'favorites'>('feed');
   const [searchQuery, setSearchQuery] = useState('');
-    const [favorites, setFavorites] = useLocalStorage<string[]>('ai-scout-favorites', []);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [favorites, setFavorites] = useLocalStorage<string[]>('ai-scout-favorites', []);
   const [isSearching, setIsSearching] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
   const [selectedTool, setSelectedTool] = useState<typeof mockTools[0] | null>(null);
@@ -656,7 +639,13 @@ export default function App() {
     );
   };
 
-  
+  const filteredTools = useMemo(() =>
+    selectedCategory === 'All'
+      ? tools
+      : tools.filter(tool => tool.category === selectedCategory),
+    [tools, selectedCategory]
+  );
+
   const favoriteTools = useMemo(() =>
     tools.filter(tool => favorites.includes(`tool-${tool.id}`)),
     [tools, favorites]
@@ -898,7 +887,7 @@ export default function App() {
                         href={post.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-2 rounded-xl text-amber-500 hover:text-amber-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-amber-500/20"
+                        className="p-2 rounded-xl text-slate-500 hover:text-cyan-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-cyan-500/20"
                         title="Открыть источник"
                       >
                         <ExternalLink className="w-5 h-5" />
@@ -1232,7 +1221,7 @@ export default function App() {
                                     href={post.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-amber-500 hover:text-amber-400 transition-colors"
+                                    className="text-cyan-400 hover:text-cyan-300 transition-colors"
                                   >
                                     <ExternalLink size={14} />
                                   </a>
