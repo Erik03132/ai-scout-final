@@ -13,6 +13,8 @@ interface PostDetailModalProps {
     onClose: () => void;
 }
 
+import ReactMarkdown from 'react-markdown';
+
 export const PostDetailModal: React.FC<PostDetailModalProps> = ({
     post,
     isOpen,
@@ -62,8 +64,8 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                             <button
                                 onClick={() => toggleFavorite(post.id, 'post')}
                                 className={`p-2 rounded-lg transition-colors ${favorite
-                                        ? 'bg-yellow-500/20 text-yellow-400'
-                                        : 'bg-slate-700 text-slate-400 hover:text-yellow-400'
+                                    ? 'bg-yellow-500/20 text-yellow-400'
+                                    : 'bg-slate-700 text-slate-400 hover:text-yellow-400'
                                     }`}
                             >
                                 {favorite ? '★' : '☆'}
@@ -89,7 +91,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                     {/* Саммари */}
                     {post.summary && (
                         <div className="mb-6">
-                            <h3 className="text-sm font-semibold text-slate-300 mb-2">Саммари</h3>
+                            <h3 className="text-sm font-semibold text-slate-300 mb-2">Краткое саммари</h3>
                             <p className="text-slate-400 leading-relaxed">{post.summary}</p>
                         </div>
                     )}
@@ -97,8 +99,10 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                     {/* Детальное использование */}
                     {post.detailedUsage && (
                         <div className="mb-6">
-                            <h3 className="text-sm font-semibold text-slate-300 mb-2">Использование</h3>
-                            <p className="text-slate-400 leading-relaxed">{post.detailedUsage}</p>
+                            <h3 className="text-sm font-semibold text-slate-300 mb-3">Содержание</h3>
+                            <div className="text-slate-300 leading-relaxed text-sm space-y-4 [&>h1]:text-white [&>h1]:text-lg [&>h1]:font-bold [&>h2]:text-white [&>h2]:font-bold [&>h3]:text-white [&>h3]:font-bold [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-1 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:space-y-1 [&>p>strong]:text-white [&>p>strong]:font-semibold">
+                                <ReactMarkdown>{post.detailedUsage}</ReactMarkdown>
+                            </div>
                         </div>
                     )}
 
