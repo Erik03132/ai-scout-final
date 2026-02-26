@@ -19,6 +19,7 @@ interface SummarizeRequest {
 }
 
 interface SummarizeResponse {
+    titleRu: string;
     summary: string;
     tags: string[];
     mentions: string[];
@@ -167,29 +168,31 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `Ты — ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом (это может быть описание видео на YouTube, статья или пост). 
+                        text: `Ты — профессиональный ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом (описание видео YouTube, статья или пост в Telegram).
 
-Твоя задача — извлечь максимум пользы и составить крутое, емкое и структурированное саммари на РУССКОМ языке.
+Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке.
 Правила:
-1. ИГНОРИРУЙ любые технические ссылки (t.me, http), промокоды, призывы подписаться на канал. Сосредоточься на сути и смысловых блоках.
-2. В поле "mentions" ОБЯЗАТЕЛЬНО извлеки ВСЕ названия софта, сервисов, программ, нейросетей, платформ и приложений (например: Figma, Spline, Midjourney, Canva, Notion, ChatGPT, Vercel, YouTube, Telegram и др.). СТРОГО ИСКЛЮЧИ обычные языки программирования и базовые веб-фреймворки (НЕ ПИШИ React, Python, Go, Java, Next.js, Vite, Tailwind, HTML, CSS и т.д.). Нас интересует софт и готовые продукты.
-3. Если в тексте есть таймкоды (Stamps, Эпизоды) — проанализируй их названия, чтобы понять структуру материала и включить смысловые блоки в "detailedUsage".
+1. ИГНОРИРУЙ ссылки (http, t.me, bit.ly), промокоды и призывы подписаться. Сосредоточься ТОЛЬКО на смысле.
+2. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский язык. Если заголовок уже на русском — используй как есть.
+3. Поле "mentions" — КРИТИЧЕСКИ ВАЖНО: извлеки АБСОЛЮТНО ВСЕ названия софта, сервисов, программ, нейросетей, платформ, приложений, которые упоминаются в тексте. Сканируй каждую строку! Например: Spline, Figma, Midjourney, Canva, Sublime, Gravity Claw, AI Studio, Adobe Fonts, Cosmos, Luma Dream Machine, Beehiiv, GoHighLevel, TikTok, YouTube, Weave, ChatGPT, Claude, Notion, Vercel и т.д. Их может быть 10-20 штук! НЕ ПРОПУСКАЙ НИ ОДНОГО! СТРОГО ИСКЛЮЧИ только чистые языки программирования (Python, Go, Java, C++) и базовые фреймворки (React, Next.js, Vue, Angular, Tailwind, HTML, CSS).
+4. Если есть таймкоды/эпизоды — используй их для понимания структуры и опиши каждый смысловой блок в "detailedUsage".
 
-Верни ТОЛЬКО валидный JSON без markdown и блоков кода (никаких \`\`\`json):
+Верни ТОЛЬКО валидный JSON (без markdown, без \`\`\`json):
 {
-  "summary": "Глубокое, вовлекающее саммари (3-4 предложения). Раскрой главную суть, о чем это, и чем это полезно для пользователя. Опирайся на заголовок и контент.",
-  "tags": ["тег1", "тег2"],
-  "mentions": ["инструмент1", "инструмент2"],
-  "detailedUsage": "Развернутый аналитический обзор контента (4-6 емких предложений). Выдели главную идею, решаемую проблему и предложенную архитектуру или подход. Обязательно отрази содержание по смысловым блокам или этапам (из таймкодов, если они есть). Возвращай сплошной текст с абзацами (через \\n), без Markdown.",
-  "usageTips": ["Практичный и конкретный совет 1 (основанный на тексте)", "Практичный совет 2", "Практичный совет 3", "Практичный совет 4", "Практичный совет 5"]
+  "titleRu": "Переведённый на русский заголовок контента",
+  "summary": "Подробное, вовлекающее саммари на русском (4-6 предложений). Раскрой главную суть: о чем это, какие программы и подходы обсуждаются, чем полезно. Назови конкретные инструменты!",
+  "tags": ["тег1", "тег2", "тег3", "тег4"],
+  "mentions": ["Spline", "Figma", "Midjourney", "и ВСЕ остальные из текста"],
+  "detailedUsage": "Развернутый аналитический обзор (6-8 предложений). Разбей по смысловым блокам: Вступление, Основная часть, Инструменты, Практика, Итоги. Для каждого блока опиши что обсуждается и какие инструменты используются. Пиши сплошным текстом с абзацами через \\n.",
+  "usageTips": ["Конкретный совет 1 из контента", "Совет 2", "Совет 3", "Совет 4", "Совет 5"]
 }
 
-Контент: ${content.substring(0, 5000)}`
+Контент: ${content.substring(0, 6000)}`
                     }]
                 }],
                 generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 1000,
+                    temperature: 0.4,
+                    maxOutputTokens: 2000,
                     responseMimeType: "application/json"
                 }
             })
@@ -221,8 +224,9 @@ function parseLLMResponse(text: string): SummarizeResponse {
         const parsed = JSON.parse(jsonStr.trim());
 
         return {
+            titleRu: parsed.titleRu || '',
             summary: parsed.summary || '',
-            tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [],
+            tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 8) : [],
             mentions: Array.isArray(parsed.mentions) ? parsed.mentions : [],
             detailedUsage: parsed.detailedUsage || '',
             usageTips: Array.isArray(parsed.usageTips) ? parsed.usageTips : []
@@ -270,6 +274,7 @@ function generateFallbackSummary(content: string): SummarizeResponse {
     }
 
     return {
+        titleRu: title || '',
         summary: summary || 'Контент недоступен для саммари',
         tags: tags.length > 0 ? tags : ['Tech'],
         mentions,

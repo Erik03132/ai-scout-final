@@ -650,7 +650,7 @@ export default function App() {
   };
 
   // Функция для создания AI-саммари новости через API
-  const generateAISummary = async (post: Partial<Post>): Promise<{ summary: string; mentions: string[]; tags: string[]; detailedUsage: string; usageTips: string[] }> => {
+  const generateAISummary = async (post: Partial<Post>): Promise<{ titleRu: string; summary: string; mentions: string[]; tags: string[]; detailedUsage: string; usageTips: string[] }> => {
     const title = post.title || '';
     const content = post.content || '';
     const fullText = `Заголовок: ${title}\n\nОписание: ${content}`;
@@ -658,6 +658,7 @@ export default function App() {
     // Fallback функция при ошибке API
     const getFallbackSummary = (post: Partial<Post>) => {
       return {
+        titleRu: title,
         summary: content.substring(0, 200) || title || 'Контент недоступен',
         tags: ['Tech'],
         mentions: [],
@@ -693,6 +694,7 @@ export default function App() {
       const result = await response.json();
 
       return {
+        titleRu: result.titleRu || title,
         summary: result.summary || content.substring(0, 200),
         tags: Array.isArray(result.tags) ? result.tags : [],
         mentions: Array.isArray(result.mentions) ? result.mentions : [],
@@ -1974,7 +1976,7 @@ export default function App() {
                       // Создаем новый пост с реальными данными
                       const newPost: Post = {
                         id: Date.now(),
-                        title: latestPost.title || 'Без названия',
+                        title: aiSummary.titleRu || latestPost.title || 'Без названия',
                         summary: aiSummary.summary,
                         source: source,
                         channel: latestPost.channel || name,
