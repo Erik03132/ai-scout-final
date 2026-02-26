@@ -69,10 +69,12 @@ serve(async (req) => {
 
                 if (existing) continue;
 
-                // Создаем новый пост
+                // Создаем новый пост. Сохраняем ПОЛНОЕ описание в поле content для анализа нейросетью.
+                // В поле summary кладем обрезку только для совместимости, но анализ будет по content.
                 const post = {
                     title: video.snippet.title,
-                    summary: video.snippet.description?.substring(0, 200) || "",
+                    summary: video.snippet.description?.substring(0, 500) || "",
+                    content: video.snippet.description || "",
                     source: "YouTube",
                     channel: video.snippet.channelTitle,
                     date: video.snippet.publishedAt,
