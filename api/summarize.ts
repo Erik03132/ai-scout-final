@@ -95,14 +95,18 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
         throw new Error('No LLM API key configured');
     }
 
-    // Используем OpenAI API
-    if (process.env.OPENAI_API_KEY) {
-        return await callOpenAI(content);
+    // Приоритет отдаем Gemini API
+    if (process.env.GEMINI_API_KEY) {
+        try {
+            return await callGemini(content);
+        } catch (e) {
+            console.error("Gemini failed, falling back to OpenAI", e);
+        }
     }
 
-    // Используем Gemini API
-    if (process.env.GEMINI_API_KEY) {
-        return await callGemini(content);
+    // Резервный вариант: OpenAI API
+    if (process.env.OPENAI_API_KEY) {
+        return await callOpenAI(content);
     }
 
     throw new Error('No LLM provider configured');
@@ -123,24 +127,29 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
             messages: [
                 {
                     role: 'system',
-                    content: `Ты — редактор новостей. Прочитай текст и напиши краткое саммари (1-2 предложения) на РУССКОМ языке. 
-Без ссылок, без url, без эмодзи. Только суть: о чём контент.
-Верни ТОЛЬКО JSON без markdown:
+                    content: `Ты — профессиональный ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом (описание видео YouTube, статья или пост).
+Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке.
+Правила:
+1. ИГНОРИРУЙ ссылки, промокоды и призывы подписаться.
+2. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Если он уже на русском — оставь как есть.
+3. Поле "mentions" — извлеки АБСОЛЮТНО ВСЕ названия софта, проектов, ИИ, нейросетей (Figma, Spline, Midjourney, Canva, Notion и т.д.). Исключи только языки программирования и фреймворки (Python, React и т.д.).
+4. Верни ТОЛЬКО JSON без markdown и \`\`\`json.
 {
-  "summary": "1-2 предложения на русском",
+  "titleRu": "Перевод заголовка",
+  "summary": "Подробное саммари (4-6 пред).",
   "tags": ["тег1", "тег2"],
-  "mentions": ["инструмент1"],
-  "detailedUsage": "2-3 предложения на русском о применении",
-  "usageTips": ["совет 1", "совет 2", "совет 3"]
+  "mentions": ["Spline", "Figma"],
+  "detailedUsage": "Детальный обзор. Разбивка по смысловым блокам.",
+  "usageTips": ["совет 1", "совет 2"]
 }`
                 },
                 {
                     role: 'user',
-                    content: content.substring(0, 4000) // Ограничение длины
+                    content: content.substring(0, 6000)
                 }
             ],
-            temperature: 0.7,
-            max_tokens: 1000
+            temperature: 0.4,
+            max_tokens: 2000
         })
     });
 

@@ -1457,9 +1457,9 @@ export default function App() {
                         <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-cyan-500/30">
                           <Zap className="w-8 h-8 text-white" />
                         </div>
-                        <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Мы уже собираем досье!</h3>
+                        <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Новый инструмент</h3>
                         <p className="text-base text-slate-300 max-w-md mx-auto mb-8 leading-relaxed">
-                          Эксперты упоминают <b>{selectedTool.name}</b>. Прямо сейчас наши AI-агенты сканируют интернет, чтобы подготовить детальный разбор тарифов, API и реальных бизнес-кейсов.
+                          Искусственный интеллект автоматически распознал <b>{selectedTool.name}</b>. Этого инструмента пока нет в нашем каталоге, но вы можете изучить его самостоятельно.
                         </p>
                         <button
                           onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTool.name + ' AI tool')}`, '_blank')}
@@ -1649,7 +1649,7 @@ export default function App() {
                             id: `dyn-${toolName}`,
                             name: toolName,
                             category: "AI Service",
-                            description: `Интеллектуальный анализ применения ${toolName} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
+                            description: `Инструмент был определен искусственным интеллектом в одном из материалов, но еще не занесен в нашу основную базу каталога.`,
                             icon: "✨",
                             rating: 4.8,
                             dailyCredits: "Уточняется",
