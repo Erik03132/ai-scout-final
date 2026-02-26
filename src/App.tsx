@@ -952,45 +952,47 @@ export default function App() {
                             <span className="text-slate-600">|</span>
                             <span className="text-xs text-slate-500">Упомянуто:</span>
                             <div className="flex flex-wrap gap-1">
-                              {post.mentions.map((toolName: string) => {
-                                const existingToolObj = allTools.find((t) =>
-                                  t.name.toLowerCase() === toolName.toLowerCase() ||
-                                  toolName.toLowerCase().includes(t.name.toLowerCase())
-                                );
+                              {post.mentions
+                                .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.toLowerCase()))
+                                .map((toolName: string) => {
+                                  const existingToolObj = allTools.find((t) =>
+                                    t.name.toLowerCase() === toolName.toLowerCase() ||
+                                    toolName.toLowerCase().includes(t.name.toLowerCase())
+                                  );
 
-                                const toolObj = existingToolObj || {
-                                  id: `dyn-${toolName}`,
-                                  name: toolName,
-                                  category: "AI/Tech",
-                                  description: `Инструмент ${toolName} был упомянут в этом посте. Детальная информация и обзоры для него пока собираются нашей системой.`,
-                                  icon: "⚙️",
-                                  rating: 4.5,
-                                  dailyCredits: "Н/Д",
-                                  monthlyCredits: "Н/Д",
-                                  minPrice: "Н/Д",
-                                  hasApi: false,
-                                  hasMcp: false,
-                                  details: [],
-                                  pros: ["Упоминается экспертами"],
-                                  docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName)}`
-                                };
+                                  const toolObj = existingToolObj || {
+                                    id: `dyn-${toolName}`,
+                                    name: toolName,
+                                    category: "AI Service",
+                                    description: `Интеллектуальный анализ применения ${toolName} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
+                                    icon: "✨",
+                                    rating: 4.8,
+                                    dailyCredits: "Уточняется",
+                                    monthlyCredits: "Уточняется",
+                                    minPrice: "По запросу",
+                                    hasApi: false,
+                                    hasMcp: false,
+                                    details: [],
+                                    pros: ["Перспективно", "Упоминается экспертами", "Тренд"],
+                                    docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName + ' AI')}`
+                                  };
 
-                                const displayName = existingToolObj ? existingToolObj.name : toolName;
+                                  const displayName = existingToolObj ? existingToolObj.name : toolName;
 
-                                return (
-                                  <button
-                                    key={toolName}
-                                    onClick={() => setSelectedTool(toolObj)}
-                                    className={cn(
-                                      "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
-                                    )}
-                                    title="Нажмите для подробностей"
-                                  >
-                                    <span>{toolObj.icon}</span>
-                                    {displayName}
-                                  </button>
-                                );
-                              })}
+                                  return (
+                                    <button
+                                      key={toolName}
+                                      onClick={() => setSelectedTool(toolObj)}
+                                      className={cn(
+                                        "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
+                                      )}
+                                      title="Нажмите для подробностей"
+                                    >
+                                      <span>{toolObj.icon}</span>
+                                      {displayName}
+                                    </button>
+                                  );
+                                })}
                             </div>
                           </>
                         )}
@@ -1030,1050 +1032,1069 @@ export default function App() {
               ))}
             </div>
           </div>
-        )}
+        )
+        }
 
         {/* Insights Tab */}
-        {activeTab === 'insights' && (
-          <div className="space-y-6">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white">AI Аналитика</h2>
-              <p className="text-slate-400 text-sm mt-1">Интеллектуальный анализ трендов и инструментов</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {[
-                { label: "Рост AI-инструментов", value: "+234%", change: "+12% за месяц", color: "from-cyan-500 to-blue-600" },
-                { label: "Анализировано контента", value: "1.2K", change: "за последние 7 дней", color: "from-emerald-500 to-teal-600" },
-                { label: "Найдено инструментов", value: "847", change: "32 новых за неделю", color: "from-amber-500 to-orange-600" },
-              ].map((stat, index) => (
-                <div key={index} className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-slate-400 text-sm">{stat.label}</span>
-                    <div className={cn("w-10 h-10 bg-gradient-to-br", stat.color, "rounded-xl flex items-center justify-center")}>
-                      <TrendingUp className="w-5 h-5 text-white" />
-                    </div>
-                  </div>
-                  <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                  <div className="text-xs text-slate-500">{stat.change}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                <h3 className="font-semibold text-white mb-4">🔥 Тренды недели</h3>
-                <div className="space-y-3">
-                  {[
-                    { rank: 1, name: "AI Agents", growth: "+45%" },
-                    { rank: 2, name: "Rust in Web", growth: "+38%" },
-                    { rank: 3, name: "Edge Computing", growth: "+32%" },
-                    { rank: 4, name: "WebGPU", growth: "+28%" },
-                    { rank: 5, name: "Microfrontends", growth: "+24%" },
-                  ].map(trend => (
-                    <div key={trend.rank} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/30 transition-colors cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <span className={cn(
-                          "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold",
-                          trend.rank === 1 ? "bg-amber-500/20 text-amber-400" :
-                            trend.rank === 2 ? "bg-slate-400/20 text-slate-300" :
-                              trend.rank === 3 ? "bg-orange-500/20 text-orange-400" :
-                                "bg-slate-700 text-slate-500"
-                        )}>
-                          {trend.rank}
-                        </span>
-                        <span className="text-sm text-white">{trend.name}</span>
-                      </div>
-                      <span className="text-xs text-emerald-400 font-medium">{trend.growth}</span>
-                    </div>
-                  ))}
-                </div>
+        {
+          activeTab === 'insights' && (
+            <div className="space-y-6">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white">AI Аналитика</h2>
+                <p className="text-slate-400 text-sm mt-1">Интеллектуальный анализ трендов и инструментов</p>
               </div>
 
-              <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                <h3 className="font-semibold text-white mb-4">💡 AI Рекомендации</h3>
-                <div className="space-y-3">
-                  {[
-                    { title: "Обратите внимание на Bun", desc: "Замена Node.js с 5x ускорением" },
-                    { title: "Попробуйте htmx", desc: "Без JS фреймворков для простых проектов" },
-                    { title: "Изучите SQL", desc: "Основа для работы с любыми БД" },
-                  ].map((rec, index) => (
-                    <div key={index} className="p-3 bg-slate-700/30 rounded-xl border border-slate-600/30 cursor-pointer hover:border-cyan-500/30 transition-colors">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <ArrowRight className="w-4 h-4 text-cyan-400" />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {[
+                  { label: "Рост AI-инструментов", value: "+234%", change: "+12% за месяц", color: "from-cyan-500 to-blue-600" },
+                  { label: "Анализировано контента", value: "1.2K", change: "за последние 7 дней", color: "from-emerald-500 to-teal-600" },
+                  { label: "Найдено инструментов", value: "847", change: "32 новых за неделю", color: "from-amber-500 to-orange-600" },
+                ].map((stat, index) => (
+                  <div key={index} className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-slate-400 text-sm">{stat.label}</span>
+                      <div className={cn("w-10 h-10 bg-gradient-to-br", stat.color, "rounded-xl flex items-center justify-center")}>
+                        <TrendingUp className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
+                    <div className="text-xs text-slate-500">{stat.change}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
+                  <h3 className="font-semibold text-white mb-4">🔥 Тренды недели</h3>
+                  <div className="space-y-3">
+                    {[
+                      { rank: 1, name: "AI Agents", growth: "+45%" },
+                      { rank: 2, name: "Rust in Web", growth: "+38%" },
+                      { rank: 3, name: "Edge Computing", growth: "+32%" },
+                      { rank: 4, name: "WebGPU", growth: "+28%" },
+                      { rank: 5, name: "Microfrontends", growth: "+24%" },
+                    ].map(trend => (
+                      <div key={trend.rank} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/30 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <span className={cn(
+                            "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold",
+                            trend.rank === 1 ? "bg-amber-500/20 text-amber-400" :
+                              trend.rank === 2 ? "bg-slate-400/20 text-slate-300" :
+                                trend.rank === 3 ? "bg-orange-500/20 text-orange-400" :
+                                  "bg-slate-700 text-slate-500"
+                          )}>
+                            {trend.rank}
+                          </span>
+                          <span className="text-sm text-white">{trend.name}</span>
                         </div>
-                        <div>
-                          <h4 className="font-medium text-white text-sm">{rec.title}</h4>
-                          <p className="text-xs text-slate-400 mt-0.5">{rec.desc}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Archive Tab */}
-        {activeTab === 'archive' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-white">Архив инструментов</h2>
-                <p className="text-slate-400 text-sm mt-1">Каталог технологий и сервисов с AI-анализом</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-400">{filteredTools.length} инструментов</span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-6">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
-                    selectedCategory === cat
-                      ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-blue-500/25"
-                      : "bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700/50 border border-slate-700/50"
-                  )}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTools.map(tool => (
-                <div
-                  key={tool.id}
-                  className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:border-cyan-500/40 hover:bg-slate-800/60 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 cursor-pointer flex flex-col h-full relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-20 h-20 bg-cyan-500/10 blur-3xl rounded-full" />
-                  </div>
-
-                  <div className="flex items-start justify-between mb-6 relative">
-                    <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
-                      {tool.icon}
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(`tool-${tool.id}`);
-                      }}
-                      className={cn(
-                        "p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md",
-                        favorites.includes(`tool-${tool.id}`)
-                          ? "text-red-400 bg-red-500/10 border-red-500/20 shadow-lg shadow-red-500/10"
-                          : "text-slate-500 hover:text-red-400 hover:bg-slate-700/50 border-white/5"
-                      )}
-                    >
-                      <Heart className={cn("w-6 h-6", favorites.includes(`tool-${tool.id}`) && "fill-current")} />
-                    </button>
-                  </div>
-
-                  <div className="mb-5 relative">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/20">
-                        {tool.category}
-                      </span>
-                      <div className="flex items-center gap-1 text-amber-400 text-xs font-bold">
-                        ★ {tool.rating}
-                      </div>
-                    </div>
-                    <h3 className="font-black text-2xl text-white group-hover:text-cyan-400 transition-colors uppercase tracking-tight leading-none mb-3">
-                      {tool.name}
-                    </h3>
-                  </div>
-
-                  <p className="text-sm text-slate-400 leading-relaxed mb-6 flex-grow line-clamp-3 font-medium">
-                    {tool.description}
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-cyan-500/20 transition-colors">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                        <Zap size={12} className="text-cyan-400" /> Daily
-                      </p>
-                      <p className="text-sm font-black text-white">{tool.dailyCredits}</p>
-                    </div>
-                    <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-blue-500/20 transition-colors">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                        <Clock size={12} className="text-blue-400" /> Monthly
-                      </p>
-                      <p className="text-sm font-black text-white">{tool.monthlyCredits}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5 mb-8">
-                    {tool.details?.slice(0, 3).map((detail: any, i: number) => (
-                      <div key={i} className="flex items-center gap-3 text-xs text-slate-300 font-semibold group-hover:text-white transition-colors">
-                        <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-sm" />
-                        {detail.title}
+                        <span className="text-xs text-emerald-400 font-medium">{trend.growth}</span>
                       </div>
                     ))}
                   </div>
-
-                  <div className="mt-auto pt-6 border-t border-slate-700/50 flex items-end justify-between">
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Plan</p>
-                      <p className="text-xl font-black text-emerald-400 tracking-tighter">{tool.minPrice}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      {tool.hasApi && (
-                        <div className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase tracking-tighter">API</div>
-                      )}
-                      {tool.hasMcp && (
-                        <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-black uppercase tracking-tighter">MCP</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <button className="mt-7 w-full h-14 bg-gradient-to-r from-slate-700/50 to-slate-800/50 hover:from-cyan-500 hover:to-blue-600 hover:text-white text-slate-300 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-500 flex items-center justify-center gap-3 border border-white/5 hover:border-transparent hover:shadow-xl hover:shadow-blue-500/20">
-                    Открыть в Scout <ExternalLink size={14} />
-                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* Favorites Tab */}
-        {activeTab === 'favorites' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white">Ваше избранное</h2>
-              <p className="text-slate-400 text-sm mt-1">Сохраненные новости и инструменты</p>
-            </div>
-
-            {favoriteTools.length === 0 && favoritePosts.length === 0 ? (
-              <div className="text-center py-20 bg-slate-800/20 rounded-3xl border border-dashed border-slate-700">
-                <Heart className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-400">Список пуст</h3>
-                <p className="text-slate-500 text-sm mt-2">Добавляйте инструменты и новости в избранное, чтобы они появились здесь</p>
+                <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
+                  <h3 className="font-semibold text-white mb-4">💡 AI Рекомендации</h3>
+                  <div className="space-y-3">
+                    {[
+                      { title: "Обратите внимание на Bun", desc: "Замена Node.js с 5x ускорением" },
+                      { title: "Попробуйте htmx", desc: "Без JS фреймворков для простых проектов" },
+                      { title: "Изучите SQL", desc: "Основа для работы с любыми БД" },
+                    ].map((rec, index) => (
+                      <div key={index} className="p-3 bg-slate-700/30 rounded-xl border border-slate-600/30 cursor-pointer hover:border-cyan-500/30 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <ArrowRight className="w-4 h-4 text-cyan-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-white text-sm">{rec.title}</h4>
+                            <p className="text-xs text-slate-400 mt-0.5">{rec.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-12">
-                {favoriteTools.length > 0 && (
-                  <section>
-                    <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                      <Wrench className="w-5 h-5 text-cyan-400" />
-                      Инструменты
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {favoriteTools.map(tool => (
-                        <div
-                          key={tool.id}
-                          className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:shadow-2xl transition-all duration-300 relative overflow-hidden"
-                        >
-                          <div className="flex items-start justify-between mb-6">
-                            <div className="w-14 h-14 bg-slate-700/50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                              {tool.icon}
-                            </div>
-                            <button
-                              onClick={() => toggleFavorite(`tool-${tool.id}`)}
-                              className="p-3 rounded-2xl text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20 shadow-lg shadow-red-500/5"
-                            >
-                              <Heart className="w-5 h-5 fill-current" />
-                            </button>
-                          </div>
-                          <h3 className="font-black text-xl text-white mb-1 group-hover:text-cyan-400 transition-colors uppercase tracking-tight">{tool.name}</h3>
-                          <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg uppercase tracking-widest mb-4 inline-block border border-cyan-500/20">
-                            {tool.category}
-                          </span>
-                          <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed mb-6 font-medium">{tool.description}</p>
+            </div>
+          )
+        }
 
-                          <div className="grid grid-cols-2 gap-3 mb-6">
-                            <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> {tool.dailyCredits}</p>
-                            </div>
-                            <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Clock size={10} /> {tool.monthlyCredits}</p>
-                            </div>
-                          </div>
+        {/* Archive Tab */}
+        {
+          activeTab === 'archive' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Архив инструментов</h2>
+                  <p className="text-slate-400 text-sm mt-1">Каталог технологий и сервисов с AI-анализом</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400">{filteredTools.length} инструментов</span>
+                </div>
+              </div>
 
-                          <div className="flex items-center justify-between pt-6 border-t border-slate-700/50 mt-auto">
-                            <div className="space-y-0.5">
-                              <p className="text-[9px] font-black text-slate-500 uppercase">Tariff</p>
-                              <p className="text-lg font-black text-emerald-400">{tool.minPrice}</p>
-                            </div>
-                            <div className="flex gap-1.5">
-                              {tool.hasApi && <span className="bg-blue-400/10 text-blue-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-blue-500/20">API</span>}
-                              {tool.hasMcp && <span className="bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-emerald-500/20">MCP</span>}
-                            </div>
-                          </div>
+              <div className="flex flex-wrap gap-2 mb-6">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
+                      selectedCategory === cat
+                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-blue-500/25"
+                        : "bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700/50 border border-slate-700/50"
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredTools.map(tool => (
+                  <div
+                    key={tool.id}
+                    className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:border-cyan-500/40 hover:bg-slate-800/60 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 cursor-pointer flex flex-col h-full relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-20 h-20 bg-cyan-500/10 blur-3xl rounded-full" />
+                    </div>
+
+                    <div className="flex items-start justify-between mb-6 relative">
+                      <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+                        {tool.icon}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(`tool-${tool.id}`);
+                        }}
+                        className={cn(
+                          "p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md",
+                          favorites.includes(`tool-${tool.id}`)
+                            ? "text-red-400 bg-red-500/10 border-red-500/20 shadow-lg shadow-red-500/10"
+                            : "text-slate-500 hover:text-red-400 hover:bg-slate-700/50 border-white/5"
+                        )}
+                      >
+                        <Heart className={cn("w-6 h-6", favorites.includes(`tool-${tool.id}`) && "fill-current")} />
+                      </button>
+                    </div>
+
+                    <div className="mb-5 relative">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/20">
+                          {tool.category}
+                        </span>
+                        <div className="flex items-center gap-1 text-amber-400 text-xs font-bold">
+                          ★ {tool.rating}
+                        </div>
+                      </div>
+                      <h3 className="font-black text-2xl text-white group-hover:text-cyan-400 transition-colors uppercase tracking-tight leading-none mb-3">
+                        {tool.name}
+                      </h3>
+                    </div>
+
+                    <p className="text-sm text-slate-400 leading-relaxed mb-6 flex-grow line-clamp-3 font-medium">
+                      {tool.description}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-cyan-500/20 transition-colors">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                          <Zap size={12} className="text-cyan-400" /> Daily
+                        </p>
+                        <p className="text-sm font-black text-white">{tool.dailyCredits}</p>
+                      </div>
+                      <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-blue-500/20 transition-colors">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                          <Clock size={12} className="text-blue-400" /> Monthly
+                        </p>
+                        <p className="text-sm font-black text-white">{tool.monthlyCredits}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5 mb-8">
+                      {tool.details?.slice(0, 3).map((detail: any, i: number) => (
+                        <div key={i} className="flex items-center gap-3 text-xs text-slate-300 font-semibold group-hover:text-white transition-colors">
+                          <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-sm" />
+                          {detail.title}
                         </div>
                       ))}
                     </div>
-                  </section>
-                )}
 
-                {favoritePosts.length > 0 && (
-                  <section>
-                    <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-blue-400" />
-                      Новости и посты
-                    </h3>
-                    <div className="grid gap-4">
-                      {favoritePosts.map(post => (
-                        <div
-                          key={post.id}
-                          className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-slate-700 rounded-2xl p-6"
-                        >
-                          <div className="flex flex-col sm:flex-row gap-4">
-                            <img src={post.image} alt={post.title} loading="lazy" onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              if (target.src.includes('maxresdefault.jpg')) {
-                                target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
-                              } else if (target.src.includes('hqdefault.jpg')) {
-                                target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
-                              } else if (!target.src.includes('unsplash.com')) {
-                                target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
-                              }
-                            }} className="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-xl flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-white mb-1">{post.title}</h3>
-                              <p className="text-sm text-slate-400 line-clamp-1">{post.summary}</p>
-                              <div className="flex items-center gap-3 mt-2">
-                                <span className="text-xs text-slate-500">{post.channel}</span>
-                                <div className="flex items-center gap-2 ml-auto">
-                                  <a
-                                    href={post.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-amber-500 hover:text-amber-400 transition-colors"
-                                  >
-                                    <ExternalLink size={14} />
-                                  </a>
-                                  <button
-                                    onClick={() => toggleFavorite(`post-${post.id}`)}
-                                    className="text-red-400 text-xs font-medium hover:underline"
-                                  >
-                                    Удалить
-                                  </button>
+                    <div className="mt-auto pt-6 border-t border-slate-700/50 flex items-end justify-between">
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Plan</p>
+                        <p className="text-xl font-black text-emerald-400 tracking-tighter">{tool.minPrice}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        {tool.hasApi && (
+                          <div className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase tracking-tighter">API</div>
+                        )}
+                        {tool.hasMcp && (
+                          <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-black uppercase tracking-tighter">MCP</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button className="mt-7 w-full h-14 bg-gradient-to-r from-slate-700/50 to-slate-800/50 hover:from-cyan-500 hover:to-blue-600 hover:text-white text-slate-300 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-500 flex items-center justify-center gap-3 border border-white/5 hover:border-transparent hover:shadow-xl hover:shadow-blue-500/20">
+                      Открыть в Scout <ExternalLink size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        }
+
+        {/* Favorites Tab */}
+        {
+          activeTab === 'favorites' && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white">Ваше избранное</h2>
+                <p className="text-slate-400 text-sm mt-1">Сохраненные новости и инструменты</p>
+              </div>
+
+              {favoriteTools.length === 0 && favoritePosts.length === 0 ? (
+                <div className="text-center py-20 bg-slate-800/20 rounded-3xl border border-dashed border-slate-700">
+                  <Heart className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-400">Список пуст</h3>
+                  <p className="text-slate-500 text-sm mt-2">Добавляйте инструменты и новости в избранное, чтобы они появились здесь</p>
+                </div>
+              ) : (
+                <div className="space-y-12">
+                  {favoriteTools.length > 0 && (
+                    <section>
+                      <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                        <Wrench className="w-5 h-5 text-cyan-400" />
+                        Инструменты
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {favoriteTools.map(tool => (
+                          <div
+                            key={tool.id}
+                            className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:shadow-2xl transition-all duration-300 relative overflow-hidden"
+                          >
+                            <div className="flex items-start justify-between mb-6">
+                              <div className="w-14 h-14 bg-slate-700/50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                                {tool.icon}
+                              </div>
+                              <button
+                                onClick={() => toggleFavorite(`tool-${tool.id}`)}
+                                className="p-3 rounded-2xl text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20 shadow-lg shadow-red-500/5"
+                              >
+                                <Heart className="w-5 h-5 fill-current" />
+                              </button>
+                            </div>
+                            <h3 className="font-black text-xl text-white mb-1 group-hover:text-cyan-400 transition-colors uppercase tracking-tight">{tool.name}</h3>
+                            <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg uppercase tracking-widest mb-4 inline-block border border-cyan-500/20">
+                              {tool.category}
+                            </span>
+                            <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed mb-6 font-medium">{tool.description}</p>
+
+                            <div className="grid grid-cols-2 gap-3 mb-6">
+                              <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
+                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> {tool.dailyCredits}</p>
+                              </div>
+                              <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
+                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Clock size={10} /> {tool.monthlyCredits}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-6 border-t border-slate-700/50 mt-auto">
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] font-black text-slate-500 uppercase">Tariff</p>
+                                <p className="text-lg font-black text-emerald-400">{tool.minPrice}</p>
+                              </div>
+                              <div className="flex gap-1.5">
+                                {tool.hasApi && <span className="bg-blue-400/10 text-blue-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-blue-500/20">API</span>}
+                                {tool.hasMcp && <span className="bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-emerald-500/20">MCP</span>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {favoritePosts.length > 0 && (
+                    <section>
+                      <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-blue-400" />
+                        Новости и посты
+                      </h3>
+                      <div className="grid gap-4">
+                        {favoritePosts.map(post => (
+                          <div
+                            key={post.id}
+                            className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-slate-700 rounded-2xl p-6"
+                          >
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <img src={post.image} alt={post.title} loading="lazy" onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                if (target.src.includes('maxresdefault.jpg')) {
+                                  target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
+                                } else if (target.src.includes('hqdefault.jpg')) {
+                                  target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
+                                } else if (!target.src.includes('unsplash.com')) {
+                                  target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                                }
+                              }} className="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-xl flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-white mb-1">{post.title}</h3>
+                                <p className="text-sm text-slate-400 line-clamp-1">{post.summary}</p>
+                                <div className="flex items-center gap-3 mt-2">
+                                  <span className="text-xs text-slate-500">{post.channel}</span>
+                                  <div className="flex items-center gap-2 ml-auto">
+                                    <a
+                                      href={post.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-amber-500 hover:text-amber-400 transition-colors"
+                                    >
+                                      <ExternalLink size={14} />
+                                    </a>
+                                    <button
+                                      onClick={() => toggleFavorite(`post-${post.id}`)}
+                                      className="text-red-400 text-xs font-medium hover:underline"
+                                    >
+                                      Удалить
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-
-      {/* Floating Action Button */}
-      <button className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105 group">
-        <Plus className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
-      </button>
-
-      {/* Tool Detail Modal */}
-      {selectedTool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          <div
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
-            onClick={() => setSelectedTool(null)}
-          />
-          <div className="relative w-full max-w-2xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-[2.5rem] shadow-2xl overflow-y-auto animate-in zoom-in-95 duration-300 custom-scrollbar">
-            <div className="absolute top-6 right-6 z-10">
-              <button
-                onClick={() => setSelectedTool(null)}
-                className="p-2 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-8 sm:p-10">
-              <div className="flex items-start gap-6 mb-8">
-                <div className="w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl rounded-[1.5rem] flex items-center justify-center text-5xl">
-                  {selectedTool.icon}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-lg border border-cyan-500/20">
-                      {selectedTool.category}
-                    </span>
-                    <div className="flex items-center gap-1 text-amber-400 text-sm font-bold">
-                      ★ {selectedTool.rating}
-                    </div>
-                  </div>
-                  <h2 className="text-3xl font-black text-white uppercase tracking-tight leading-none mb-4">
-                    {selectedTool.name}
-                  </h2>
-                  <div className="flex gap-2">
-                    {selectedTool.hasApi && (
-                      <div className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-black uppercase">API Access</div>
-                    )}
-                    {selectedTool.hasMcp && (
-                      <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-black uppercase">MCP Ready</div>
-                    )}
-                    {(selectedTool as any).useCases && (
-                      <button
-                        onClick={() => document.getElementById('use-cases-section')?.scrollIntoView({ behavior: 'smooth' })}
-                        className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-black uppercase hover:bg-amber-500/20 transition-all flex items-center gap-1.5"
-                      >
-                        <Lightbulb size={12} /> Кейсы
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-8">
-                <section>
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 ml-1">Описание</h4>
-                  <p className="text-slate-300 leading-relaxed font-medium text-lg">
-                    {selectedTool.description}
-                  </p>
-                </section>
-
-                {selectedTool.id.toString().startsWith('dyn-') ? (
-                  <div className="bg-gradient-to-br from-purple-500/10 via-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-[2rem] p-8 text-center relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-700">
-                      <Sparkles size={120} className="text-cyan-400" />
-                    </div>
-                    <div className="relative z-10">
-                      <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-cyan-500/30">
-                        <Zap className="w-8 h-8 text-white" />
-                      </div>
-                      <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Мы уже собираем досье!</h3>
-                      <p className="text-base text-slate-300 max-w-md mx-auto mb-8 leading-relaxed">
-                        Эксперты упоминают <b>{selectedTool.name}</b>. Прямо сейчас наши AI-агенты сканируют интернет, чтобы подготовить детальный разбор тарифов, API и реальных бизнес-кейсов.
-                      </p>
-                      <button
-                        onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTool.name + ' AI tool')}`, '_blank')}
-                        className="inline-flex items-center gap-2 bg-white hover:bg-slate-200 text-black px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg active:scale-95"
-                      >
-                        Поискать в Google <ExternalLink size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-800/50 rounded-[1.5rem] p-5 border border-white/5">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                          <Zap size={14} className="text-cyan-400" /> Daily Limit
-                        </p>
-                        <p className="text-lg font-black text-white">{selectedTool.dailyCredits}</p>
-                      </div>
-                      <div className="bg-slate-800/50 rounded-[1.5rem] p-5 border border-white/5">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                          <Clock size={14} className="text-blue-400" /> Monthly Credits
-                        </p>
-                        <p className="text-lg font-black text-white">{selectedTool.monthlyCredits}</p>
-                      </div>
-                    </div>
-
-                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[1.5rem] p-6 flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Минимальный тариф</p>
-                        <p className="text-3xl font-black text-emerald-400 tracking-tighter">{selectedTool.minPrice}</p>
-                      </div>
-                      <button className="h-14 px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
-                        Подписаться
-                      </button>
-                    </div>
-
-                    <section>
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 ml-1">Ключевые особенности (кликабельно)</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {selectedTool.details?.map((detail: any, i: number) => (
-                          <button
-                            key={i}
-                            onClick={() => setSelectedFeature(detail)}
-                            className="flex items-center gap-3 p-3 bg-slate-800/30 rounded-xl border border-white/5 text-sm text-slate-300 font-semibold hover:text-white hover:border-cyan-500/30 transition-all text-left group/feature"
-                          >
-                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 group-hover/feature:shadow-[0_0_8px_rgba(6,182,212,0.8)] transition-all" />
-                            {detail.title}
-                          </button>
                         ))}
                       </div>
                     </section>
-                  </>
-                )}
-
-                {(selectedTool as any).useCases && (
-                  <section id="use-cases-section" className="scroll-mt-8">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
-                        <Lightbulb size={20} className="text-amber-400" />
-                      </div>
-                      <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Популярные бизнес-кейсы</h3>
-                    </div>
-                    <div className="space-y-3">
-                      {(selectedTool as any).useCases.map((useCase: any, i: number) => (
-                        <div
-                          key={i}
-                          onClick={() => setSelectedUseCase({ tool: selectedTool.name, case: useCase })}
-                          className="group flex flex-col p-5 bg-gradient-to-r from-slate-800/50 to-slate-800/20 rounded-2xl border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-4">
-                              <div className="w-2 h-2 rounded-full bg-amber-500/50 group-hover:bg-amber-400 transition-colors" />
-                              <p className="text-slate-200 font-bold group-hover:text-white transition-colors">{useCase.title}</p>
-                            </div>
-                            <span className={cn(
-                              "text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider",
-                              useCase.complexity === 'Simple' && "bg-emerald-500/10 text-emerald-500",
-                              useCase.complexity === 'Medium' && "bg-amber-500/10 text-amber-500",
-                              useCase.complexity === 'Hard' && "bg-red-500/10 text-red-500"
-                            )}>
-                              {useCase.complexity}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-400 ml-6 line-clamp-1 group-hover:text-slate-300 transition-colors">
-                            {useCase.description}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-              </div>
-
-              <div className="mt-10 flex gap-4">
-                <button
-                  onClick={() => toggleFavorite(`tool-${selectedTool.id}`)}
-                  className={cn(
-                    "flex-1 h-14 rounded-2xl font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2",
-                    favorites.includes(`tool-${selectedTool.id}`)
-                      ? "bg-red-500/10 text-red-500 border-red-500/20"
-                      : "bg-slate-800 text-slate-300 border-white/5 hover:bg-slate-700"
                   )}
-                >
-                  <Heart className={cn("w-5 h-5", favorites.includes(`tool-${selectedTool.id}`) && "fill-current")} />
-                  {favorites.includes(`tool-${selectedTool.id}`) ? "В избранном" : "В избранное"}
-                </button>
-                <button
-                  onClick={() => window.open(selectedTool.docsUrl, '_blank')}
-                  className="flex-1 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  Документация <ExternalLink size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Post Detail Modal (Summary & Guide) */}
-      {selectedPost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          <div
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
-            onClick={() => setSelectedPost(null)}
-          />
-          <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="absolute top-6 right-6 z-10">
-              <button
-                onClick={() => setSelectedPost(null)}
-                className="p-2 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-8 sm:p-12 overflow-y-auto max-h-[90vh]">
-              <div className="flex gap-6 mb-8 items-start">
-                <img
-                  src={selectedPost.image}
-                  alt={selectedPost.title}
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (target.src.includes('maxresdefault.jpg')) {
-                      target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
-                    } else if (target.src.includes('hqdefault.jpg')) {
-                      target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
-                    } else if (!target.src.includes('unsplash.com')) {
-                      target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
-                    }
-                  }}
-                  className="w-48 h-32 object-cover rounded-2xl shadow-xl border-2 border-slate-800"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={cn(
-                      "flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest",
-                      selectedPost.source === 'YouTube' ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"
-                    )}>
-                      {selectedPost.source === 'YouTube' ? <Youtube size={14} /> : <MessageCircle size={14} />}
-                      {selectedPost.source}
-                    </span>
-                    <span className="text-sm font-bold text-slate-500">@{selectedPost.channel}</span>
-                  </div>
-                  <h2 className="text-2xl font-black text-white leading-tight mb-4 uppercase tracking-tight">
-                    {selectedPost.title}
-                  </h2>
                 </div>
-              </div>
-
-              {/* Mentions Section - Tools mentioned in this post */}
-              {selectedPost.mentions.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">
-                      <Sparkles size={20} className="text-purple-400" />
-                    </div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Упомянутые инструменты</h3>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    {selectedPost.mentions.map(toolName => {
-                      const toolObj = allTools.find(t => t.name.toLowerCase() === toolName.toLowerCase() || toolName.toLowerCase().includes(t.name.toLowerCase()));
-                      return (
-                        <button
-                          key={toolName}
-                          onClick={() => toolObj && setSelectedTool(toolObj)}
-                          className={cn(
-                            "flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-800/50 rounded-2xl border transition-all group",
-                            toolObj
-                              ? "border-white/10 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer"
-                              : "border-white/5 opacity-50 cursor-default"
-                          )}
-                        >
-                          {toolObj && (
-                            <>
-                              <span className="text-xl">{toolObj.icon}</span>
-                              <div className="text-left">
-                                <p className="text-sm font-black text-white uppercase tracking-tight group-hover:text-purple-400 transition-colors">
-                                  {toolName}
-                                </p>
-                                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-                                  {toolObj.category}
-                                </p>
-                              </div>
-                              <ArrowRight size={14} className="text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all ml-2" />
-                            </>
-                          )}
-                          {!toolObj && (
-                            <span className="text-sm text-slate-400 font-medium">{toolName}</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
               )}
-
-              <div className="space-y-10">
-                <section>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center">
-                      <Brain size={20} className="text-cyan-400" />
-                    </div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">AI Анализ контента</h3>
-                  </div>
-                  <div className="bg-slate-850 p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                      <Sparkles size={120} />
-                    </div>
-                    <div className="text-slate-300 leading-relaxed text-lg font-medium relative z-10">
-                      {selectedPost.detailedUsage?.split('\n').map((paragraph, idx) => (
-                        <span key={idx} className="block mb-3 last:mb-0">
-                          {paragraph}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-
-                <section>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-                      <Zap size={20} className="text-emerald-400" />
-                    </div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Как использовать эффективнее</h3>
-                  </div>
-                  <div className="grid gap-4">
-                    {selectedPost.usageTips?.map((tip, i) => (
-                      <div key={i} className="flex items-start gap-4 p-5 bg-slate-800/40 rounded-2xl border border-white/5 hover:border-emerald-500/20 transition-all group">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-black text-sm group-hover:bg-emerald-500 group-hover:text-black transition-all">
-                          {i + 1}
-                        </div>
-                        <p className="text-slate-200 font-semibold pt-1">{tip}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <div className="flex items-center justify-between p-8 bg-gradient-to-r from-slate-800 to-slate-800/40 rounded-[2rem] border border-white/10">
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <p className="text-[10px] font-black text-slate-500 uppercase">Views</p>
-                      <p className="text-xl font-black text-white tracking-widest leading-none mt-1">{selectedPost.views}</p>
-                    </div>
-                    <div className="w-px h-8 bg-white/10" />
-                    <div className="text-center">
-                      <p className="text-[10px] font-black text-slate-500 uppercase">Released</p>
-                      <p className="text-lg font-black text-slate-300 leading-none mt-1">{selectedPost.date}</p>
-                    </div>
-                  </div>
-                  <a
-                    href={selectedPost.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-14 px-8 bg-white text-black font-black uppercase tracking-widest rounded-2xl flex items-center gap-3 hover:bg-cyan-400 transition-all hover:shadow-xl hover:shadow-cyan-400/20"
-                  >
-                    Смотреть источник <ExternalLink size={18} />
-                  </a>
-                </div>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )
+        }
+      </main >
 
-      {/* Use Case Implementation Modal */}
-      {selectedUseCase && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
-          <div
-            className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300"
-            onClick={() => setSelectedUseCase(null)}
-          />
-          <div className="relative w-full max-w-2xl bg-slate-900 border border-amber-500/20 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 sm:p-10">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-black">
-                    <Layers size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Реализация кейса</p>
-                    <h2 className="text-2xl font-black text-white uppercase tracking-tight">{selectedUseCase.case.title}</h2>
-                  </div>
-                </div>
+      {/* Floating Action Button */}
+      < button className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105 group" >
+        <Plus className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
+      </button >
+
+      {/* Tool Detail Modal */}
+      {
+        selectedTool && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <div
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
+              onClick={() => setSelectedTool(null)}
+            />
+            <div className="relative w-full max-w-2xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-[2.5rem] shadow-2xl overflow-y-auto animate-in zoom-in-95 duration-300 custom-scrollbar">
+              <div className="absolute top-6 right-6 z-10">
                 <button
-                  onClick={() => setSelectedUseCase(null)}
+                  onClick={() => setSelectedTool(null)}
                   className="p-2 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="space-y-8">
+              <div className="p-8 sm:p-10">
+                <div className="flex items-start gap-6 mb-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl rounded-[1.5rem] flex items-center justify-center text-5xl">
+                    {selectedTool.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-lg border border-cyan-500/20">
+                        {selectedTool.category}
+                      </span>
+                      <div className="flex items-center gap-1 text-amber-400 text-sm font-bold">
+                        ★ {selectedTool.rating}
+                      </div>
+                    </div>
+                    <h2 className="text-3xl font-black text-white uppercase tracking-tight leading-none mb-4">
+                      {selectedTool.name}
+                    </h2>
+                    <div className="flex gap-2">
+                      {selectedTool.hasApi && (
+                        <div className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-black uppercase">API Access</div>
+                      )}
+                      {selectedTool.hasMcp && (
+                        <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-black uppercase">MCP Ready</div>
+                      )}
+                      {(selectedTool as any).useCases && (
+                        <button
+                          onClick={() => document.getElementById('use-cases-section')?.scrollIntoView({ behavior: 'smooth' })}
+                          className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-black uppercase hover:bg-amber-500/20 transition-all flex items-center gap-1.5"
+                        >
+                          <Lightbulb size={12} /> Кейсы
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  <section>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 ml-1">Описание</h4>
+                    <p className="text-slate-300 leading-relaxed font-medium text-lg">
+                      {selectedTool.description}
+                    </p>
+                  </section>
+
+                  {selectedTool.id.toString().startsWith('dyn-') ? (
+                    <div className="bg-gradient-to-br from-purple-500/10 via-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-[2rem] p-8 text-center relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+                        <Sparkles size={120} className="text-cyan-400" />
+                      </div>
+                      <div className="relative z-10">
+                        <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-cyan-500/30">
+                          <Zap className="w-8 h-8 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Мы уже собираем досье!</h3>
+                        <p className="text-base text-slate-300 max-w-md mx-auto mb-8 leading-relaxed">
+                          Эксперты упоминают <b>{selectedTool.name}</b>. Прямо сейчас наши AI-агенты сканируют интернет, чтобы подготовить детальный разбор тарифов, API и реальных бизнес-кейсов.
+                        </p>
+                        <button
+                          onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTool.name + ' AI tool')}`, '_blank')}
+                          className="inline-flex items-center gap-2 bg-white hover:bg-slate-200 text-black px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg active:scale-95"
+                        >
+                          Поискать в Google <ExternalLink size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-800/50 rounded-[1.5rem] p-5 border border-white/5">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <Zap size={14} className="text-cyan-400" /> Daily Limit
+                          </p>
+                          <p className="text-lg font-black text-white">{selectedTool.dailyCredits}</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-[1.5rem] p-5 border border-white/5">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <Clock size={14} className="text-blue-400" /> Monthly Credits
+                          </p>
+                          <p className="text-lg font-black text-white">{selectedTool.monthlyCredits}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[1.5rem] p-6 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Минимальный тариф</p>
+                          <p className="text-3xl font-black text-emerald-400 tracking-tighter">{selectedTool.minPrice}</p>
+                        </div>
+                        <button className="h-14 px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
+                          Подписаться
+                        </button>
+                      </div>
+
+                      <section>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 ml-1">Ключевые особенности (кликабельно)</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {selectedTool.details?.map((detail: any, i: number) => (
+                            <button
+                              key={i}
+                              onClick={() => setSelectedFeature(detail)}
+                              className="flex items-center gap-3 p-3 bg-slate-800/30 rounded-xl border border-white/5 text-sm text-slate-300 font-semibold hover:text-white hover:border-cyan-500/30 transition-all text-left group/feature"
+                            >
+                              <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 group-hover/feature:shadow-[0_0_8px_rgba(6,182,212,0.8)] transition-all" />
+                              {detail.title}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    </>
+                  )}
+
+                  {(selectedTool as any).useCases && (
+                    <section id="use-cases-section" className="scroll-mt-8">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
+                          <Lightbulb size={20} className="text-amber-400" />
+                        </div>
+                        <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Популярные бизнес-кейсы</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {(selectedTool as any).useCases.map((useCase: any, i: number) => (
+                          <div
+                            key={i}
+                            onClick={() => setSelectedUseCase({ tool: selectedTool.name, case: useCase })}
+                            className="group flex flex-col p-5 bg-gradient-to-r from-slate-800/50 to-slate-800/20 rounded-2xl border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-4">
+                                <div className="w-2 h-2 rounded-full bg-amber-500/50 group-hover:bg-amber-400 transition-colors" />
+                                <p className="text-slate-200 font-bold group-hover:text-white transition-colors">{useCase.title}</p>
+                              </div>
+                              <span className={cn(
+                                "text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider",
+                                useCase.complexity === 'Simple' && "bg-emerald-500/10 text-emerald-500",
+                                useCase.complexity === 'Medium' && "bg-amber-500/10 text-amber-500",
+                                useCase.complexity === 'Hard' && "bg-red-500/10 text-red-500"
+                              )}>
+                                {useCase.complexity}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 ml-6 line-clamp-1 group-hover:text-slate-300 transition-colors">
+                              {useCase.description}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
+
+                <div className="mt-10 flex gap-4">
+                  <button
+                    onClick={() => toggleFavorite(`tool-${selectedTool.id}`)}
+                    className={cn(
+                      "flex-1 h-14 rounded-2xl font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2",
+                      favorites.includes(`tool-${selectedTool.id}`)
+                        ? "bg-red-500/10 text-red-500 border-red-500/20"
+                        : "bg-slate-800 text-slate-300 border-white/5 hover:bg-slate-700"
+                    )}
+                  >
+                    <Heart className={cn("w-5 h-5", favorites.includes(`tool-${selectedTool.id}`) && "fill-current")} />
+                    {favorites.includes(`tool-${selectedTool.id}`) ? "В избранном" : "В избранное"}
+                  </button>
+                  <button
+                    onClick={() => window.open(selectedTool.docsUrl, '_blank')}
+                    className="flex-1 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    Документация <ExternalLink size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Post Detail Modal (Summary & Guide) */}
+      {
+        selectedPost && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <div
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
+              onClick={() => setSelectedPost(null)}
+            />
+            <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+              <div className="absolute top-6 right-6 z-10">
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="p-2 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-8 sm:p-12 overflow-y-auto max-h-[90vh]">
+                <div className="flex gap-6 mb-8 items-start">
+                  <img
+                    src={selectedPost.image}
+                    alt={selectedPost.title}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target.src.includes('maxresdefault.jpg')) {
+                        target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
+                      } else if (target.src.includes('hqdefault.jpg')) {
+                        target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
+                      } else if (!target.src.includes('unsplash.com')) {
+                        target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                      }
+                    }}
+                    className="w-48 h-32 object-cover rounded-2xl shadow-xl border-2 border-slate-800"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={cn(
+                        "flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest",
+                        selectedPost.source === 'YouTube' ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"
+                      )}>
+                        {selectedPost.source === 'YouTube' ? <Youtube size={14} /> : <MessageCircle size={14} />}
+                        {selectedPost.source}
+                      </span>
+                      <span className="text-sm font-bold text-slate-500">@{selectedPost.channel}</span>
+                    </div>
+                    <h2 className="text-2xl font-black text-white leading-tight mb-4 uppercase tracking-tight">
+                      {selectedPost.title}
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Mentions Section - Tools mentioned in this post */}
+                {selectedPost.mentions.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                        <Sparkles size={20} className="text-purple-400" />
+                      </div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Упомянутые инструменты</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {selectedPost.mentions
+                        .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.toLowerCase()))
+                        .map(toolName => {
+                          const toolObj = allTools.find(t => t.name.toLowerCase() === toolName.toLowerCase() || toolName.toLowerCase().includes(t.name.toLowerCase()));
+                          return (
+                            <button
+                              key={toolName}
+                              onClick={() => toolObj && setSelectedTool(toolObj)}
+                              className={cn(
+                                "flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-800/50 rounded-2xl border transition-all group",
+                                toolObj
+                                  ? "border-white/10 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer"
+                                  : "border-white/5 opacity-50 cursor-default"
+                              )}
+                            >
+                              {toolObj && (
+                                <>
+                                  <span className="text-xl">{toolObj.icon}</span>
+                                  <div className="text-left">
+                                    <p className="text-sm font-black text-white uppercase tracking-tight group-hover:text-purple-400 transition-colors">
+                                      {toolName}
+                                    </p>
+                                    <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                                      {toolObj.category}
+                                    </p>
+                                  </div>
+                                  <ArrowRight size={14} className="text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all ml-2" />
+                                </>
+                              )}
+                              {!toolObj && (
+                                <span className="text-sm text-slate-400 font-medium">{toolName}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </section>
+                )}
+
+                <div className="space-y-10">
+                  <section>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center">
+                        <Brain size={20} className="text-cyan-400" />
+                      </div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">AI Анализ контента</h3>
+                    </div>
+                    <div className="bg-slate-850 p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-8 opacity-5">
+                        <Sparkles size={120} />
+                      </div>
+                      <div className="text-slate-300 leading-relaxed text-lg font-medium relative z-10">
+                        {selectedPost.detailedUsage?.split('\n').map((paragraph, idx) => (
+                          <span key={idx} className="block mb-3 last:mb-0">
+                            {paragraph}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                        <Zap size={20} className="text-emerald-400" />
+                      </div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Как использовать эффективнее</h3>
+                    </div>
+                    <div className="grid gap-4">
+                      {selectedPost.usageTips?.map((tip, i) => (
+                        <div key={i} className="flex items-start gap-4 p-5 bg-slate-800/40 rounded-2xl border border-white/5 hover:border-emerald-500/20 transition-all group">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-black text-sm group-hover:bg-emerald-500 group-hover:text-black transition-all">
+                            {i + 1}
+                          </div>
+                          <p className="text-slate-200 font-semibold pt-1">{tip}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <div className="flex items-center justify-between p-8 bg-gradient-to-r from-slate-800 to-slate-800/40 rounded-[2rem] border border-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <p className="text-[10px] font-black text-slate-500 uppercase">Views</p>
+                        <p className="text-xl font-black text-white tracking-widest leading-none mt-1">{selectedPost.views}</p>
+                      </div>
+                      <div className="w-px h-8 bg-white/10" />
+                      <div className="text-center">
+                        <p className="text-[10px] font-black text-slate-500 uppercase">Released</p>
+                        <p className="text-lg font-black text-slate-300 leading-none mt-1">{selectedPost.date}</p>
+                      </div>
+                    </div>
+                    <a
+                      href={selectedPost.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-14 px-8 bg-white text-black font-black uppercase tracking-widest rounded-2xl flex items-center gap-3 hover:bg-cyan-400 transition-all hover:shadow-xl hover:shadow-cyan-400/20"
+                    >
+                      Смотреть источник <ExternalLink size={18} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Use Case Implementation Modal */}
+      {
+        selectedUseCase && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
+            <div
+              className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300"
+              onClick={() => setSelectedUseCase(null)}
+            />
+            <div className="relative w-full max-w-2xl bg-slate-900 border border-amber-500/20 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+              <div className="p-8 sm:p-10">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-black">
+                      <Layers size={24} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Реализация кейса</p>
+                      <h2 className="text-2xl font-black text-white uppercase tracking-tight">{selectedUseCase.case.title}</h2>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedUseCase(null)}
+                    className="p-2 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-8">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                      <Brain size={16} className="text-amber-400" /> Концепция
+                    </h3>
+                    <p className="text-slate-300 text-lg leading-relaxed font-medium bg-slate-800/50 p-6 rounded-3xl border border-white/5">
+                      {selectedUseCase.case.description}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                      <Terminal size={16} className="text-amber-400" /> Шаги реализации
+                    </h3>
+                    <div className="grid gap-3">
+                      {selectedUseCase.case.steps.map((step: string, i: number) => (
+                        <div key={i} className="flex items-start gap-4 p-5 bg-slate-800/30 rounded-2xl border border-white/5 group hover:bg-slate-800/50 transition-all">
+                          <div className="min-w-[2rem] h-8 rounded-lg bg-amber-500 text-black flex items-center justify-center font-black text-sm">
+                            {i + 1}
+                          </div>
+                          <p className="text-slate-200 font-bold pt-1">{step}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 p-6 rounded-[2rem] border border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                        <Code size={20} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-blue-300 uppercase leading-none mb-1 text-left">Технологии</p>
+                        <p className="text-white font-black uppercase text-sm">{selectedUseCase.tool}</p>
+                      </div>
+                    </div>
+                    <a
+                      href={allTools.find(t => t.name === selectedUseCase.tool)?.docsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-12 px-6 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center"
+                    >
+                      Открыть документацию
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Feature Info Modal (Tooltip substitute) */}
+      {
+        selectedFeature && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+            <div
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setSelectedFeature(null)}
+            />
+            <div className="relative w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-cyan-500/10 rounded-lg flex items-center justify-center text-cyan-400">
+                      <Sparkles size={16} />
+                    </div>
+                    <h3 className="font-black text-white text-sm uppercase tracking-wider">{selectedFeature.title}</h3>
+                  </div>
+                  <button
+                    onClick={() => setSelectedFeature(null)}
+                    className="text-slate-500 hover:text-white transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                  {selectedFeature.description}
+                </p>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setSelectedFeature(null)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-black uppercase rounded-lg transition-all"
+                  >
+                    Понятно
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {/* Add Channel Modal */}
+      {
+        isAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setIsAddModalOpen(false)}
+            />
+            <div className="relative bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <h2 className="text-xl font-bold text-white mb-2">Добавить канал</h2>
+              <p className="text-slate-400 text-sm mb-6">Добавьте @username или URL канала YouTube/Telegram</p>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const url = formData.get('channelUrl') as string;
+                  const source = formData.get('source') as 'YouTube' | 'Telegram';
+
+                  if (url.trim()) {
+                    // Extract channel name from URL or @username
+                    let name = url.trim();
+                    if (url.startsWith('@')) {
+                      // Telegram @username format
+                      name = url.substring(1);
+                    } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                      const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
+                      if (match) name = match[1];
+                    } else if (url.includes('t.me')) {
+                      const match = url.match(/t\.me\/([^/?]+)/);
+                      if (match) name = match[1];
+                    }
+
+                    const newChannel = {
+                      id: `channel-${Date.now()}`,
+                      url: url.trim(),
+                      source,
+                      name
+                    };
+
+                    setIsLoadingChannel(true);
+
+                    try {
+                      // Сохраняем канал в БД
+                      const supabase = getClient();
+                      if (supabase) {
+                        const { data: insertedChannel, error: channelError } = await supabase.from('channels').upsert([{
+                          name: newChannel.name,
+                          source: newChannel.source,
+                          url: newChannel.url
+                        }], { onConflict: 'url' }).select().single();
+
+                        if (!channelError && insertedChannel) {
+                          newChannel.id = insertedChannel.id;
+                        }
+                      }
+
+                      // Получаем последнюю новость с канала через API
+                      const latestPost = await fetchLatestPost(newChannel);
+
+                      // Всегда генерируем полное AI-саммари через API, чтобы получить теги и упомянутые сервисы
+                      const aiSummary = await generateAISummary(latestPost);
+
+                      // Если API канала уже вернуло хорошее саммари, а у нас заглушка, берем API саммари
+                      if (latestPost.summary && aiSummary.summary === 'Контент недоступен') {
+                        aiSummary.summary = latestPost.summary;
+                      }
+
+                      // Форматируем дату
+                      const formatDate = (dateStr: string): string => {
+                        if (!dateStr) return 'Только что';
+                        try {
+                          const date = new Date(dateStr);
+                          const now = new Date();
+                          const diffMs = now.getTime() - date.getTime();
+                          const diffMins = Math.floor(diffMs / 60000);
+                          const diffHours = Math.floor(diffMins / 60);
+                          const diffDays = Math.floor(diffHours / 24);
+
+                          if (diffMins < 1) return 'Только что';
+                          if (diffMins < 60) return `${diffMins} мин. назад`;
+                          if (diffHours < 24) return `${diffHours} ч. назад`;
+                          if (diffDays < 7) return `${diffDays} дн. назад`;
+                          return date.toLocaleDateString('ru-RU');
+                        } catch {
+                          return 'Только что';
+                        }
+                      };
+
+                      // Создаем новый пост с реальными данными
+                      const newPost: Post = {
+                        id: Date.now(),
+                        title: latestPost.title || 'Без названия',
+                        summary: aiSummary.summary,
+                        source: source,
+                        channel: latestPost.channel || name,
+                        date: formatDate(latestPost.date || ''),
+                        tags: aiSummary.tags,
+                        mentions: aiSummary.mentions,
+                        views: '0',
+                        image: latestPost.image || 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=400&h=200',
+                        url: latestPost.url || url.trim(),
+                        detailedUsage: aiSummary.detailedUsage,
+                        usageTips: aiSummary.usageTips
+                      };
+
+                      // Сохраняем в Supabase
+                      if (supabase) {
+                        try {
+                          const { data: insertedPost, error } = await supabase.from('posts').upsert([{
+                            title: newPost.title,
+                            summary: newPost.summary,
+                            source: newPost.source,
+                            channel: newPost.channel,
+                            date: new Date().toISOString(), // Используем ISO формат для БД
+                            tags: newPost.tags,
+                            mentions: newPost.mentions,
+                            views: newPost.views || '0',
+                            image: newPost.image,
+                            url: newPost.url,
+                            detailed_usage: newPost.detailedUsage,
+                            usage_tips: newPost.usageTips,
+                            is_analyzed: true
+                          }], { onConflict: 'url' }).select().single();
+
+                          if (error) {
+                            console.error('Error saving post to Supabase:', error);
+                          } else if (insertedPost) {
+                            // Используем ID из базы для корректного отображения и хранения
+                            newPost.id = typeof insertedPost.id === 'string' ? parseInt(insertedPost.id.slice(0, 8), 16) : insertedPost.id;
+                          }
+                        } catch (dbError) {
+                          console.error('Exception saving to DB:', dbError);
+                        }
+                      }
+
+                      // Добавляем канал и новую новость в начало списка
+                      setChannels(prev => [newChannel, ...prev]);
+                      setPosts(prev => [newPost, ...prev]);
+                    } catch (error) {
+                      console.error('Error fetching channel data:', error);
+                      // Добавляем канал даже если произошла ошибка
+                      setChannels(prev => [newChannel, ...prev]);
+                    } finally {
+                      setIsLoadingChannel(false);
+                      setIsAddModalOpen(false);
+                    }
+                  }
+                }}
+                className="space-y-4"
+              >
                 <div>
-                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                    <Brain size={16} className="text-amber-400" /> Концепция
-                  </h3>
-                  <p className="text-slate-300 text-lg leading-relaxed font-medium bg-slate-800/50 p-6 rounded-3xl border border-white/5">
-                    {selectedUseCase.case.description}
-                  </p>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">URL канала</label>
+                  <input
+                    name="channelUrl"
+                    type="text"
+                    placeholder="@channel или https://t.me/channel"
+                    className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                    required
+                  />
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                    <Terminal size={16} className="text-amber-400" /> Шаги реализации
-                  </h3>
-                  <div className="grid gap-3">
-                    {selectedUseCase.case.steps.map((step: string, i: number) => (
-                      <div key={i} className="flex items-start gap-4 p-5 bg-slate-800/30 rounded-2xl border border-white/5 group hover:bg-slate-800/50 transition-all">
-                        <div className="min-w-[2rem] h-8 rounded-lg bg-amber-500 text-black flex items-center justify-center font-black text-sm">
-                          {i + 1}
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Платформа</label>
+                  <div className="flex gap-3">
+                    <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-red-500/50 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-500/10">
+                      <input type="radio" name="source" value="YouTube" className="sr-only" defaultChecked />
+                      <Youtube className="w-5 h-5 text-red-400" />
+                      <span className="text-sm font-medium">YouTube</span>
+                    </label>
+                    <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-500/10">
+                      <input type="radio" name="source" value="Telegram" className="sr-only" />
+                      <MessageCircle className="w-5 h-5 text-blue-400" />
+                      <span className="text-sm font-medium">Telegram</span>
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoadingChannel}
+                  className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isLoadingChannel ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Загрузка...
+                    </>
+                  ) : (
+                    'Добавить канал'
+                  )}
+                </button>
+              </form>
+
+              {channels.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <h3 className="text-sm font-medium text-slate-400 mb-3">Добавленные каналы</h3>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {channels.map(channel => (
+                      <div key={channel.id} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          {channel.source === 'YouTube'
+                            ? <Youtube className="w-4 h-4 text-red-400" />
+                            : <MessageCircle className="w-4 h-4 text-blue-400" />
+                          }
+                          <span className="text-sm text-white truncate max-w-[150px]">{channel.name}</span>
                         </div>
-                        <p className="text-slate-200 font-bold pt-1">{step}</p>
+                        <button
+                          onClick={() => setChannels(prev => prev.filter(c => c.id !== channel.id))}
+                          className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
                       </div>
                     ))}
                   </div>
                 </div>
-
-                <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 p-6 rounded-[2rem] border border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                      <Code size={20} className="text-white" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-blue-300 uppercase leading-none mb-1 text-left">Технологии</p>
-                      <p className="text-white font-black uppercase text-sm">{selectedUseCase.tool}</p>
-                    </div>
-                  </div>
-                  <a
-                    href={allTools.find(t => t.name === selectedUseCase.tool)?.docsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-12 px-6 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center"
-                  >
-                    Открыть документацию
-                  </a>
-                </div>
-              </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Feature Info Modal (Tooltip substitute) */}
-      {selectedFeature && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
-          <div
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setSelectedFeature(null)}
-          />
-          <div className="relative w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-cyan-500/10 rounded-lg flex items-center justify-center text-cyan-400">
-                    <Sparkles size={16} />
-                  </div>
-                  <h3 className="font-black text-white text-sm uppercase tracking-wider">{selectedFeature.title}</h3>
-                </div>
-                <button
-                  onClick={() => setSelectedFeature(null)}
-                  className="text-slate-500 hover:text-white transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <p className="text-slate-300 text-sm leading-relaxed font-medium">
-                {selectedFeature.description}
-              </p>
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setSelectedFeature(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-black uppercase rounded-lg transition-all"
-                >
-                  Понятно
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Add Channel Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setIsAddModalOpen(false)}
-          />
-          <div className="relative bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <button
-              onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white transition-colors"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-xl font-bold text-white mb-2">Добавить канал</h2>
-            <p className="text-slate-400 text-sm mb-6">Добавьте @username или URL канала YouTube/Telegram</p>
-
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const url = formData.get('channelUrl') as string;
-                const source = formData.get('source') as 'YouTube' | 'Telegram';
-
-                if (url.trim()) {
-                  // Extract channel name from URL or @username
-                  let name = url.trim();
-                  if (url.startsWith('@')) {
-                    // Telegram @username format
-                    name = url.substring(1);
-                  } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-                    const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
-                    if (match) name = match[1];
-                  } else if (url.includes('t.me')) {
-                    const match = url.match(/t\.me\/([^/?]+)/);
-                    if (match) name = match[1];
-                  }
-
-                  const newChannel = {
-                    id: `channel-${Date.now()}`,
-                    url: url.trim(),
-                    source,
-                    name
-                  };
-
-                  setIsLoadingChannel(true);
-
-                  try {
-                    // Сохраняем канал в БД
-                    const supabase = getClient();
-                    if (supabase) {
-                      const { data: insertedChannel, error: channelError } = await supabase.from('channels').upsert([{
-                        name: newChannel.name,
-                        source: newChannel.source,
-                        url: newChannel.url
-                      }], { onConflict: 'url' }).select().single();
-
-                      if (!channelError && insertedChannel) {
-                        newChannel.id = insertedChannel.id;
-                      }
-                    }
-
-                    // Получаем последнюю новость с канала через API
-                    const latestPost = await fetchLatestPost(newChannel);
-
-                    // Всегда генерируем полное AI-саммари через API, чтобы получить теги и упомянутые сервисы
-                    const aiSummary = await generateAISummary(latestPost);
-
-                    // Если API канала уже вернуло хорошее саммари, а у нас заглушка, берем API саммари
-                    if (latestPost.summary && aiSummary.summary === 'Контент недоступен') {
-                      aiSummary.summary = latestPost.summary;
-                    }
-
-                    // Форматируем дату
-                    const formatDate = (dateStr: string): string => {
-                      if (!dateStr) return 'Только что';
-                      try {
-                        const date = new Date(dateStr);
-                        const now = new Date();
-                        const diffMs = now.getTime() - date.getTime();
-                        const diffMins = Math.floor(diffMs / 60000);
-                        const diffHours = Math.floor(diffMins / 60);
-                        const diffDays = Math.floor(diffHours / 24);
-
-                        if (diffMins < 1) return 'Только что';
-                        if (diffMins < 60) return `${diffMins} мин. назад`;
-                        if (diffHours < 24) return `${diffHours} ч. назад`;
-                        if (diffDays < 7) return `${diffDays} дн. назад`;
-                        return date.toLocaleDateString('ru-RU');
-                      } catch {
-                        return 'Только что';
-                      }
-                    };
-
-                    // Создаем новый пост с реальными данными
-                    const newPost: Post = {
-                      id: Date.now(),
-                      title: latestPost.title || 'Без названия',
-                      summary: aiSummary.summary,
-                      source: source,
-                      channel: latestPost.channel || name,
-                      date: formatDate(latestPost.date || ''),
-                      tags: aiSummary.tags,
-                      mentions: aiSummary.mentions,
-                      views: '0',
-                      image: latestPost.image || 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=400&h=200',
-                      url: latestPost.url || url.trim(),
-                      detailedUsage: aiSummary.detailedUsage,
-                      usageTips: aiSummary.usageTips
-                    };
-
-                    // Сохраняем в Supabase
-                    if (supabase) {
-                      try {
-                        const { data: insertedPost, error } = await supabase.from('posts').upsert([{
-                          title: newPost.title,
-                          summary: newPost.summary,
-                          source: newPost.source,
-                          channel: newPost.channel,
-                          date: new Date().toISOString(), // Используем ISO формат для БД
-                          tags: newPost.tags,
-                          mentions: newPost.mentions,
-                          views: newPost.views || '0',
-                          image: newPost.image,
-                          url: newPost.url,
-                          detailed_usage: newPost.detailedUsage,
-                          usage_tips: newPost.usageTips,
-                          is_analyzed: true
-                        }], { onConflict: 'url' }).select().single();
-
-                        if (error) {
-                          console.error('Error saving post to Supabase:', error);
-                        } else if (insertedPost) {
-                          // Используем ID из базы для корректного отображения и хранения
-                          newPost.id = typeof insertedPost.id === 'string' ? parseInt(insertedPost.id.slice(0, 8), 16) : insertedPost.id;
-                        }
-                      } catch (dbError) {
-                        console.error('Exception saving to DB:', dbError);
-                      }
-                    }
-
-                    // Добавляем канал и новую новость в начало списка
-                    setChannels(prev => [newChannel, ...prev]);
-                    setPosts(prev => [newPost, ...prev]);
-                  } catch (error) {
-                    console.error('Error fetching channel data:', error);
-                    // Добавляем канал даже если произошла ошибка
-                    setChannels(prev => [newChannel, ...prev]);
-                  } finally {
-                    setIsLoadingChannel(false);
-                    setIsAddModalOpen(false);
-                  }
-                }
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">URL канала</label>
-                <input
-                  name="channelUrl"
-                  type="text"
-                  placeholder="@channel или https://t.me/channel"
-                  className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Платформа</label>
-                <div className="flex gap-3">
-                  <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-red-500/50 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-500/10">
-                    <input type="radio" name="source" value="YouTube" className="sr-only" defaultChecked />
-                    <Youtube className="w-5 h-5 text-red-400" />
-                    <span className="text-sm font-medium">YouTube</span>
-                  </label>
-                  <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-500/10">
-                    <input type="radio" name="source" value="Telegram" className="sr-only" />
-                    <MessageCircle className="w-5 h-5 text-blue-400" />
-                    <span className="text-sm font-medium">Telegram</span>
-                  </label>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoadingChannel}
-                className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoadingChannel ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Загрузка...
-                  </>
-                ) : (
-                  'Добавить канал'
-                )}
-              </button>
-            </form>
-
-            {channels.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <h3 className="text-sm font-medium text-slate-400 mb-3">Добавленные каналы</h3>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {channels.map(channel => (
-                    <div key={channel.id} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        {channel.source === 'YouTube'
-                          ? <Youtube className="w-4 h-4 text-red-400" />
-                          : <MessageCircle className="w-4 h-4 text-blue-400" />
-                        }
-                        <span className="text-sm text-white truncate max-w-[150px]">{channel.name}</span>
-                      </div>
-                      <button
-                        onClick={() => setChannels(prev => prev.filter(c => c.id !== channel.id))}
-                        className="p-1 text-slate-400 hover:text-red-400 transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

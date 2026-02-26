@@ -85,45 +85,47 @@ export const FeedTab: React.FC<FeedTabProps> = ({
                                             <span className="text-slate-600">|</span>
                                             <span className="text-xs text-slate-500">Упомянуто:</span>
                                             <div className="flex flex-wrap gap-1">
-                                                {post.mentions.map((toolName: string) => {
-                                                    const existingToolObj = tools.find((t) =>
-                                                        t.name.toLowerCase() === toolName.toLowerCase() ||
-                                                        toolName.toLowerCase().includes(t.name.toLowerCase())
-                                                    );
+                                                {post.mentions
+                                                    .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.toLowerCase()))
+                                                    .map((toolName: string) => {
+                                                        const existingToolObj = tools.find((t) =>
+                                                            t.name.toLowerCase() === toolName.toLowerCase() ||
+                                                            toolName.toLowerCase().includes(t.name.toLowerCase())
+                                                        );
 
-                                                    const toolObj = existingToolObj || {
-                                                        id: `dyn-${toolName}`,
-                                                        name: toolName,
-                                                        category: "AI/Tech",
-                                                        description: `Инструмент ${toolName} был упомянут в этом посте. Детальная информация и обзоры для него пока собираются нашей системой.`,
-                                                        icon: "⚙️",
-                                                        rating: 4.5,
-                                                        dailyCredits: "Н/Д",
-                                                        monthlyCredits: "Н/Д",
-                                                        minPrice: "Н/Д",
-                                                        hasApi: false,
-                                                        hasMcp: false,
-                                                        details: [],
-                                                        pros: ["Упоминается экспертами"],
-                                                        docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName)}`
-                                                    };
+                                                        const toolObj = existingToolObj || {
+                                                            id: `dyn-${toolName}`,
+                                                            name: toolName,
+                                                            category: "AI Service",
+                                                            description: `Интеллектуальный анализ применения ${toolName} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
+                                                            icon: "✨",
+                                                            rating: 4.8,
+                                                            dailyCredits: "Уточняется",
+                                                            monthlyCredits: "Уточняется",
+                                                            minPrice: "По запросу",
+                                                            hasApi: false,
+                                                            hasMcp: false,
+                                                            details: [],
+                                                            pros: ["Перспективно", "Упоминается экспертами", "Тренд"],
+                                                            docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName + ' AI')}`
+                                                        };
 
-                                                    const displayName = existingToolObj ? existingToolObj.name : toolName;
+                                                        const displayName = existingToolObj ? existingToolObj.name : toolName;
 
-                                                    return (
-                                                        <button
-                                                            key={toolName}
-                                                            onClick={() => setSelectedTool(toolObj)}
-                                                            className={cn(
-                                                                "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
-                                                            )}
-                                                            title="Нажмите для подробностей"
-                                                        >
-                                                            <span>{toolObj.icon}</span>
-                                                            {displayName}
-                                                        </button>
-                                                    );
-                                                })}
+                                                        return (
+                                                            <button
+                                                                key={toolName}
+                                                                onClick={() => setSelectedTool(toolObj)}
+                                                                className={cn(
+                                                                    "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
+                                                                )}
+                                                                title="Нажмите для подробностей"
+                                                            >
+                                                                <span>{toolObj.icon}</span>
+                                                                {displayName}
+                                                            </button>
+                                                        );
+                                                    })}
                                             </div>
                                         </>
                                     )}
