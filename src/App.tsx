@@ -985,7 +985,11 @@ export default function App() {
                                   return (
                                     <button
                                       key={toolName}
-                                      onClick={() => setSelectedTool(toolObj as any)}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setSelectedTool(toolObj as any);
+                                      }}
                                       className={cn(
                                         "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
                                       )}

@@ -52,23 +52,28 @@ serve(async (req) => {
             // Если есть Gemini API - используем AI
             if (geminiApiKey) {
                 const prompt = `
-Проанализируй этот пост и извлеки информацию:
+Ты — профессиональный ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом (описание видео YouTube, статья или пост).
+Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке.
+Правила:
+1. ИГНОРИРУЙ ссылки, промокоды и призывы подписаться.
+2. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Если он уже на русском — оставь как есть.
+3. Поле "mentions" — извлеки АБСОЛЮТНО ВСЕ названия софта, проектов, ИИ, нейросетей (Figma, Spline, Midjourney, Canva, Notion и т.д.). Исключи только языки программирования и фреймворки (Python, React и т.д.).
+4. Верни ТОЛЬКО JSON без markdown и \`\`\`json.
+{
+  "titleRu": "Перевод заголовка",
+  "summary": "Подробное саммари (4-6 пред).",
+  "tags": ["тег1", "тег2"],
+  "mentions": ["Spline", "Figma"],
+  "detailedUsage": "Детальный обзор. Разбивка по смысловым блокам.",
+  "usageTips": ["совет 1", "совет 2"]
+}
 
 Заголовок: ${post.title}
 Описание: ${post.summary}
 Контент: ${post.content || post.summary}
-
-Список известных инструментов в системе: ${toolNames.join(", ")}
-
-Ты должен вернуть JSON с полями:
-1. "mentions" - массив ВСЕХ упоминаемых софтверных продуктов, сервисов и платформ (например: Figma, Spline, ChatGPT, Claude, YouTube, Telegram, Notion, и т.д.). СТРОГО ИСКЛЮЧИ обычные языки программирования и базовые веб-фреймворки (НЕ ПИШИ React, Python, Go, Java, Next.js, FastAPI, Node.js, HTML, CSS). Нас интересует готовый софт.
-2. "detailedUsage" - Развернутый аналитический обзор контента (4-6 емких предложений). Выдели главную идею, решаемую проблему и предложенный подход. Обязательно отрази содержание по смысловым блокам или этапам (из таймкодов, если они есть). Возвращай сплошной текст с абзацами (чередуя \n\n).
-3. "usageTips" - массив из 5 КОНКРЕТНЫХ и ПРАКТИЧНЫХ советов, извлеченных прямо из текста, которые можно сразу применить.
-
-Верни только JSON без markdown:
 `;
 
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
 
                 const response = await fetch(geminiUrl, {
                     method: "POST",
@@ -76,8 +81,8 @@ serve(async (req) => {
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: prompt }] }],
                         generationConfig: {
-                            temperature: 0.7,
-                            maxOutputTokens: 1000,
+                            temperature: 0.4,
+                            maxOutputTokens: 2000,
                         }
                     })
                 });
@@ -92,6 +97,16 @@ serve(async (req) => {
                             textParams = match[0];
                         }
                         const aiResult = JSON.parse(textParams);
+
+                        // Если AI перевел заголовок, обновляем его
+                        if (aiResult.titleRu) {
+                            post.title = aiResult.titleRu;
+                        }
+
+                        if (aiResult.summary) {
+                            post.summary = aiResult.summary;
+                        }
+
                         mentions = aiResult.mentions || [];
                         detailedUsage = aiResult.detailedUsage || "";
                         usageTips = aiResult.usageTips || [];
@@ -119,6 +134,8 @@ serve(async (req) => {
             const { error: updateError } = await supabase
                 .from("posts")
                 .update({
+                    title: post.title,
+                    summary: post.summary,
                     mentions,
                     detailed_usage: detailedUsage,
                     usage_tips: usageTips,
