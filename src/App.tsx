@@ -651,13 +651,14 @@ export default function App() {
 
   // Функция для создания AI-саммари новости через API
   const generateAISummary = async (post: Partial<Post>): Promise<{ summary: string; mentions: string[]; tags: string[]; detailedUsage: string; usageTips: string[] }> => {
+    const title = post.title || '';
     const content = post.content || '';
+    const fullText = `Заголовок: ${title}\n\nОписание: ${content}`;
 
     // Fallback функция при ошибке API
     const getFallbackSummary = (post: Partial<Post>) => {
-      const content = post.content || '';
       return {
-        summary: content.substring(0, 200) || 'Контент недоступен',
+        summary: content.substring(0, 200) || title || 'Контент недоступен',
         tags: ['Tech'],
         mentions: [],
         detailedUsage: '',
@@ -669,8 +670,8 @@ export default function App() {
       };
     };
 
-    // Проверяем, что контент не пустой
-    if (!content.trim()) {
+    // Проверяем, что есть хоть какой-то текст
+    if (!fullText.trim()) {
       return getFallbackSummary(post);
     }
 
@@ -681,7 +682,7 @@ export default function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content: fullText }),
       });
 
       if (!response.ok) {
