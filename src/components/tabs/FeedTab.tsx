@@ -86,7 +86,7 @@ export const FeedTab: React.FC<FeedTabProps> = ({
                                             <span className="text-xs text-slate-500">Упомянуто:</span>
                                             <div className="flex flex-wrap gap-1">
                                                 {post.mentions
-                                                    .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.toLowerCase()))
+                                                    .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.trim().toLowerCase()))
                                                     .map((toolName: string) => {
                                                         const existingToolObj = tools.find((t) =>
                                                             t.name.toLowerCase() === toolName.toLowerCase() ||
@@ -115,7 +115,7 @@ export const FeedTab: React.FC<FeedTabProps> = ({
                                                         return (
                                                             <button
                                                                 key={toolName}
-                                                                onClick={() => setSelectedTool(toolObj)}
+                                                                onClick={() => setSelectedTool(toolObj as any)}
                                                                 className={cn(
                                                                     "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
                                                                 )}

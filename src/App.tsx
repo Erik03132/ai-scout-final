@@ -953,7 +953,7 @@ export default function App() {
                             <span className="text-xs text-slate-500">Упомянуто:</span>
                             <div className="flex flex-wrap gap-1">
                               {post.mentions
-                                .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.toLowerCase()))
+                                .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.trim().toLowerCase()))
                                 .map((toolName: string) => {
                                   const existingToolObj = allTools.find((t) =>
                                     t.name.toLowerCase() === toolName.toLowerCase() ||
@@ -982,7 +982,7 @@ export default function App() {
                                   return (
                                     <button
                                       key={toolName}
-                                      onClick={() => setSelectedTool(toolObj)}
+                                      onClick={() => setSelectedTool(toolObj as any)}
                                       className={cn(
                                         "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
                                       )}
@@ -1639,37 +1639,45 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {selectedPost.mentions
-                        .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.toLowerCase()))
+                        .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.trim().toLowerCase()))
                         .map(toolName => {
-                          const toolObj = allTools.find(t => t.name.toLowerCase() === toolName.toLowerCase() || toolName.toLowerCase().includes(t.name.toLowerCase()));
+                          const existingToolObj = allTools.find(t => t.name.toLowerCase() === toolName.toLowerCase() || toolName.toLowerCase().includes(t.name.toLowerCase()));
+                          const toolObj = existingToolObj || {
+                            id: `dyn-${toolName}`,
+                            name: toolName,
+                            category: "AI Service",
+                            description: `Интеллектуальный анализ применения ${toolName} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
+                            icon: "✨",
+                            rating: 4.8,
+                            dailyCredits: "Уточняется",
+                            monthlyCredits: "Уточняется",
+                            minPrice: "По запросу",
+                            hasApi: false,
+                            hasMcp: false,
+                            details: [],
+                            pros: ["Перспективно", "Упоминается экспертами", "Тренд"],
+                            docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName + ' AI')}`
+                          };
+
                           return (
                             <button
                               key={toolName}
-                              onClick={() => toolObj && setSelectedTool(toolObj)}
+                              onClick={() => setSelectedTool(toolObj as any)}
                               className={cn(
                                 "flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-800/50 rounded-2xl border transition-all group",
-                                toolObj
-                                  ? "border-white/10 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer"
-                                  : "border-white/5 opacity-50 cursor-default"
+                                "border-white/10 hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10 cursor-pointer"
                               )}
                             >
-                              {toolObj && (
-                                <>
-                                  <span className="text-xl">{toolObj.icon}</span>
-                                  <div className="text-left">
-                                    <p className="text-sm font-black text-white uppercase tracking-tight group-hover:text-purple-400 transition-colors">
-                                      {toolName}
-                                    </p>
-                                    <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-                                      {toolObj.category}
-                                    </p>
-                                  </div>
-                                  <ArrowRight size={14} className="text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all ml-2" />
-                                </>
-                              )}
-                              {!toolObj && (
-                                <span className="text-sm text-slate-400 font-medium">{toolName}</span>
-                              )}
+                              <span className="text-xl">{toolObj.icon}</span>
+                              <div className="text-left">
+                                <p className="text-sm font-black text-white uppercase tracking-tight group-hover:text-cyan-400 transition-colors">
+                                  {toolObj.name}
+                                </p>
+                                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                                  {toolObj.category}
+                                </p>
+                              </div>
+                              <ArrowRight size={14} className="text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all ml-2" />
                             </button>
                           );
                         })}
