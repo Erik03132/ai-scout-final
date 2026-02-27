@@ -104,34 +104,49 @@ export const ArchiveTab: React.FC<ArchiveTabProps> = ({
                             {tool.description}
                         </p>
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-cyan-500/20 transition-colors">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                                    <Zap size={12} className="text-cyan-400" /> Daily
-                                </p>
-                                <p className="text-sm font-black text-white">{tool.dailyCredits}</p>
-                            </div>
-                            <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-blue-500/20 transition-colors">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                                    <Clock size={12} className="text-blue-400" /> Monthly
-                                </p>
-                                <p className="text-sm font-black text-white">{tool.monthlyCredits}</p>
-                            </div>
-                        </div>
+                        {(tool.dailyCredits !== undefined || tool.monthlyCredits !== undefined) && (
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                {tool.dailyCredits !== undefined ? (
+                                    <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-cyan-500/20 transition-colors">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                                            <Zap size={12} className="text-cyan-400" /> Daily
+                                        </p>
+                                        <p className="text-sm font-black text-white">{tool.dailyCredits}</p>
+                                    </div>
+                                ) : <div />}
 
-                        <div className="space-y-2.5 mb-8">
-                            {tool.details?.slice(0, 3).map((detail: any, i: number) => (
-                                <div key={i} className="flex items-center gap-3 text-xs text-slate-300 font-semibold group-hover:text-white transition-colors">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-sm" />
-                                    {detail.title}
-                                </div>
-                            ))}
-                        </div>
+                                {tool.monthlyCredits !== undefined ? (
+                                    <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-blue-500/20 transition-colors">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                                            <Clock size={12} className="text-blue-400" /> Monthly
+                                        </p>
+                                        <p className="text-sm font-black text-white">{tool.monthlyCredits}</p>
+                                    </div>
+                                ) : <div />}
+                            </div>
+                        )}
+
+                        {tool.details && tool.details.length > 0 && (
+                            <div className="space-y-2.5 mb-8">
+                                {tool.details.slice(0, 3).map((detail: any, i: number) => (
+                                    <div key={i} className="flex items-center gap-3 text-xs text-slate-300 font-semibold group-hover:text-white transition-colors">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-sm" />
+                                        {detail.title}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="mt-auto pt-6 border-t border-slate-700/50 flex items-end justify-between">
                             <div className="space-y-1.5">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Plan</p>
-                                <p className="text-xl font-black text-emerald-400 tracking-tighter">{tool.minPrice}</p>
+                                {tool.minPrice !== undefined && (
+                                    <>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Plan</p>
+                                        <p className="text-xl font-black text-emerald-400 tracking-tighter">
+                                            {tool.minPrice === "$0" || tool.minPrice === 0 ? 'Бесплатно' : tool.minPrice}
+                                        </p>
+                                    </>
+                                )}
                             </div>
                             <div className="flex gap-2">
                                 {tool.hasApi && (
