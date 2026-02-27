@@ -1453,23 +1453,23 @@ export default function App() {
                   </section>
 
                   {selectedTool.id.toString().startsWith('dyn-') ? (
-                    <div className="bg-gradient-to-br from-purple-500/10 via-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-[2rem] p-8 text-center relative overflow-hidden group">
+                    <div className="bg-[#172033] border border-slate-700/50 rounded-3xl p-10 text-center relative overflow-hidden group">
                       <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-700">
                         <Sparkles size={120} className="text-cyan-400" />
                       </div>
                       <div className="relative z-10">
-                        <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-cyan-500/30">
-                          <Zap className="w-8 h-8 text-white" />
+                        <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-cyan-500/30">
+                          <Zap className="w-10 h-10 text-white" />
                         </div>
-                        <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Новый инструмент</h3>
-                        <p className="text-base text-slate-300 max-w-md mx-auto mb-8 leading-relaxed">
+                        <h3 className="text-3xl font-black text-white mb-4 tracking-tight uppercase">Новый инструмент</h3>
+                        <p className="text-lg text-slate-300 max-w-md mx-auto mb-8 leading-relaxed font-medium">
                           Искусственный интеллект автоматически распознал <b>{selectedTool.name}</b>. Этого инструмента пока нет в нашем каталоге, но вы можете изучить его самостоятельно.
                         </p>
                         <button
                           onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedTool.name + ' AI tool')}`, '_blank')}
-                          className="inline-flex items-center gap-2 bg-white hover:bg-slate-200 text-black px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg active:scale-95"
+                          className="inline-flex items-center justify-center gap-3 bg-white hover:bg-slate-200 text-black px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] active:scale-95 w-full sm:w-auto"
                         >
-                          Поискать в Google <ExternalLink size={16} />
+                          Поискать в Google <ExternalLink size={18} />
                         </button>
                       </div>
                     </div>
