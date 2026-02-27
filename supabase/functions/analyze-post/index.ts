@@ -110,7 +110,12 @@ serve(async (req) => {
                             post.summary = aiResult.summary;
                         }
 
-                        mentions = aiResult.mentions || [];
+                        // Очищаем массив упоминаний от дубликатов с помощью Set
+                        if (aiResult.mentions && Array.isArray(aiResult.mentions)) {
+                            mentions = Array.from(new Set(aiResult.mentions.map((m: string) => typeof m === 'string' ? m.trim() : m)));
+                        } else {
+                            mentions = [];
+                        }
                         detailedUsage = aiResult.detailedUsage || "";
                         usageTips = aiResult.usageTips || [];
                     } catch (e) {
