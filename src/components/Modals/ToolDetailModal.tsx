@@ -166,14 +166,14 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                     {/* Особенности */}
                     {tool.pros && tool.pros.length > 0 && (
                         <div className="mb-8">
-                            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">
-                                Ключевые особенности (кликабельно)
+                            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                Ключевые преимущества
                             </h3>
                             <div className="flex flex-wrap gap-2">
                                 {tool.pros.map((pro, index) => (
                                     <span
                                         key={index}
-                                        className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-sm font-medium border border-slate-700/50 transition-colors cursor-pointer"
+                                        className="px-3 py-1.5 bg-slate-800/50 text-slate-300 rounded-lg text-sm border border-slate-700/50 hover:border-slate-600 hover:bg-slate-800 transition-colors cursor-default"
                                     >
                                         {pro}
                                     </span>
