@@ -216,7 +216,9 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
     );
 
     if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`Gemini API error \${response.status}:`, errorText);
+        throw new Error(`Gemini API error: \${response.status}`);
     }
 
     const data = await response.json();
