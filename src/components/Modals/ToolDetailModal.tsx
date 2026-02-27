@@ -103,57 +103,65 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                     </div>
 
                     {/* Лимиты и квоты (Квадратные карточки) */}
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60">
-                            <div className="flex items-center gap-2 text-cyan-400 mb-2">
-                                <Zap size={14} />
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                    Daily Limit
-                                </h3>
-                            </div>
-                            <p className="text-2xl font-black text-white">
-                                {tool.dailyCredits !== undefined ? tool.dailyCredits : '—'}
-                            </p>
-                        </div>
+                    {(tool.dailyCredits !== undefined || tool.monthlyCredits !== undefined) && (
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            {tool.dailyCredits !== undefined ? (
+                                <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60">
+                                    <div className="flex items-center gap-2 text-cyan-400 mb-2">
+                                        <Zap size={14} />
+                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                            Daily Limit
+                                        </h3>
+                                    </div>
+                                    <p className="text-2xl font-black text-white">
+                                        {tool.dailyCredits}
+                                    </p>
+                                </div>
+                            ) : <div />}
 
-                        <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60">
-                            <div className="flex items-center gap-2 text-indigo-400 mb-2">
-                                <Clock size={14} />
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                    Monthly Credits
-                                </h3>
-                            </div>
-                            <p className="text-2xl font-black text-white">
-                                {tool.monthlyCredits !== undefined ? tool.monthlyCredits : '—'}
-                            </p>
+                            {tool.monthlyCredits !== undefined ? (
+                                <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60">
+                                    <div className="flex items-center gap-2 text-indigo-400 mb-2">
+                                        <Clock size={14} />
+                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                            Monthly Credits
+                                        </h3>
+                                    </div>
+                                    <p className="text-2xl font-black text-white">
+                                        {tool.monthlyCredits}
+                                    </p>
+                                </div>
+                            ) : <div />}
                         </div>
-                    </div>
+                    )}
 
                     {/* Минимальный тариф (Широкая карточка) */}
-                    <div className="flex items-center justify-between p-6 bg-[#131d2f]/80 rounded-2xl border border-slate-700/50 mb-8">
-                        <div>
-                            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                                Минимальный тариф
-                            </h3>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-black text-[#00E599]">
-                                    {tool.minPrice !== undefined ? `$${tool.minPrice}` : 'Бесплатно'}
-                                </span>
-                                {tool.minPrice !== undefined && tool.minPrice > 0 && (
-                                    <span className="text-slate-400 text-sm font-medium">/мес</span>
-                                )}
+                    {tool.minPrice !== undefined && (
+                        <div className="flex items-center justify-between p-6 bg-[#131d2f]/80 rounded-2xl border border-slate-700/50 mb-8">
+                            <div>
+                                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                    Минимальный тариф
+                                </h3>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-3xl font-black text-[#00E599]">
+                                        {tool.minPrice === "$0" || tool.minPrice === 0 ? 'Бесплатно' : (typeof tool.minPrice === 'number' ? `$${tool.minPrice}` : tool.minPrice)}
+                                    </span>
+                                    {tool.minPrice !== "$0" && tool.minPrice !== 0 && tool.minPrice !== "Бесплатно" && tool.minPrice !== "Н/Д" && (
+                                        <span className="text-slate-400 text-sm font-medium">/мес</span>
+                                    )}
+                                </div>
                             </div>
-                        </div>
 
-                        <a
-                            href={tool.docsUrl || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-6 py-3 bg-gradient-to-r from-[#00E599] to-[#00C885] hover:from-[#00faad] hover:to-[#00db95] text-slate-900 font-bold uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(0,229,153,0.3)] hover:shadow-[0_0_25px_rgba(0,229,153,0.5)] active:scale-95"
-                        >
-                            Подписаться
-                        </a>
-                    </div>
+                            <a
+                                href={tool.docsUrl || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-6 py-3 bg-gradient-to-r from-[#00E599] to-[#00C885] hover:from-[#00faad] hover:to-[#00db95] text-slate-900 font-bold uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(0,229,153,0.3)] hover:shadow-[0_0_25px_rgba(0,229,153,0.5)] active:scale-95"
+                            >
+                                Подписаться
+                            </a>
+                        </div>
+                    )}
 
                     {/* Особенности */}
                     {tool.pros && tool.pros.length > 0 && (
@@ -179,8 +187,8 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                         <button
                             onClick={() => toggleFavorite(tool.id, 'tool')}
                             className={`flex flex-1 items-center justify-center gap-2 px-5 py-4 rounded-xl font-bold transition-all border ${favorite
-                                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
-                                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
+                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
+                                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
                                 }`}
                         >
                             <Heart size={18} className={favorite ? "fill-current" : ""} />
