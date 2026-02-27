@@ -75,7 +75,7 @@ serve(async (req) => {
 Контент: ${post.content || post.summary}
 `;
 
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
                 const response = await fetch(geminiUrl, {
                     method: "POST",
@@ -114,7 +114,12 @@ serve(async (req) => {
                         usageTips = aiResult.usageTips || [];
                     } catch (e) {
                         console.error("Failed to parse AI response:", e);
+                        // Save the raw text in detailedUsage so we can debug it
+                        detailedUsage = `[DEBUG JSON ERROR] AI generated invalid JSON:\n\n${data.candidates[0].content.parts[0].text}`;
                     }
+                } else {
+                    console.error("Gemini API Error:", data);
+                    detailedUsage = `⚠️ ИИ-анализ временно недоступен (ошибка API Gemini).\n\nДетали ошибки:\n${JSON.stringify(data, null, 2)}`;
                 }
             } else {
                 // Fallback: простое извлечение тегов из названия
