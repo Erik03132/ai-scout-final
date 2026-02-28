@@ -5,6 +5,8 @@
 
 import { askDeepSeek } from './deepseek'
 import { askOpenRouter } from './openrouter'
+import { askPerplexity } from './perplexity'
+import { askAnthropic } from './anthropic'
 
 interface GeminiResponse {
     candidates: Array<{ content: { parts: Array<{ text: string }> } }>
@@ -15,6 +17,8 @@ const MODELS = [
     'gemini-2.0-flash-lite',
     'gemini-1.5-flash',
     'openrouter',
+    'anthropic',
+    'perplexity',
     'moonshot',
     'openai',
     'deepseek'
@@ -86,7 +90,27 @@ export async function askAI(prompt: string, options: { json?: boolean } = {}): P
                 }
             }
 
-            // 3. OpenAI Fallback
+            // 3. Anthropic
+            else if (model === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
+                try {
+                    return await askAnthropic(prompt)
+                } catch (e) {
+                    console.warn('Anthropic failed, rotating...')
+                    continue
+                }
+            }
+
+            // 4. Perplexity
+            else if (model === 'perplexity' && process.env.PERPLEXITY_API_KEY) {
+                try {
+                    return await askPerplexity([{ role: 'user', content: prompt }])
+                } catch (e) {
+                    console.warn('Perplexity failed, rotating...')
+                    continue
+                }
+            }
+
+            // 5. OpenAI Fallback
             else if (model === 'openai') {
                 if (!openaiKey) continue
                 try {
