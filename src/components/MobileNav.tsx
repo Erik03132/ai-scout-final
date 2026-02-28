@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Layers, Plus, Search } from "lucide-react";
+import { Archive, Layers, Search } from "lucide-react";
 
 interface MobileNavProps {
     activeTab: string;
@@ -26,15 +26,6 @@ export default function MobileNav({ activeTab, onTabChange }: MobileNavProps) {
             >
                 <Archive size={20} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Архив</span>
-            </button>
-
-            <button
-                onClick={() => onTabChange('add')}
-                className="relative -top-2"
-            >
-                <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/25 border-4 border-slate-900">
-                    <Plus size={24} />
-                </div>
             </button>
 
             <button
