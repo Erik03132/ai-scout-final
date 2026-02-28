@@ -1010,49 +1010,38 @@ export default function App() {
                       {post.summary}
                     </p>
 
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
-                      <div className="flex flex-wrap gap-2">
-                        {post.tags.slice(0, 3).map(tag => (
-                          <span key={tag} className="px-2.5 py-1 bg-slate-800/80 text-slate-400 rounded-lg text-[9px] font-black border border-white/5 uppercase tracking-widest hover:bg-slate-700/80 transition-colors">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center justify-between mt-auto pt-4 border-t border-white/5 gap-y-4">
+                      <div className="flex items-center flex-wrap gap-2 flex-1">
                         {post.mentions.length > 0 && (
-                          <div className="flex -space-x-2 group-hover:space-x-1 transition-all duration-500">
-                            {post.mentions.slice(0, 3).map((m, i) => (
-                              <div key={i} className="w-7 h-7 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center text-xs shadow-2xl transform hover:-translate-y-1 transition-transform" title={m}>
-                                {getToolIcon(m)}
+                          <div className="flex flex-wrap gap-2">
+                            {post.mentions.map((m, i) => (
+                              <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/60 border border-white/5 rounded-xl text-[10px] font-black text-cyan-400/90 uppercase tracking-widest shadow-sm transition-all hover:bg-cyan-500/10 hover:border-cyan-500/30 hover:text-cyan-300" title={m}>
+                                <span className="text-sm filter grayscale group-hover:grayscale-0 transition-all">{getToolIcon(m)}</span>
+                                <span className="tracking-tight">{m}</span>
                               </div>
                             ))}
-                            {post.mentions.length > 3 && (
-                              <div className="w-7 h-7 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-2xl">
-                                +{post.mentions.length - 3}
-                              </div>
-                            )}
                           </div>
                         )}
-                        <div className="flex gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavorite(`post-${post.id}`);
-                            }}
-                            className={cn(
-                              "p-2.5 rounded-xl transition-all duration-300 border backdrop-blur-md",
-                              favorites.includes(`post-${post.id}`)
-                                ? "text-rose-400 bg-rose-500/10 border-rose-500/30 shadow-lg shadow-rose-500/10"
-                                : "text-slate-500 hover:text-rose-400 hover:bg-slate-700/50 border-white/5"
-                            )}
-                          >
-                            <Heart className={cn("w-5 h-5", favorites.includes(`post-${post.id}`) && "fill-current")} />
-                          </button>
-                          <button className="p-2.5 bg-slate-800 rounded-xl text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 transition-all">
-                            <ArrowUpRight size={20} />
-                          </button>
-                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(`post-${post.id}`);
+                          }}
+                          className={cn(
+                            "p-2.5 rounded-xl transition-all duration-300 border backdrop-blur-md",
+                            favorites.includes(`post-${post.id}`)
+                              ? "text-rose-400 bg-rose-500/10 border-rose-500/30 shadow-lg shadow-rose-500/10"
+                              : "text-slate-500 hover:text-rose-400 hover:bg-slate-700/50 border-white/5"
+                          )}
+                        >
+                          <Heart className={cn("w-5 h-5", favorites.includes(`post-${post.id}`) && "fill-current")} />
+                        </button>
+                        <button className="p-2.5 bg-slate-800 rounded-xl text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 transition-all">
+                          <ArrowUpRight size={20} />
+                        </button>
                       </div>
                     </div>
                   </div>
