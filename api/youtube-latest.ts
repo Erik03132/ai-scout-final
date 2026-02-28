@@ -209,11 +209,11 @@ async function generateSummary(title: string, description: string): Promise<{ ti
   const geminiApiKey = process.env.GEMINI_API_KEY;
 
   if (!geminiApiKey) {
-    return { title, summary: createFallbackSummary(description) };
+    return { title: `[Need Translation] ${title}`, summary: createFallbackSummary(description) };
   }
 
   try {
-    const content = `${title}\n${description}`.substring(0, 4000);
+    const content = `Title: ${title}\nDescription: ${description}`.substring(0, 8000);
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
@@ -225,54 +225,55 @@ async function generateSummary(title: string, description: string): Promise<{ ti
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Ты — редактор новостей. Проанализируй это видео и верни ответ на РУССКОМ языке.
+              text: `Ты — профессиональный редактор новостей. Проанализируй это видео и верни ответ на качественном РУССКОМ языке.
 ОЧЕНЬ ВАЖНО: Весь ответ ДОЛЖЕН БЫТЬ НА РУССКОМ ЯЗЫКЕ. Даже если заголовок и описание на английском — ПЕРЕВЕДИ ИХ.
 
-1. TITLE: Переведи заголовок на качественный русский язык.
-2. SUMMARY: Краткое информативное саммари на русском (1-2 предложения).
+1. "title": Переведи заголовок на качественный русский язык.
+2. "summary": Краткое информативное саммари на русском (2-3 длинных предложения).
 
-Очень важно: ИГНОРИРУЙ любые технические ссылки, промокоды, призывы подписаться.
-Верни ТОЛЬКО текст в формате:
-TITLE: [перевод]
-SUMMARY: [текст на русском]
+JSON СТРУКТУРА:
+{
+  "title": "Шикарный перевод заголовка",
+  "summary": "Информативное описание видео на русском языке."
+}
 
-Текст видео: ${content}`
+Контент: ${content}`
             }]
           }],
           generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 300
+            temperature: 0.3,
+            maxOutputTokens: 500,
+            responseMimeType: "application/json"
           }
         })
       }
     );
 
     if (!response.ok) {
-      return { title, summary: createFallbackSummary(description) };
+      const errText = await response.text();
+      console.error('Gemini API error in youtube-latest:', errText);
+      return { title: `[Need Translation] ${title}`, summary: createFallbackSummary(description) };
     }
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    // Парсим результат
-    let aiTitle = title;
-    let aiSummary = '';
-
-    const titleMatch = text.match(/TITLE:\s*(.*?)(?:\n|$)/i);
-    const summaryMatch = text.match(/SUMMARY:\s*([\s\S]*)/i);
-
-    if (titleMatch) aiTitle = titleMatch[1].trim();
-    if (summaryMatch) aiSummary = summaryMatch[1].trim();
-
-    return {
-      title: aiTitle,
-      summary: aiSummary || createFallbackSummary(description)
-    };
+    try {
+      const parsed = JSON.parse(text);
+      return {
+        title: parsed.title || title,
+        summary: parsed.summary || createFallbackSummary(description)
+      };
+    } catch (e) {
+      console.error('Failed to parse Gemini JSON in youtube-latest:', text);
+      return { title: `[Need Translation] ${title}`, summary: createFallbackSummary(description) };
+    }
   } catch (error) {
-    console.error('Gemini summarization failed:', error);
-    return { title, summary: createFallbackSummary(description) };
+    console.error('Gemini summarization failed in youtube-latest:', error);
+    return { title: `[Need Translation] ${title}`, summary: createFallbackSummary(description) };
   }
 }
+
 
 /**
  * Fallback генерация саммари

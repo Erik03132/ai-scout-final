@@ -49,30 +49,18 @@ const KNOWN_TOOLS = [
     'Node.js', 'Express', 'Fastify', 'NestJS',
     'GraphQL', 'REST API', 'tRPC',
     'Git', 'GitHub', 'GitLab', 'Bitbucket',
-    'VS Code', 'WebStorm', 'Sublime Text'
-];
-
-// Известные теги по категориям
-const KNOWN_TAGS = [
-    'AI', 'Machine Learning', 'Deep Learning', 'LLM', 'GPT',
-    'Frontend', 'Backend', 'Fullstack', 'DevOps', 'Cloud',
-    'React', 'Next.js', 'Vue', 'Angular', 'Svelte',
-    'TypeScript', 'JavaScript', 'Python', 'Go', 'Rust',
-    'API', 'REST', 'GraphQL', 'Database', 'Authentication',
-    'Design', 'UI/UX', 'Performance', 'Security', 'Testing',
-    'Automation', 'Productivity', 'Tools', 'Tutorial', 'Review'
+    'VS Code', 'WebStorm', 'Sublime Text',
+    'Antigravity', 'OpenClaw', 'NotebookLM'
 ];
 
 export default async function handler(
     req: VercelRequest,
     res: VercelResponse
 ) {
-    // Проверка метода
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // Проверка тела запроса
     const { content } = req.body as SummarizeRequest;
 
     if (!content || typeof content !== 'string' || !content.trim()) {
@@ -82,18 +70,21 @@ export default async function handler(
     try {
         const result = await generateSummaryWithLLM(content);
         return res.status(200).json(result);
-    } catch (error) {
+    } catch (error: any) {
         console.error('LLM summarization failed:', error);
-        const fallbackResult = generateFallbackSummary(content);
+        // Добавляем логирование ошибки для диагностики
+        const errorDetails = error?.message || (typeof error === 'string' ? error : 'Unknown error');
+
+        const fallbackResult = generateFallbackSummary(content, errorDetails);
         return res.status(200).json(fallbackResult);
     }
 }
 
 /**
- * Генерация саммари с помощью LLM (OpenAI/Gemini)
+ * Генерация саммари с помощью LLM (Gemini/OpenAI)
  */
 async function generateSummaryWithLLM(content: string): Promise<SummarizeResponse> {
-    const apiKey = process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
         throw new Error('No LLM API key configured');
@@ -103,9 +94,10 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
     if (process.env.GEMINI_API_KEY) {
         try {
             return await callGemini(content);
-        } catch (e) {
-            console.error("Gemini failed, falling back to OpenAI", e);
+        } catch (e: any) {
+            console.error("Gemini failed:", e.message);
             if (!process.env.OPENAI_API_KEY) throw e;
+            // else continue to OpenAI
         }
     }
 
@@ -113,13 +105,13 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
     if (process.env.OPENAI_API_KEY) {
         try {
             return await callOpenAI(content);
-        } catch (e) {
-            console.error("OpenAI failed too", e);
+        } catch (e: any) {
+            console.error("OpenAI failed too:", e.message);
             throw e;
         }
     }
 
-    throw new Error('No LLM provider configured');
+    throw new Error('No LLM provider configured or all providers failed');
 }
 
 /**
@@ -137,43 +129,41 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
             messages: [
                 {
                     role: 'system',
-                    content: `Ты — профессиональный ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом (описание видео YouTube, статья или пост).
+                    content: `Ты — профессиональный ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом.
 Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке.
-ОЧЕНЬ ВАЖНО: Весь ответ (заголовок, саммари, подробный разбор, советы) ДОЛЖЕН БЫТЬ НА РУССКОМ ЯЗЫКЕ. Если исходный текст на английском — ПЕРЕВЕДИ ЕГО.
 
-Правила:
-1. ИГНОРИРУЙ ссылки, промокоды и призывы подписаться.
-2. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Если он уже на русском — оставь как есть.
-3. В поле "mentions" — извлеки АБСОЛЮТНО ВСЕ названия софта, проектов, конкретных ИИ-моделей или нейросетей (Figma, Spline, Midjourney, Canva, Notion, ChatGPT, Vercel и т.д.). 
-СТРОГО ИГНОРИРУЙ: 
-- языки программирования и фреймворки (Python, React, Go и т.д.)
-- общие термины, технологии и концепции (AUTOENCODER, NEURAL NETWORK, VAE, LLM, RAG, API, Database и т.д.).
-4. В поле "detailedUsage" создай максимально подробное, ИСЧЕРПЫВАЮЩЕЕ текстовое саммари. Напиши столько предложений и абзацев, сколько нужно, чтобы передать ВСЮ суть, все этапы и ключевые пункты контента. Это должно быть полноценным пересказом.
-5. В поле "detailedUsage" допускается использование Markdown (списки, выделение жирным), чтобы текст легко читался.
-6. В поле "summary" напиши ёмкое описание на РУССКОМ языке.
-7. Верни ТОЛЬКО JSON без markdown и \`\`\`json.
+КРИТИЧЕСКИЕ ТРЕБОВАНИЯ:
+1. Весь ответ (заголовок, саммари, подробный разбор, советы) ДОЛЖЕН БЫТЬ НА РУССКОМ ЯЗЫКЕ. 
+2. Если исходный текст на английском — ПЕРЕВЕДИ ЕГО на качественный, профессиональный русский язык.
+3. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Не оставляй английские слова в заголовке, если есть адекватный перевод.
+4. Поле "detailedUsage" — создай ИСЧЕРПЫВАЮЩЕЕ текстовое саммари. Сделай МИНИМУМ 5-7 развернутых абзацев. Разбери все ключевые моменты, этапы и выводы. Используй Markdown для оформления.
+5. ИГНОРИРУЙ ссылки, промокоды и призывы подписаться.
 
+JSON СТРУКТУРА:
 {
-  "titleRu": "Перевод заголовка",
-  "summary": "Краткое саммари (2-3 пред) для превью на русском.",
-  "tags": ["тег1", "тег2"],
+  "titleRu": "Переведенный заголовок на русский",
+  "summary": "Краткое саммари (3-4 пред) для превью на русском.",
+  "tags": ["AI", "Automation", "Tools"],
   "mentions": ["Tool1", "Tool2"],
-  "detailedUsage": "ИСЧЕРПЫВАЮЩЕЕ саммари всего ролика/поста на русском. Детальный разбор всех пунктов содержания, главных идей и выводов. Не ограничивай себя в объеме.",
-  "usageTips": ["совет 1", "совет 2"]
-}`
+  "detailedUsage": "Подробный разбор всего содержания на русском языке. Минимум 5-8 абзацев. Опиши все детали.",
+  "usageTips": ["совет 1 на русском", "совет 2 на русском"]
+}
+
+Верни ТОЛЬКО чистый JSON без markdown блоков.`
                 },
                 {
                     role: 'user',
-                    content: content.substring(0, 8000)
+                    content: content.substring(0, 10000)
                 }
             ],
-            temperature: 0.4,
-            max_tokens: 3000
+            temperature: 0.3,
+            max_tokens: 3500
         })
     });
 
     if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
+        const err = await response.text();
+        throw new Error(`OpenAI API error ${response.status}: ${err}`);
     }
 
     const data = await response.json();
@@ -197,55 +187,52 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
                 contents: [{
                     parts: [{
                         text: `Ты — ведущий ИИ-аналитик. Твоя задача: сделать глубокий разбор контента на РУССКОМ ЯЗЫКЕ.
-ОЧЕНЬ ВАЖНО: Весь ответ ДОЛЖЕН БЫТЬ НА РУССКОМ ЯЗЫКЕ. Если исходный текст на английском — ПЕРЕВЕДИ ЕГО на качественный русский язык.
 
-ИНСТРУКЦИИ:
-1. "titleRu": ОБЯЗАТЕЛЬНО переведи заголовок на качественный русский язык.
-2. "summary": Напиши ПЛОТНОЕ информативное саммари (3-4 длинных предложения) на РУССКОМ ЯЗЫКЕ, передающее суть.
-3. "mentions": Извлеки ВСЕ конкретные сервисы/нейросети. Игнорируй общие понятия (AI, LLM, Cloud).
-4. "mentionsDetail": Для каждого из "mentions" укажи: category, minPrice (или "Бесплатно"), hasApi (boolean), hasMcp (boolean).
-5. "detailedUsage": Сделай максимально подробный пересказ всего контента на РУССКОМ ЯЗЫКЕ (минимум 3-5 абзацев с Markdown).
+КРИТИЧЕСКИЕ ИНСТРУКЦИИ:
+1. "titleRu": ОБЯЗАТЕЛЬНО переведи заголовок на качественный русский язык. НИКАКОГО английского в заголовке.
+2. "summary": Напиши ПЛОТНОЕ информативное саммари (3-4 длинных предложения) на РУССКОМ ЯЗЫКЕ.
+3. "detailedUsage": Сделай МАКСИМАЛЬНО подробный пересказ всего контента на РУССКОМ ЯЗЫКЕ. Опиши все этапы, идеи и выводы в деталях. Минимум 5-8 абзацев с заголовками Markdown (###).
+4. "mentions": Извлеки ВСЕ конкретные сервисы/нейросети/модели.
+5. ИГНОРИРУЙ общие понятия (AI, LLM) и языки программирования (Python, JS).
 
 JSON СТРУКТУРА:
 {
-  "titleRu": "Лучший перевод заголовка",
-  "summary": "Краткое, но емкое описание контента для ленты на русском языке.",
+  "titleRu": "Идеальный перевод заголовка на русский",
+  "summary": "Краткое, но емкое описание контента на русском языке.",
   "tags": ["AI", "Automation", "Tools"],
   "mentions": ["Tool1", "Tool2"],
   "mentionsDetail": [
     { "name": "Tool1", "category": "AI", "minPrice": "Бесплатно", "hasApi": true, "hasMcp": false }
   ],
-  "detailedUsage": "### Основные идеи\\n...подробности на русском...\\n### Как использовать\\n...подробности на русском...",
+  "detailedUsage": "### Основная идея\\n...\\n### Детальный разбор\\n...\\n### Технические особенности\\n...\\n### Заключение\\n...",
   "usageTips": ["Совет 1 на русском", "Совет 2 на русском"]
 }
 
-Контент для анализа: ${content.substring(0, 15000)}`
+Контент для анализа: ${content.substring(0, 20000)}`
                     }]
                 }],
                 generationConfig: {
-                    temperature: 0.4,
+                    temperature: 0.2,
                     maxOutputTokens: 4000,
                     responseMimeType: "application/json"
-                },
-                safetySettings: [
-                    { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
-                    { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },
-                    { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" },
-                    { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" }
-                ]
+                }
             })
         }
     );
 
     if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Gemini API error ${response.status}:`, errorText);
-        throw new Error(`Gemini API error: ${response.status}`);
+        throw new Error(`Gemini API error ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        console.error('Gemini empty response:', JSON.stringify(data));
+        throw new Error('Gemini returned empty response (safety filter or quota?)');
+    }
+
+    const text = data.candidates[0].content.parts[0].text;
     return parseLLMResponse(text);
 }
 
@@ -254,54 +241,76 @@ JSON СТРУКТУРА:
  */
 function parseLLMResponse(text: string): SummarizeResponse {
     try {
-        let jsonStr = text;
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) {
-            jsonStr = match[0];
+        let jsonStr = text.trim();
+
+        // Очистка от markdown-блоков если они есть
+        if (jsonStr.includes('```')) {
+            const match = jsonStr.match(/```json\n?([\s\S]*?)\n?```/) || jsonStr.match(/```\n?([\s\S]*?)\n?```/);
+            if (match) {
+                jsonStr = match[1];
+            }
         }
 
-        const parsed = JSON.parse(jsonStr.trim());
+        // Если все ещё есть мусор вокруг JSON
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            jsonStr = jsonMatch[0];
+        }
+
+        const parsed = JSON.parse(jsonStr);
 
         return {
-            titleRu: parsed.titleRu || '',
-            summary: parsed.summary || '',
+            titleRu: parsed.titleRu || parsed.title || 'Обновление данных',
+            summary: parsed.summary || 'Саммари находится в обработке...',
             tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 8) : [],
             mentions: Array.isArray(parsed.mentions) ? parsed.mentions : [],
             mentionsDetail: Array.isArray(parsed.mentionsDetail) ? parsed.mentionsDetail : [],
-            detailedUsage: parsed.detailedUsage || '',
-            usageTips: Array.isArray(parsed.usageTips) ? parsed.usageTips : []
+            detailedUsage: parsed.detailedUsage || parsed.detailed_usage || '',
+            usageTips: Array.isArray(parsed.usageTips) ? parsed.usageTips : (Array.isArray(parsed.usage_tips) ? parsed.usage_tips : [])
         };
     } catch (e) {
-        console.error('Failed to parse LLM response:', e);
-        throw new Error('Failed to parse LLM response');
+        console.error('Failed to parse LLM response:', e, 'Raw text:', text.substring(0, 200));
+        throw new Error('Failed to parse AI response into JSON');
     }
 }
 
 /**
  * Fallback генерация саммари без LLM
  */
-function generateFallbackSummary(content: string): SummarizeResponse {
-    // Извлекаем название канала/видео если есть
+function generateFallbackSummary(content: string, error?: string): SummarizeResponse {
     let title = '';
     const titleMatch = content.match(/Заголовок:\s*(.*?)\n/);
     if (titleMatch) title = titleMatch[1].trim();
 
-    // Пытаемся извлечь инструменты из списка KNOWN_TOOLS в тексте
+    const isEnglish = (text: string) => text && !/[а-яА-ЯёЁ]/.test(text) && /[a-zA-Z]/.test(text);
+
+    let displayTitle = title || 'Новое обновление';
+    if (isEnglish(displayTitle)) {
+        displayTitle = `[Требуется перевод] ${displayTitle}`;
+    }
+
+    let summaryMessage = 'ИИ-анализ временно недоступен. Вероятно, превышены лимиты API или текст слишком короткий для анализа.';
+    if (error?.includes('429')) {
+        summaryMessage = 'Превышена квота запросов к ИИ. Пожалуйста, попробуйте обновить через минуту.';
+    } else if (error?.toLowerCase().includes('empty')) {
+        summaryMessage = 'Контент заблокирован фильтрами безопасности или слишком короткий для анализа.';
+    }
+
     const extractedMentions = KNOWN_TOOLS.filter(tool =>
         new RegExp(`\\b${tool}\\b`, 'i').test(content)
     );
 
     return {
-        titleRu: title || 'Новое обновление',
-        summary: 'ИИ-анализ временно недоступен. Вероятно, превышены лимиты API или текст слишком короткий для анализа.',
-        tags: ['Tech'],
+        titleRu: displayTitle,
+        summary: summaryMessage,
+        tags: ['System'],
         mentions: extractedMentions,
         mentionsDetail: [],
-        detailedUsage: 'К сожалению, нам не удалось сгенерировать подробный разбор этого контента. Это может быть связано с техническими ограничениями или отсутствием развернутого описания в источнике.',
+        detailedUsage: `К сожалению, нам не удалось сгенерировать подробный разбор этого контента.\n\nТехническая информация: ${error || 'Нет данных'}\n\nПожалуйста, попробуйте обновить страницу позже или проверьте оригинальный источник.`,
         usageTips: [
             'Проверьте оригинальный источник',
             'Попробуйте обновить страницу позже',
-            'Убедитесь в правильности настроек API'
+            'Убедитесь, что контент не заблокирован в вашем регионе'
         ]
     };
 }

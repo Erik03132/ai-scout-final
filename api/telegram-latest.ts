@@ -115,13 +115,13 @@ async function getLatestPost(channel: string, botToken: string): Promise<Telegra
     const latestMessage = messages[0];
     const text = latestMessage.text || latestMessage.caption || '';
 
-    // Генерируем саммари
-    const summary = await generateSummary(text);
+    // Генерируем саммари и перевод заголовка
+    const aiResult = await generateSummaryDetailed(text);
 
     return {
-        title: extractTitle(text),
+        title: aiResult.title || extractTitle(text),
         text,
-        summary,
+        summary: aiResult.summary,
         link: `https://t.me/${channelUsername}/${latestMessage.message_id}`,
         date: new Date(latestMessage.date * 1000).toISOString(),
     };
@@ -195,83 +195,80 @@ async function getChatMessages(
 }
 
 /**
- * Извлечь заголовок из текста поста
+ * Извлечь заголовок из текста поста (fallback)
  */
 function extractTitle(text: string): string | null {
     if (!text) return null;
-
-    // Пытаемся найти заголовок в первой строке
     const lines = text.split('\n').filter(line => line.trim());
-
     if (lines.length === 0) return null;
-
     const firstLine = lines[0].trim();
-
-    // Если первая строка слишком длинная, обрезаем
-    if (firstLine.length > 100) {
-        return firstLine.substring(0, 100) + '...';
-    }
-
-    // Если первая строка выглядит как заголовок (не ссылка, не эмодзи)
-    if (firstLine.startsWith('http') || firstLine.startsWith('@')) {
-        return null;
-    }
-
-    return firstLine;
+    return firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;
 }
 
 /**
- * Генерация саммари через Gemini API
+ * Генерация саммари и заголовка через Gemini API
  */
-async function generateSummary(text: string): Promise<string> {
+async function generateSummaryDetailed(text: string): Promise<{ title: string; summary: string }> {
     const geminiApiKey = process.env.GEMINI_API_KEY;
 
     if (!geminiApiKey) {
-        return createFallbackSummary(text);
+        return { title: '', summary: createFallbackSummary(text) };
     }
 
     try {
-        const content = text.substring(0, 4000);
+        const content = text.substring(0, 8000);
 
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
             {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
-                            text: `Ты — редактор новостей. Напиши краткое саммари (1-2 sentences) на РУССКОМ языке про этот пост. 
-ОЧЕНЬ ВАЖНО: Весь ответ ДОЛЖЕН БЫТЬ НА РУССКОМ ЯЗЫКЕ. Даже если исходный пост на английском — ПЕРЕВЕДИ его.
+                            text: `Ты — профессиональный редактор. Проанализируй этот пост в Telegram и подготовь ответ на РУССКОМ ЯЗЫКЕ.
+ОЧЕНЬ ВАЖНО: Даже если пост на английском — ПЕРЕВЕДИ его. НИКАКИХ ССЫЛОК И ТЕГОВ.
 
-Очень важно: ИГНОРИРУЙ любые технические ссылки (t.me, http, me/...), промокоды, призывы подписаться на канал, таймкоды и прочий мусор. Возвращай ТОЛЬКО СУТЬ самого контента.
-Без ссылок, без url, без эмодзи.
-Верни ТОЛЬКО текст саммари на русском без JSON и без markdown.
+1. "title": Придумай или переведи короткий заголовок на русском (до 10 слов).
+2. "summary": Краткое информативное саммари на русском (1-2 предложения).
+
+JSON СТРУКТУРА:
+{
+  "title": "Заголовок на русском",
+  "summary": "Текст саммари на русском"
+}
 
 Текст: ${content}`
                         }]
                     }],
                     generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 200
+                        temperature: 0.4,
+                        maxOutputTokens: 400,
+                        responseMimeType: "application/json"
                     }
                 })
             }
         );
 
         if (!response.ok) {
-            return createFallbackSummary(text);
+            return { title: '', summary: createFallbackSummary(text) };
         }
 
         const data = await response.json();
-        const summary = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const resText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-        return summary.trim() || createFallbackSummary(text);
+        try {
+            const parsed = JSON.parse(resText);
+            return {
+                title: parsed.title || '',
+                summary: parsed.summary || createFallbackSummary(text)
+            };
+        } catch (e) {
+            return { title: '', summary: createFallbackSummary(text) };
+        }
     } catch (error) {
-        console.error('Gemini summarization failed:', error);
-        return createFallbackSummary(text);
+        console.error('Gemini summarization failed in telegram-latest:', error);
+        return { title: '', summary: createFallbackSummary(text) };
     }
 }
 
