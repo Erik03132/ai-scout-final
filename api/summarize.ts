@@ -80,113 +80,13 @@ export default async function handler(
     }
 }
 
+import { askAI } from '../src/lib/ai/gemini';
+
 /**
- * Генерация саммари с помощью LLM (Gemini/OpenAI)
+ * Основная логика получения саммари через оркестратор моделей
  */
 async function generateSummaryWithLLM(content: string): Promise<SummarizeResponse> {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-        throw new Error('No LLM API key configured');
-    }
-
-    // Приоритет отдаем Gemini API
-    if (process.env.GEMINI_API_KEY) {
-        try {
-            console.log("Starting Gemini summarization...");
-            return await callGemini(content);
-        } catch (e: any) {
-            console.error("Gemini failed, trying OpenAI fallback:", e.message);
-            if (!process.env.OPENAI_API_KEY) throw e;
-        }
-    }
-
-    // Резервный вариант: OpenAI API
-    if (process.env.OPENAI_API_KEY) {
-        try {
-            return await callOpenAI(content);
-        } catch (e: any) {
-            console.error("OpenAI failed too:", e.message);
-            throw e;
-        }
-    }
-
-    throw new Error('No LLM provider configured or all providers failed');
-}
-
-/**
- * Вызов OpenAI API
- */
-async function callOpenAI(content: string): Promise<SummarizeResponse> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-                {
-                    role: 'system',
-                    content: `Ты — профессиональный ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом.
-Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке.
-
-КРИТИЧЕСКИЕ ТРЕБОВАНИЯ:
-1. Весь ответ (заголовок, саммари, подробный разбор, советы) ДОЛЖЕН БЫТЬ НА РУССКОМ ЯЗЫКЕ. 
-2. Если исходный текст на английском — ПЕРЕВЕДИ ЕГО на качественный, профессиональный русский язык.
-3. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Не оставляй английские слова в заголовке, если есть адекватный перевод.
-4. Поле "detailedUsage" — создай ИСЧЕРПЫВАЮЩЕЕ текстовое саммари. Сделай МИНИМУМ 5-7 развернутых абзацев. Разбери все ключевые моменты, этапы и выводы. Используй Markdown для оформления.
-5. ИГНОРИРУЙ ссылки, промокоды и призывы подписаться.
-
-JSON СТРУКТУРА:
-{
-  "titleRu": "Переведенный заголовок на русский",
-  "summary": "Краткое саммари (3-4 пред) для превью на русском.",
-  "tags": ["AI", "Automation", "Tools"],
-  "mentions": ["Tool1", "Tool2"],
-  "detailedUsage": "Подробный разбор всего содержания на русском языке. Минимум 5-8 абзацев. Опиши все детали.",
-  "usageTips": ["совет 1 на русском", "совет 2 на русском"]
-}
-
-Верни ТОЛЬКО чистый JSON без markdown блоков.`
-                },
-                {
-                    role: 'user',
-                    content: content.substring(0, 10000)
-                }
-            ],
-            temperature: 0.3,
-            max_tokens: 3500
-        })
-    });
-
-    if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`OpenAI API error ${response.status}: ${err}`);
-    }
-
-    const data = await response.json();
-    const text = data.choices[0]?.message?.content || '';
-
-    return parseLLMResponse(text);
-}
-
-/**
- * Вызов Gemini API
- */
-async function callGemini(content: string): Promise<SummarizeResponse> {
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `Ты — ведущий ИИ-аналитик. Твоя задача: сделать глубокий разбор контента на РУССКОМ ЯЗЫКЕ.
+    const prompt = ` Ты — ведущий ИИ-аналитик. Твоя задача: сделать глубокий разбор контента на РУССКОМ ЯЗЫКЕ.
 
 КРИТИЧЕСКИЕ ИНСТРУКЦИИ:
 1. "titleRu": ОБЯЗАТЕЛЬНО переведи заголовок на качественный русский язык. НИКАКОГО английского в заголовке.
@@ -208,34 +108,17 @@ JSON СТРУКТУРА:
   "usageTips": ["Совет 1 на русском", "Совет 2 на русском"]
 }
 
-Верни ТОЛЬКО чистый JSON без markdown блоков.
+Верни ТОЛЬКО чистый JSON (объект).
 
-Контент для анализа: ${content.substring(0, 20000)}`
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.3,
-                    maxOutputTokens: 500,
-                    responseMimeType: "application/json"
-                }
-            })
-        }
-    );
+Контент для анализа: ${content.substring(0, 20000)}`;
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini API error ${response.status}: ${errorText}`);
+    try {
+        const responseText = await askAI(prompt, { json: true });
+        return parseLLMResponse(responseText);
+    } catch (e: any) {
+        console.error("All AI providers in orchestrator failed:", e.message);
+        throw e;
     }
-
-    const data = await response.json();
-
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        console.error('Gemini empty response:', JSON.stringify(data));
-        throw new Error('Gemini returned empty response (safety filter or quota?)');
-    }
-
-    const text = data.candidates[0].content.parts[0].text;
-    return parseLLMResponse(text);
 }
 
 /**
