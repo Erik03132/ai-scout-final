@@ -44,7 +44,22 @@ const TOOL_ICONS: Record<string, string> = {
   'framer': '🎨',
   'figma': '🎨',
   'react': '⚛️',
-  'typescript': '🟦'
+  'typescript': '🟦',
+  'midjourney': '🎨',
+  'python': '🐍',
+  'node.js': '🟢',
+  'perplexity': '🔍',
+  'linear': '📈',
+  'docker': '🐳',
+  'kubernetes': '☸️',
+  'postgresql': '🐘',
+  'mongodb': '🍃',
+  'aws': '☁️',
+  'azure': '☁️',
+  'firebase': '🔥',
+  'google cloud': '☁️',
+  'cursor': '🖱️',
+  'copilot': '🤖'
 };
 
 const getToolIcon = (name: string): string => {
@@ -952,7 +967,7 @@ export default function App() {
                   {/* Thumbnail */}
                   <div className="relative w-full md:w-64 h-44 flex-shrink-0 group-hover:scale-[1.02] transition-transform duration-500">
                     <img
-                      src={post.image}
+                      src={post.image || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200'}
                       alt={post.title}
                       loading="lazy"
                       onError={(e) => {
@@ -1917,10 +1932,13 @@ export default function App() {
                   }
 
                   if (url) {
-                    // Extract channel name from URL or @username
                     let name = url;
+                    let finalUrl = url;
+
                     if (url.startsWith('@')) {
+                      source = 'Telegram';
                       name = url;
+                      finalUrl = `https://t.me/${url.substring(1)}`;
                     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
                       const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
                       if (match) name = match[1];
@@ -1929,11 +1947,23 @@ export default function App() {
                       const match = url.match(/t\.me\/([^/?]+)/);
                       if (match) name = '@' + match[1];
                       else name = url.split('/').pop() || url;
+                      finalUrl = url;
+                    }
+
+                    // ПРОВЕРКА НА ДУБЛИКАТЫ (проверяем и нормализованный URL, и имя)
+                    const isDuplicate = channels.some(c =>
+                      c.url.toLowerCase().trim() === finalUrl.toLowerCase().trim() ||
+                      c.name.toLowerCase().trim() === name.toLowerCase().trim()
+                    );
+
+                    if (isDuplicate) {
+                      alert('Этот канал уже добавлен в ваш список!');
+                      return;
                     }
 
                     const newChannel = {
                       id: `channel-${Date.now()}`,
-                      url: url.trim(),
+                      url: finalUrl.trim(),
                       source,
                       name
                     };
