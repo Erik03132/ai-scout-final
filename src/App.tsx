@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
+import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
+import { FeedTab } from './components/Tabs/FeedTab';
+import { InsightsTab } from './components/Tabs/InsightsTab';
+import { ArchiveTab } from './components/Tabs/ArchiveTab';
+import { FavoritesTab } from './components/Tabs/FavoritesTab';
 
 // Types
 interface Post {
@@ -21,56 +25,6 @@ interface Post {
   usageTips: string[];
   content?: string;
 }
-
-const TOOL_ICONS: Record<string, string> = {
-  'vercel': '▲',
-  'next.js': '▲',
-  'supabase': '⚡',
-  'tailwind css': '🎨',
-  'prisma': '◮',
-  'zustand': '🐻',
-  'stripe': '💳',
-  'openai': '🤖',
-  'gemini': '♊',
-  'claude': '🎭',
-  'chatgpt': '💬',
-  'n8n': '🐙',
-  'pinecone': '🌲',
-  'antigravity': '👽',
-  'openclaw': '🦞',
-  'notebooklm': '📔',
-  'skool': '🎓',
-  'github': '🐙',
-  'framer': '🎨',
-  'figma': '🎨',
-  'react': '⚛️',
-  'typescript': '🟦',
-  'midjourney': '🎨',
-  'python': '🐍',
-  'node.js': '🟢',
-  'perplexity': '🔍',
-  'linear': '📈',
-  'docker': '🐳',
-  'kubernetes': '☸️',
-  'postgresql': '🐘',
-  'mongodb': '🍃',
-  'aws': '☁️',
-  'azure': '☁️',
-  'firebase': '🔥',
-  'google cloud': '☁️',
-  'cursor': '🖱️',
-  'copilot': '🤖'
-};
-
-const getToolIcon = (name: string): string => {
-  const normalized = name.toLowerCase().trim();
-  // Check exact match
-  if (TOOL_ICONS[normalized]) return TOOL_ICONS[normalized];
-  // Check if any key is contained in name
-  const foundKey = Object.keys(TOOL_ICONS).find(key => normalized.includes(key));
-  if (foundKey) return TOOL_ICONS[foundKey];
-  return '⚙️';
-};
 
 // Mock data
 const mockPosts: Post[] = [
@@ -469,9 +423,9 @@ export default function App() {
       const newDynamicTools = [...prev];
       let hasChanges = false;
 
-      allMentions.forEach((mention) => {
-        const existsInTools = tools.some((t: any) => t.name.toLowerCase() === (mention as string).toLowerCase() || (mention as string).toLowerCase().includes(t.name.toLowerCase()));
-        const existsInCached = newDynamicTools.some((t: any) => t.name.toLowerCase() === (mention as string).toLowerCase() || (mention as string).toLowerCase().includes(t.name.toLowerCase()));
+      allMentions.forEach(mention => {
+        const existsInTools = tools.some(t => t.name.toLowerCase() === mention.toLowerCase() || mention.toLowerCase().includes(t.name.toLowerCase()));
+        const existsInCached = newDynamicTools.some(t => t.name.toLowerCase() === mention.toLowerCase() || mention.toLowerCase().includes(t.name.toLowerCase()));
 
         if (!existsInTools && !existsInCached) {
           newDynamicTools.push({
@@ -498,16 +452,6 @@ export default function App() {
   }, [posts, tools, setCachedDynamicTools]);
 
   const allTools = [...tools, ...cachedDynamicTools];
-  const [selectedCategory, setSelectedCategory] = useState('All');
-
-  const filteredTools = useMemo(() =>
-    allTools.filter((tool: any) =>
-      (selectedCategory === 'All' || tool.category === selectedCategory) &&
-      (tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tool.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    ),
-    [allTools, selectedCategory, searchQuery]
-  );
 
   // Загрузка данных из Supabase
   useEffect(() => {
@@ -552,79 +496,16 @@ export default function App() {
             summary: p.summary || '',
             source: p.source,
             channel: p.channel,
-            date: p.date ? new Date(p.date).toLocaleDateString('ru-RU') : '',
+            date: p.date ? new Date(p.date).toLocaleDateString() : '',
             tags: p.tags || [],
             mentions: p.mentions || [],
             views: p.views || '0',
             image: p.image || '',
             url: p.url,
             detailedUsage: p.detailed_usage || '',
-            usageTips: p.usage_tips || [],
-            content: (p as any).content || ''
+            usageTips: p.usage_tips || []
           }));
           setPosts(formattedPosts);
-
-          // Фоновый перевод постов без кириллицы в названии
-          const hasCyrillic = (text: string) => text && /[а-яА-ЯёЁ]/.test(text);
-          const needsTranslation = postsResult.data.filter(p =>
-            p.title && !hasCyrillic(p.title.replace(/\[.*?\]/g, '').trim()) && p.url
-          );
-
-          if (needsTranslation.length > 0) {
-            // Переводим по одному в фоне (сравниваем по URL, а не ID)
-            (async () => {
-              for (const rawPost of needsTranslation.slice(0, 10)) { // max 10
-                try {
-                  // Пауза 4.5 секунды между запросами для строгого соблюдения лимитов Gemini (15 RPM = 1 запр / 4 сек)
-                  await new Promise(resolve => setTimeout(resolve, 4500));
-
-                  const content = `Заголовок: ${rawPost.title}\n\nОписание: ${(rawPost as any).description || rawPost.summary || ''}`;
-                  const res = await fetch('/api/summarize', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content }),
-                  });
-                  if (!res.ok) continue;
-                  const translated = await res.json();
-
-                  // Очищаем заголовок от служебных тегов
-                  const cleanTitle = (translated.titleRu || '').replace(/\[.*?\]/g, '').trim();
-
-                  if (cleanTitle && hasCyrillic(cleanTitle)) {
-                    setPosts(prev => prev.map(p =>
-                      p.url === rawPost.url
-                        ? {
-                          ...p,
-                          title: cleanTitle,
-                          summary: hasCyrillic(translated.summary) ? translated.summary : p.summary,
-                          tags: translated.tags?.length ? translated.tags : p.tags,
-                          mentions: translated.mentions?.length ? translated.mentions : p.mentions,
-                          detailedUsage: translated.detailedUsage || p.detailedUsage,
-                          usageTips: translated.usageTips?.length ? translated.usageTips : p.usageTips,
-                        }
-                        : p
-                    ));
-
-                    // Сохраняем перевод обратно в БД
-                    const supabaseClient = getClient();
-                    if (supabaseClient && rawPost.url) {
-                      await supabaseClient.from('posts').update({
-                        title: cleanTitle,
-                        summary: hasCyrillic(translated.summary) ? translated.summary : rawPost.summary,
-                        tags: translated.tags,
-                        mentions: translated.mentions,
-                        detailed_usage: translated.detailedUsage,
-                        usage_tips: translated.usageTips,
-                        is_analyzed: true
-                      }).eq('url', rawPost.url);
-                    }
-                  }
-                } catch (e) {
-                  console.error('Background translation failed for:', rawPost.title, e);
-                }
-              }
-            })();
-          }
         }
 
         // Обрабатываем каналы
@@ -775,22 +656,17 @@ export default function App() {
     const fullText = `Заголовок: ${title}\n\nОписание: ${content}`;
 
     // Fallback функция при ошибке API
-    const getFallbackSummary = (fallbackPost: Partial<Post>) => {
-      const fallbackTitle = fallbackPost.title || title;
-      const hasCyrillic = (text: string) => /[а-яА-ЯёЁ]/.test(text);
-
+    const getFallbackSummary = (post: Partial<Post>) => {
       return {
-        titleRu: hasCyrillic(fallbackTitle) ? fallbackTitle : 'Требуется перевод заголовка',
-        summary: hasCyrillic(fallbackPost.summary || '')
-          ? fallbackPost.summary!
-          : 'Описание на английском. AI-анализ и перевод скоро будут готовы...',
-        tags: fallbackPost.tags && fallbackPost.tags.length > 0 ? fallbackPost.tags : ['Tech'],
-        mentions: fallbackPost.mentions || [],
-        detailedUsage: 'Подробный анализ этого контента на русском языке находится в очереди на обработку. Пожалуйста, обновите страницу через несколько минут.',
+        titleRu: title,
+        summary: content.substring(0, 200) || title || 'Контент недоступен',
+        tags: ['Tech'],
+        mentions: [],
+        detailedUsage: '',
         usageTips: [
-          'Проверьте оригинальный источник',
-          'Попробуйте зайти позже для просмотра полного анализа',
-          'Следите за обновлениями в ленте'
+          'Изучите официальную документацию',
+          'Попробуйте на практике',
+          'Следите за обновлениями'
         ]
       };
     };
@@ -817,19 +693,8 @@ export default function App() {
 
       const result = await response.json();
 
-      // ГАРАНТИЯ РУССКОГО ЯЗЫКА: Если заголовок все еще на английском, пробуем перевести
-      let finalTitle = result.titleRu || title;
-      const possessesCyrillic = /[а-яА-ЯёЁ]/.test(finalTitle);
-
-      if (!possessesCyrillic && finalTitle) {
-        // Если вообще нет кириллицы - это скорее всего ошибка перевода
-        // Мы можем попробовать еще раз или оставить как есть, но для надежности
-        // возьмем title из post если он там вдруг был на русском.
-        // Но сейчас просто оставим логику как есть, т.к. API уже должно переводить.
-      }
-
       return {
-        titleRu: finalTitle,
+        titleRu: result.titleRu || title,
         summary: result.summary || content.substring(0, 200),
         tags: Array.isArray(result.tags) ? result.tags : [],
         mentions: Array.isArray(result.mentions) ? result.mentions : [],
@@ -1017,34 +882,27 @@ export default function App() {
 
         {/* Feed Tab */}
         {activeTab === 'feed' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between mb-8">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Последние находки</h2>
-                <p className="text-slate-500 text-sm mt-1 font-medium">Интеллектуальный поток инструментов и решений</p>
+                <h2 className="text-2xl font-bold text-white">Последние новости</h2>
+                <p className="text-slate-400 text-sm mt-1">AI-анализ контента из ваших источников</p>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all border border-white/5">
+              <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
                 <Filter className="w-4 h-4" />
-                ФИЛЬТРЫ
+                Фильтры
               </button>
             </div>
 
-            <div className="grid gap-6">
+            <div className="grid gap-4">
               {posts.map(post => (
                 <div
                   key={post.id}
-                  className="group bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] p-6 hover:border-cyan-500/30 hover:bg-slate-800/60 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 flex flex-col md:flex-row gap-8 relative overflow-hidden"
-                  onClick={() => setSelectedPost(post)}
+                  className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-slate-700 rounded-2xl p-6 mb-4 hover:border-cyan-500/50 hover:bg-slate-800/90 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1"
                 >
-                  {/* Subtle Background Glow */}
-                  <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <div className="w-32 h-32 bg-cyan-500/5 blur-3xl rounded-full" />
-                  </div>
-
-                  {/* Thumbnail */}
-                  <div className="relative w-full md:w-64 h-44 flex-shrink-0 group-hover:scale-[1.02] transition-transform duration-500">
+                  <div className="flex flex-col sm:flex-row gap-4">
                     <img
-                      src={post.image || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200'}
+                      src={post.image}
                       alt={post.title}
                       loading="lazy"
                       onError={(e) => {
@@ -1057,100 +915,132 @@ export default function App() {
                           target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
                         }
                       }}
-                      className="w-full h-full object-cover rounded-[1.5rem] shadow-2xl border border-white/5"
+                      className="w-full sm:w-40 h-48 sm:h-28 object-cover rounded-xl flex-shrink-0"
                     />
-                    <div className="absolute inset-0 rounded-[1.5rem] ring-1 ring-inset ring-white/10" />
-
-                    {/* Badge on Image for Source */}
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 px-2 py-1 rounded-lg flex items-center gap-1.5 shadow-lg">
-                      {post.source === 'YouTube' ? <Youtube className="w-3 h-3 text-red-500" /> : <MessageCircle className="w-3 h-3 text-sky-500" />}
-                      <span className="text-[9px] font-black text-white uppercase tracking-wider">{post.source}</span>
-                    </div>
-                  </div>
-
-                  {/* Content Area */}
-                  <div className="flex-1 min-w-0 flex flex-col pt-1">
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-xs font-black text-cyan-400 group-hover:text-cyan-300 transition-colors uppercase tracking-[0.1em]">@{post.channel}</span>
-                      <span className="text-slate-700 opacity-30">•</span>
-                      <div className="flex items-center gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-widest">
-                        <Clock size={12} className="opacity-50" />
-                        {post.date}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={cn(
+                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                          post.source === 'YouTube'
+                            ? "bg-red-500/10 text-red-400"
+                            : "bg-sky-500/10 text-sky-400"
+                        )}>
+                          {post.source === 'YouTube' ? <Youtube className="w-3 h-3" /> : <MessageCircle className="w-3 h-3" />}
+                          {post.source}
+                        </span>
+                        <span className="text-xs text-slate-500">{post.channel}</span>
+                        <span className="text-xs text-slate-600">•</span>
+                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {post.date}
+                        </span>
+                        <span className="text-xs text-slate-500 ml-auto">{post.views} просмотров</span>
                       </div>
-                    </div>
 
-                    <h3 className="text-2xl font-black text-white mb-3 group-hover:text-cyan-400 transition-colors uppercase tracking-tight leading-[1.1]">
-                      {post.title}
-                    </h3>
+                      <h3 className="font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors cursor-pointer">
+                        {post.title}
+                      </h3>
+                      <p className="text-sm text-slate-400 line-clamp-2 mb-3">{post.summary}</p>
 
-                    <p className="text-sm text-slate-400 line-clamp-2 mb-6 font-medium leading-relaxed opacity-80">
-                      {post.summary}
-                    </p>
-
-                    <div className="flex flex-col md:flex-row gap-6 mt-auto pt-6 border-t border-white/5">
-                      <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {post.tags.map(tag => (
+                            <span key={tag} className="px-2 py-0.5 bg-slate-700/50 text-slate-300 rounded-full text-xs">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                         {post.mentions.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {post.mentions.map((m, i) => (
-                              <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/60 border border-white/5 rounded-xl text-[10px] font-black text-cyan-400/90 uppercase tracking-widest shadow-sm transition-all hover:bg-cyan-500/10 hover:border-cyan-500/30 hover:text-cyan-300" title={m}>
-                                <span className="text-sm filter grayscale group-hover:grayscale-0 transition-all">{getToolIcon(m)}</span>
-                                <span className="tracking-tight">{m}</span>
-                              </div>
-                            ))}
-                          </div>
+                          <>
+                            <span className="text-slate-600">|</span>
+                            <span className="text-xs text-slate-500">Упомянуто:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {post.mentions
+                                .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.trim().toLowerCase()))
+                                .map((toolName: string) => {
+                                  const existingToolObj = allTools.find((t) =>
+                                    t.name.toLowerCase() === toolName.toLowerCase() ||
+                                    toolName.toLowerCase().includes(t.name.toLowerCase())
+                                  );
+
+                                  const toolObj = existingToolObj || {
+                                    id: `dyn-${toolName}`,
+                                    name: toolName,
+                                    category: "AI Service",
+                                    description: `Интеллектуальный анализ применения ${toolName} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
+                                    icon: "✨",
+                                    rating: 4.8,
+                                    dailyCredits: "Уточняется",
+                                    monthlyCredits: "Уточняется",
+                                    minPrice: "По запросу",
+                                    hasApi: false,
+                                    hasMcp: false,
+                                    details: [],
+                                    pros: ["Перспективно", "Упоминается экспертами", "Тренд"],
+                                    docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName + ' AI')}`
+                                  };
+
+                                  const displayName = existingToolObj ? existingToolObj.name : toolName;
+
+                                  return (
+                                    <button
+                                      key={toolName}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setSelectedTool(toolObj as any);
+                                      }}
+                                      className={cn(
+                                        "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
+                                      )}
+                                      title="Нажмите для подробностей"
+                                    >
+                                      <span>{toolObj.icon}</span>
+                                      {displayName}
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          </>
                         )}
                       </div>
-
-                      {/* Right Side Actions - VERTICAL BLOCK */}
-                      <div className="flex flex-row md:flex-col gap-2.5 shrink-0 self-center md:self-end">
-                        {/* 1. Source Link - cyan */}
-                        <a
-                          href={post.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="group/btn w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-cyan-500/20 text-slate-500 hover:text-cyan-400 border border-slate-700 hover:border-cyan-500/50 rounded-2xl transition-all duration-200 shadow-md hover:shadow-cyan-500/10"
-                          title="Перейти к источнику"
-                        >
-                          <ExternalLink size={16} className="group-hover/btn:scale-110 transition-transform" />
-                        </a>
-
-                        {/* 2. Details Button - violet */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedPost(post);
-                          }}
-                          className="group/btn w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-violet-500/20 text-slate-500 hover:text-violet-400 border border-slate-700 hover:border-violet-500/50 rounded-2xl transition-all duration-200 shadow-md hover:shadow-violet-500/10"
-                          title="Подробный разбор"
-                        >
-                          <Sparkles size={16} className="group-hover/btn:scale-110 transition-transform" />
-                        </button>
-
-                        {/* 3. Favorite Button - rose */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(`post-${post.id}`);
-                          }}
-                          className={cn(
-                            "group/btn w-10 h-10 flex items-center justify-center rounded-2xl transition-all duration-200 border shadow-md",
-                            favorites.includes(`post-${post.id}`)
-                              ? "text-rose-400 bg-rose-500/20 border-rose-500/50 shadow-rose-500/10"
-                              : "text-slate-500 hover:text-rose-400 bg-slate-800 border-slate-700 hover:bg-rose-500/20 hover:border-rose-500/50 hover:shadow-rose-500/10"
-                          )}
-                          title="В избранное"
-                        >
-                          <Heart className={cn("w-4 h-4 group-hover/btn:scale-110 transition-transform", favorites.includes(`post-${post.id}`) && "fill-current")} />
-                        </button>
-                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={post.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-xl text-amber-500 hover:text-amber-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-amber-500/20"
+                        title="Открыть источник"
+                      >
+                        <ExternalLink className="w-5 h-5" />
+                      </a>
+                      <button
+                        onClick={() => setSelectedPost(post)}
+                        className="p-2 rounded-xl text-slate-500 hover:text-blue-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-blue-500/20"
+                        title="Подробный саммари"
+                      >
+                        <FileText className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => toggleFavorite(`post-${post.id}`)}
+                        className={cn(
+                          "p-2 rounded-xl transition-all duration-200 border",
+                          favorites.includes(`post-${post.id}`)
+                            ? "text-red-400 bg-red-500/10 border-red-500/20"
+                            : "text-slate-500 hover:text-red-400 hover:bg-slate-700/50 border-transparent"
+                        )}
+                      >
+                        <Heart className={cn("w-5 h-5", favorites.includes(`post-${post.id}`) && "fill-current")} />
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        )}
+        )
+        }
 
         {/* Insights Tab */}
         {
@@ -1495,7 +1385,10 @@ export default function App() {
         }
       </main >
 
-      {/* Floating Action Button Removed */}
+      {/* Floating Action Button */}
+      < button className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105 group" >
+        <Plus className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
+      </button >
 
       {/* Tool Detail Modal */}
       {
@@ -2011,49 +1904,26 @@ export default function App() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
-                  const url = (formData.get('channelUrl') as string).trim();
-                  let source = formData.get('source') as 'YouTube' | 'Telegram';
+                  const url = formData.get('channelUrl') as string;
+                  const source = formData.get('source') as 'YouTube' | 'Telegram';
 
-                  // Auto-detect source from URL
-                  if (url.includes('t.me/') || url.startsWith('@')) {
-                    source = 'Telegram';
-                  } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-                    source = 'YouTube';
-                  }
-
-                  if (url) {
-                    let name = url;
-                    let finalUrl = url;
-
+                  if (url.trim()) {
+                    // Extract channel name from URL or @username
+                    let name = url.trim();
                     if (url.startsWith('@')) {
-                      source = 'Telegram';
-                      name = url;
-                      finalUrl = `https://t.me/${url.substring(1)}`;
+                      // Telegram @username format
+                      name = url.substring(1);
                     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
                       const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
                       if (match) name = match[1];
-                      else name = url.split('/').pop() || url;
                     } else if (url.includes('t.me')) {
                       const match = url.match(/t\.me\/([^/?]+)/);
-                      if (match) name = '@' + match[1];
-                      else name = url.split('/').pop() || url;
-                      finalUrl = url;
-                    }
-
-                    // ПРОВЕРКА НА ДУБЛИКАТЫ (проверяем и нормализованный URL, и имя)
-                    const isDuplicate = channels.some(c =>
-                      c.url.toLowerCase().trim() === finalUrl.toLowerCase().trim() ||
-                      c.name.toLowerCase().trim() === name.toLowerCase().trim()
-                    );
-
-                    if (isDuplicate) {
-                      alert('Этот канал уже добавлен в ваш список!');
-                      return;
+                      if (match) name = match[1];
                     }
 
                     const newChannel = {
                       id: `channel-${Date.now()}`,
-                      url: finalUrl.trim(),
+                      url: url.trim(),
                       source,
                       name
                     };
@@ -2081,29 +1951,9 @@ export default function App() {
                       // Всегда генерируем полное AI-саммари через API, чтобы получить теги и упомянутые сервисы
                       const aiSummary = await generateAISummary(latestPost);
 
-                      // Если API анализа вернуло ошибку, мы уже получили русскую заглушку в aiSummary через generateAISummary
-                      // Поэтому здесь больше не нужно откатываться на latestPost.summary, который может быть на английском.
-
-                      // АВТО-ОТКРЫТИЕ ИНСТРУМЕНТОВ: Сохраняем новые инструменты в базу
-                      if (supabase && (aiSummary as any).mentionsDetail) {
-                        const details = (aiSummary as any).mentionsDetail;
-                        for (const detail of details) {
-                          try {
-                            await supabase.from('tools').upsert([{
-                              name: detail.name,
-                              category: detail.category,
-                              description: `Инструмент ${detail.name} (обнаружен AI Scout).`,
-                              icon: '⚙️',
-                              rating: 4.5,
-                              min_price: detail.minPrice,
-                              has_api: detail.hasApi,
-                              has_mcp: detail.hasMcp,
-                              pros: ['Обнаружено в поиске']
-                            }], { onConflict: 'name' });
-                          } catch (toolErr) {
-                            console.error('Error auto-saving tool:', toolErr);
-                          }
-                        }
+                      // Если API канала уже вернуло хорошее саммари, а у нас заглушка, берем API саммари
+                      if (latestPost.summary && aiSummary.summary === 'Контент недоступен') {
+                        aiSummary.summary = latestPost.summary;
                       }
 
                       // Форматируем дату
@@ -2128,11 +1978,10 @@ export default function App() {
                       };
 
                       // Создаем новый пост с реальными данными
-                      const cleanTitle = (aiSummary.titleRu || latestPost.title || 'Новое обновление').replace(/\[.*?\]/g, '').trim();
                       const newPost: Post = {
                         id: Date.now(),
-                        title: cleanTitle,
-                        summary: aiSummary.summary || 'Краткое описание готовится...',
+                        title: aiSummary.titleRu || latestPost.title || 'Без названия',
+                        summary: aiSummary.summary,
                         source: source,
                         channel: latestPost.channel || name,
                         date: formatDate(latestPost.date || ''),
