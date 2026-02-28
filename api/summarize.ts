@@ -173,7 +173,7 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
  */
 async function callGemini(content: string): Promise<SummarizeResponse> {
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: {
@@ -182,33 +182,38 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `Ты — профессиональный ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом (описание видео YouTube, статья или пост).
-Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке.
+                        text: `Ты — профессиональный ИИ-аналитик и технологический исследователь. Ознакомься с предоставленным контентом (описание видео YouTube, статья или пост).
+Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке и собрать первичные данные о упомянутых сервисах.
+
 Правила:
-1. ИГНОРИРУЙ ссылки, промокоды и призывы подписаться.
-2. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Если он уже на русском — оставь как есть.
-3. В поле "mentions" — извлеки АБСОЛЮТНО ВСЕ названия софта, проектов, конкретных ИИ-моделей или нейросетей (Figma, Spline, Midjourney, Canva, Notion, ChatGPT, Vercel и т.д.). 
-СТРОГО ИГНОРИРУЙ: 
-- языки программирования и фреймворки (Python, React, Go и т.д.)
-- общие термины, технологии и концепции (AUTOENCODER, NEURAL NETWORK, VAE, LLM, RAG, API, Database и т.д.).
-4. В поле "detailedUsage" создай максимально подробное, ИСЧЕРПЫВАЮЩЕЕ текстовое саммари. Напиши столько предложений и абзацев, сколько нужно, чтобы передать ВСЮ суть, все этапы и ключевые пункты контента. Это должно быть полноценным пересказом.
-5. В поле "detailedUsage" допускается использование Markdown (списки, выделение жирным), чтобы текст легко читался.
-6. Верни ТОЛЬКО JSON без markdown и \`\`\`json.
+1. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Если он уже на русском — оставь как есть.
+2. В поле "mentions" — извлеки названия софта (Figma, Supabase, Claude и т.д.). Игнорируй языки программирования и общие термины.
+3. В поле "mentionsDetail" — для КАЖДОГО извлеченного инструмента из "mentions" предоставь краткую информацию на основе своих знаний (даже если данных нет в тексте):
+   - name: Название
+   - category: Категория (Design, AI, Database и т.д.)
+   - minPrice: Минимальная цена (например, "$0" или "$20/мес"). Если не знаешь точно — напиши "Бесплатно" или "Платный".
+   - hasApi: true/false (есть ли у сервиса API)
+   - hasMcp: true/false (есть ли поддержка Model Context Protocol)
+4. В поле "detailedUsage" создай подробное текстовое саммари. Сделай его максимально глубоким, перескажи все ключевые моменты.
+5. Верни ТОЛЬКО JSON:
 {
-  "titleRu": "Перевод заголовка",
-  "summary": "Краткое саммари (2-3 пред) для превью.",
+  "titleRu": "Заголовок",
+  "summary": "Краткое саммари для карточки.",
   "tags": ["тег1", "тег2"],
-  "mentions": ["Spline", "Figma"],
-  "detailedUsage": "ИСЧЕРПЫВАЮЩЕЕ саммари всего ролика/поста. Детальный разбор всех пунктов содержания, главных идей и выводов. Не ограничивай себя в объеме.",
+  "mentions": ["Tool1", "Tool2"],
+  "mentionsDetail": [
+    { "name": "Tool1", "category": "AI", "minPrice": "$0", "hasApi": true, "hasMcp": false }
+  ],
+  "detailedUsage": "Детальный пересказ контента с Markdown.",
   "usageTips": ["совет 1", "совет 2"]
 }
 
-Контент: ${content.substring(0, 8000)}`
+Контент: ${content.substring(0, 10000)}`
                     }]
                 }],
                 generationConfig: {
                     temperature: 0.4,
-                    maxOutputTokens: 3000,
+                    maxOutputTokens: 4000,
                     responseMimeType: "application/json"
                 }
             })
@@ -217,8 +222,8 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
 
     if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Gemini API error \${response.status}:`, errorText);
-        throw new Error(`Gemini API error: \${response.status}`);
+        console.error(`Gemini API error ${response.status}:`, errorText);
+        throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -227,13 +232,28 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
     return parseLLMResponse(text);
 }
 
+interface SummarizeResponse {
+    titleRu: string;
+    summary: string;
+    tags: string[];
+    mentions: string[];
+    mentionsDetail?: Array<{
+        name: string;
+        category: string;
+        minPrice: string;
+        hasApi: boolean;
+        hasMcp: boolean;
+    }>;
+    detailedUsage: string;
+    usageTips: string[];
+}
+
 /**
  * Парсинг ответа LLM
  */
 function parseLLMResponse(text: string): SummarizeResponse {
     try {
         let jsonStr = text;
-        // Извлекаем JSON из текста с помощью регулярного выражения
         const match = text.match(/\{[\s\S]*\}/);
         if (match) {
             jsonStr = match[0];
@@ -246,10 +266,12 @@ function parseLLMResponse(text: string): SummarizeResponse {
             summary: parsed.summary || '',
             tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 8) : [],
             mentions: Array.isArray(parsed.mentions) ? parsed.mentions : [],
+            mentionsDetail: Array.isArray(parsed.mentionsDetail) ? parsed.mentionsDetail : [],
             detailedUsage: parsed.detailedUsage || '',
             usageTips: Array.isArray(parsed.usageTips) ? parsed.usageTips : []
         };
-    } catch {
+    } catch (e) {
+        console.error('Failed to parse LLM response:', e);
         throw new Error('Failed to parse LLM response');
     }
 }
@@ -258,49 +280,22 @@ function parseLLMResponse(text: string): SummarizeResponse {
  * Fallback генерация саммари без LLM
  */
 function generateFallbackSummary(content: string): SummarizeResponse {
-    // Извлекаем упоминания известных инструментов
-    const mentions = KNOWN_TOOLS.filter(tool =>
-        content.toLowerCase().includes(tool.toLowerCase())
-    ).slice(0, 5);
-
-    // Извлекаем теги
-    const tags = KNOWN_TAGS.filter(tag =>
-        content.toLowerCase().includes(tag.toLowerCase())
-    ).slice(0, 3);
-
-    // Создаём саммари: фильтруем строки с ссылками и слишком короткие
-    const sentences = content
-        .split(/[.!?]+/)
-        .map(s => s.trim())
-        .filter(s => {
-            // Пропускаем строки с ссылками
-            if (/https?:\/\/|bit\.ly|t\.me/i.test(s)) return false;
-            // Пропускаем слишком короткие строки
-            if (s.length < 30) return false;
-            return true;
-        });
-
-    // Пытаемся вытащить заголовок из формата "Заголовок: ...\n\nОписание: "
+    // Извлекаем название канала/видео если есть
     let title = '';
     const titleMatch = content.match(/Заголовок:\s*(.*?)\n/);
     if (titleMatch) title = titleMatch[1].trim();
 
-    // Берём первое нормальное предложение и обрезаем до 150 символов
-    let summary = title || sentences[0] || '';
-    if (summary.length > 200) {
-        summary = summary.substring(0, 200).trim() + '...';
-    }
-
     return {
-        titleRu: title || '',
-        summary: summary || 'Контент недоступен для саммари',
-        tags: tags.length > 0 ? tags : ['Tech'],
-        mentions,
-        detailedUsage: '⚠️ ИИ-анализ временно недоступен (вероятно, не настроен API-ключ Gemini на Vercel или превышен лимит).\n\nПока вы можете посмотреть оригинальный ролик. В нем, скорее всего, упоминаются следующие инструменты: ' + (mentions.length > 0 ? mentions.join(', ') : 'различные технологии.'),
+        titleRu: title || 'Новое обновление',
+        summary: 'ИИ-анализ временно недоступен. Вероятно, превышены лимиты API или текст слишком короткий для анализа.',
+        tags: ['Tech'],
+        mentions: [],
+        mentionsDetail: [],
+        detailedUsage: 'К сожалению, нам не удалось сгенерировать подробный разбор этого контента. Это может быть связано с техническими ограничениями или отсутствием развернутого описания в источнике.',
         usageTips: [
-            'Убедитесь, что GEMINI_API_KEY добавлен в панель Vercel',
-            'Проверьте лимиты вашего ИИ-провайдера',
-            'Следите за обновлениями системы'
+            'Проверьте оригинальный источник',
+            'Попробуйте обновить страницу позже',
+            'Убедитесь в правильности настроек API'
         ]
     };
 }

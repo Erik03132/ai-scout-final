@@ -1,12 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
+import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, Lightbulb, Code, Terminal, Layers, ArrowUpRight } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
-import { FeedTab } from './components/Tabs/FeedTab';
-import { InsightsTab } from './components/Tabs/InsightsTab';
-import { ArchiveTab } from './components/Tabs/ArchiveTab';
-import { FavoritesTab } from './components/Tabs/FavoritesTab';
 
 // Types
 interface Post {
@@ -25,6 +21,41 @@ interface Post {
   usageTips: string[];
   content?: string;
 }
+
+const TOOL_ICONS: Record<string, string> = {
+  'vercel': '▲',
+  'next.js': '▲',
+  'supabase': '⚡',
+  'tailwind css': '🎨',
+  'prisma': '◮',
+  'zustand': '🐻',
+  'stripe': '💳',
+  'openai': '🤖',
+  'gemini': '♊',
+  'claude': '🎭',
+  'chatgpt': '💬',
+  'n8n': '🐙',
+  'pinecone': '🌲',
+  'antigravity': '👽',
+  'openclaw': '🦞',
+  'notebooklm': '📔',
+  'skool': '🎓',
+  'github': '🐙',
+  'framer': '🎨',
+  'figma': '🎨',
+  'react': '⚛️',
+  'typescript': '🟦'
+};
+
+const getToolIcon = (name: string): string => {
+  const normalized = name.toLowerCase().trim();
+  // Check exact match
+  if (TOOL_ICONS[normalized]) return TOOL_ICONS[normalized];
+  // Check if any key is contained in name
+  const foundKey = Object.keys(TOOL_ICONS).find(key => normalized.includes(key));
+  if (foundKey) return TOOL_ICONS[foundKey];
+  return '⚙️';
+};
 
 // Mock data
 const mockPosts: Post[] = [
@@ -423,9 +454,9 @@ export default function App() {
       const newDynamicTools = [...prev];
       let hasChanges = false;
 
-      allMentions.forEach(mention => {
-        const existsInTools = tools.some(t => t.name.toLowerCase() === mention.toLowerCase() || mention.toLowerCase().includes(t.name.toLowerCase()));
-        const existsInCached = newDynamicTools.some(t => t.name.toLowerCase() === mention.toLowerCase() || mention.toLowerCase().includes(t.name.toLowerCase()));
+      allMentions.forEach((mention) => {
+        const existsInTools = tools.some((t: any) => t.name.toLowerCase() === (mention as string).toLowerCase() || (mention as string).toLowerCase().includes(t.name.toLowerCase()));
+        const existsInCached = newDynamicTools.some((t: any) => t.name.toLowerCase() === (mention as string).toLowerCase() || (mention as string).toLowerCase().includes(t.name.toLowerCase()));
 
         if (!existsInTools && !existsInCached) {
           newDynamicTools.push({
@@ -452,6 +483,16 @@ export default function App() {
   }, [posts, tools, setCachedDynamicTools]);
 
   const allTools = [...tools, ...cachedDynamicTools];
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const filteredTools = useMemo(() =>
+    allTools.filter((tool: any) =>
+      (selectedCategory === 'All' || tool.category === selectedCategory) &&
+      (tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tool.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    ),
+    [allTools, selectedCategory, searchQuery]
+  );
 
   // Загрузка данных из Supabase
   useEffect(() => {
@@ -656,10 +697,12 @@ export default function App() {
     const fullText = `Заголовок: ${title}\n\nОписание: ${content}`;
 
     // Fallback функция при ошибке API
-    const getFallbackSummary = (post: Partial<Post>) => {
+    const getFallbackSummary = (fallbackPost: Partial<Post>) => {
+      const fallbackTitle = fallbackPost.title || title;
+      const fallbackContent = fallbackPost.content || content;
       return {
-        titleRu: title,
-        summary: content.substring(0, 200) || title || 'Контент недоступен',
+        titleRu: fallbackTitle,
+        summary: fallbackContent.substring(0, 200) || fallbackTitle || 'Контент недоступен',
         tags: ['Tech'],
         mentions: [],
         detailedUsage: '',
@@ -882,25 +925,32 @@ export default function App() {
 
         {/* Feed Tab */}
         {activeTab === 'feed' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-6">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-2xl font-bold text-white">Последние новости</h2>
-                <p className="text-slate-400 text-sm mt-1">AI-анализ контента из ваших источников</p>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Последние находки</h2>
+                <p className="text-slate-500 text-sm mt-1 font-medium">Интеллектуальный поток инструментов и решений</p>
               </div>
-              <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
+              <button className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all border border-white/5">
                 <Filter className="w-4 h-4" />
-                Фильтры
+                ФИЛЬТРЫ
               </button>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-6">
               {posts.map(post => (
                 <div
                   key={post.id}
-                  className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-slate-700 rounded-2xl p-6 mb-4 hover:border-cyan-500/50 hover:bg-slate-800/90 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1"
+                  className="group bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] p-6 hover:border-cyan-500/30 hover:bg-slate-800/60 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 flex flex-col md:flex-row gap-8 relative overflow-hidden"
+                  onClick={() => setSelectedPost(post)}
                 >
-                  <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Subtle Background Glow */}
+                  <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div className="w-32 h-32 bg-cyan-500/5 blur-3xl rounded-full" />
+                  </div>
+
+                  {/* Thumbnail */}
+                  <div className="relative w-full md:w-64 h-44 flex-shrink-0 group-hover:scale-[1.02] transition-transform duration-500">
                     <img
                       src={post.image}
                       alt={post.title}
@@ -915,132 +965,87 @@ export default function App() {
                           target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
                         }
                       }}
-                      className="w-full sm:w-40 h-48 sm:h-28 object-cover rounded-xl flex-shrink-0"
+                      className="w-full h-full object-cover rounded-[1.5rem] shadow-2xl border border-white/5"
                     />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={cn(
-                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
-                          post.source === 'YouTube'
-                            ? "bg-red-500/10 text-red-400"
-                            : "bg-sky-500/10 text-sky-400"
-                        )}>
-                          {post.source === 'YouTube' ? <Youtube className="w-3 h-3" /> : <MessageCircle className="w-3 h-3" />}
-                          {post.source}
-                        </span>
-                        <span className="text-xs text-slate-500">{post.channel}</span>
-                        <span className="text-xs text-slate-600">•</span>
-                        <span className="text-xs text-slate-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {post.date}
-                        </span>
-                        <span className="text-xs text-slate-500 ml-auto">{post.views} просмотров</span>
-                      </div>
+                    <div className="absolute inset-0 rounded-[1.5rem] ring-1 ring-inset ring-white/10" />
 
-                      <h3 className="font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors cursor-pointer">
-                        {post.title}
-                      </h3>
-                      <p className="text-sm text-slate-400 line-clamp-2 mb-3">{post.summary}</p>
+                    {/* Badge on Image for Source */}
+                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 px-2 py-1 rounded-lg flex items-center gap-1.5 shadow-lg">
+                      {post.source === 'YouTube' ? <Youtube className="w-3 h-3 text-red-500" /> : <MessageCircle className="w-3 h-3 text-sky-500" />}
+                      <span className="text-[9px] font-black text-white uppercase tracking-wider">{post.source}</span>
+                    </div>
+                  </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-wrap gap-1.5">
-                          {post.tags.map(tag => (
-                            <span key={tag} className="px-2 py-0.5 bg-slate-700/50 text-slate-300 rounded-full text-xs">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        {post.mentions.length > 0 && (
-                          <>
-                            <span className="text-slate-600">|</span>
-                            <span className="text-xs text-slate-500">Упомянуто:</span>
-                            <div className="flex flex-wrap gap-1">
-                              {post.mentions
-                                .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.trim().toLowerCase()))
-                                .map((toolName: string) => {
-                                  const existingToolObj = allTools.find((t) =>
-                                    t.name.toLowerCase() === toolName.toLowerCase() ||
-                                    toolName.toLowerCase().includes(t.name.toLowerCase())
-                                  );
-
-                                  const toolObj = existingToolObj || {
-                                    id: `dyn-${toolName}`,
-                                    name: toolName,
-                                    category: "AI Service",
-                                    description: `Интеллектуальный анализ применения ${toolName} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
-                                    icon: "✨",
-                                    rating: 4.8,
-                                    dailyCredits: "Уточняется",
-                                    monthlyCredits: "Уточняется",
-                                    minPrice: "По запросу",
-                                    hasApi: false,
-                                    hasMcp: false,
-                                    details: [],
-                                    pros: ["Перспективно", "Упоминается экспертами", "Тренд"],
-                                    docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName + ' AI')}`
-                                  };
-
-                                  const displayName = existingToolObj ? existingToolObj.name : toolName;
-
-                                  return (
-                                    <button
-                                      key={toolName}
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setSelectedTool(toolObj as any);
-                                      }}
-                                      className={cn(
-                                        "px-2 py-0.5 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-medium transition-all flex items-center gap-1 hover:border-cyan-400 hover:scale-105 cursor-pointer"
-                                      )}
-                                      title="Нажмите для подробностей"
-                                    >
-                                      <span>{toolObj.icon}</span>
-                                      {displayName}
-                                    </button>
-                                  );
-                                })}
-                            </div>
-                          </>
-                        )}
+                  {/* Content Area */}
+                  <div className="flex-1 min-w-0 flex flex-col pt-1">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-xs font-black text-cyan-400 group-hover:text-cyan-300 transition-colors uppercase tracking-[0.1em]">@{post.channel}</span>
+                      <span className="text-slate-700 opacity-30">•</span>
+                      <div className="flex items-center gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-widest">
+                        <Clock size={12} className="opacity-50" />
+                        {post.date}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <a
-                        href={post.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-xl text-amber-500 hover:text-amber-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-amber-500/20"
-                        title="Открыть источник"
-                      >
-                        <ExternalLink className="w-5 h-5" />
-                      </a>
-                      <button
-                        onClick={() => setSelectedPost(post)}
-                        className="p-2 rounded-xl text-slate-500 hover:text-blue-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-blue-500/20"
-                        title="Подробный саммари"
-                      >
-                        <FileText className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => toggleFavorite(`post-${post.id}`)}
-                        className={cn(
-                          "p-2 rounded-xl transition-all duration-200 border",
-                          favorites.includes(`post-${post.id}`)
-                            ? "text-red-400 bg-red-500/10 border-red-500/20"
-                            : "text-slate-500 hover:text-red-400 hover:bg-slate-700/50 border-transparent"
+
+                    <h3 className="text-2xl font-black text-white mb-3 group-hover:text-cyan-400 transition-colors uppercase tracking-tight leading-[1.1]">
+                      {post.title}
+                    </h3>
+
+                    <p className="text-sm text-slate-400 line-clamp-2 mb-6 font-medium leading-relaxed opacity-80">
+                      {post.summary}
+                    </p>
+
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                      <div className="flex flex-wrap gap-2">
+                        {post.tags.slice(0, 3).map(tag => (
+                          <span key={tag} className="px-2.5 py-1 bg-slate-800/80 text-slate-400 rounded-lg text-[9px] font-black border border-white/5 uppercase tracking-widest hover:bg-slate-700/80 transition-colors">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        {post.mentions.length > 0 && (
+                          <div className="flex -space-x-2 group-hover:space-x-1 transition-all duration-500">
+                            {post.mentions.slice(0, 3).map((m, i) => (
+                              <div key={i} className="w-7 h-7 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center text-xs shadow-2xl transform hover:-translate-y-1 transition-transform" title={m}>
+                                {getToolIcon(m)}
+                              </div>
+                            ))}
+                            {post.mentions.length > 3 && (
+                              <div className="w-7 h-7 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-2xl">
+                                +{post.mentions.length - 3}
+                              </div>
+                            )}
+                          </div>
                         )}
-                      >
-                        <Heart className={cn("w-5 h-5", favorites.includes(`post-${post.id}`) && "fill-current")} />
-                      </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(`post-${post.id}`);
+                            }}
+                            className={cn(
+                              "p-2.5 rounded-xl transition-all duration-300 border backdrop-blur-md",
+                              favorites.includes(`post-${post.id}`)
+                                ? "text-rose-400 bg-rose-500/10 border-rose-500/30 shadow-lg shadow-rose-500/10"
+                                : "text-slate-500 hover:text-rose-400 hover:bg-slate-700/50 border-white/5"
+                            )}
+                          >
+                            <Heart className={cn("w-5 h-5", favorites.includes(`post-${post.id}`) && "fill-current")} />
+                          </button>
+                          <button className="p-2.5 bg-slate-800 rounded-xl text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 transition-all">
+                            <ArrowUpRight size={20} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        )
-        }
+        )}
 
         {/* Insights Tab */}
         {
@@ -1385,10 +1390,7 @@ export default function App() {
         }
       </main >
 
-      {/* Floating Action Button */}
-      < button className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105 group" >
-        <Plus className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
-      </button >
+      {/* Floating Action Button Removed */}
 
       {/* Tool Detail Modal */}
       {
@@ -1904,21 +1906,29 @@ export default function App() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
-                  const url = formData.get('channelUrl') as string;
-                  const source = formData.get('source') as 'YouTube' | 'Telegram';
+                  const url = (formData.get('channelUrl') as string).trim();
+                  let source = formData.get('source') as 'YouTube' | 'Telegram';
 
-                  if (url.trim()) {
+                  // Auto-detect source from URL
+                  if (url.includes('t.me/') || url.startsWith('@')) {
+                    source = 'Telegram';
+                  } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                    source = 'YouTube';
+                  }
+
+                  if (url) {
                     // Extract channel name from URL or @username
-                    let name = url.trim();
+                    let name = url;
                     if (url.startsWith('@')) {
-                      // Telegram @username format
-                      name = url.substring(1);
+                      name = url;
                     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
                       const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
                       if (match) name = match[1];
+                      else name = url.split('/').pop() || url;
                     } else if (url.includes('t.me')) {
                       const match = url.match(/t\.me\/([^/?]+)/);
-                      if (match) name = match[1];
+                      if (match) name = '@' + match[1];
+                      else name = url.split('/').pop() || url;
                     }
 
                     const newChannel = {
@@ -1956,6 +1966,28 @@ export default function App() {
                         aiSummary.summary = latestPost.summary;
                       }
 
+                      // АВТО-ОТКРЫТИЕ ИНСТРУМЕНТОВ: Сохраняем новые инструменты в базу
+                      if (supabase && (aiSummary as any).mentionsDetail) {
+                        const details = (aiSummary as any).mentionsDetail;
+                        for (const detail of details) {
+                          try {
+                            await supabase.from('tools').upsert([{
+                              name: detail.name,
+                              category: detail.category,
+                              description: `Инструмент ${detail.name} (обнаружен AI Scout).`,
+                              icon: '⚙️',
+                              rating: 4.5,
+                              min_price: detail.minPrice,
+                              has_api: detail.hasApi,
+                              has_mcp: detail.hasMcp,
+                              pros: ['Обнаружено в поиске']
+                            }], { onConflict: 'name' });
+                          } catch (toolErr) {
+                            console.error('Error auto-saving tool:', toolErr);
+                          }
+                        }
+                      }
+
                       // Форматируем дату
                       const formatDate = (dateStr: string): string => {
                         if (!dateStr) return 'Только что';
@@ -1980,8 +2012,8 @@ export default function App() {
                       // Создаем новый пост с реальными данными
                       const newPost: Post = {
                         id: Date.now(),
-                        title: aiSummary.titleRu || latestPost.title || 'Без названия',
-                        summary: aiSummary.summary,
+                        title: aiSummary.titleRu || latestPost.title || 'Новое обновление',
+                        summary: aiSummary.summary || 'Краткое описание готовится...',
                         source: source,
                         channel: latestPost.channel || name,
                         date: formatDate(latestPost.date || ''),
