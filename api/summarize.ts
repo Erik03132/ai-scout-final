@@ -23,6 +23,13 @@ interface SummarizeResponse {
     summary: string;
     tags: string[];
     mentions: string[];
+    mentionsDetail?: Array<{
+        name: string;
+        category: string;
+        minPrice: string;
+        hasApi: boolean;
+        hasMcp: boolean;
+    }>;
     detailedUsage: string;
     usageTips: string[];
 }
@@ -31,7 +38,7 @@ interface SummarizeResponse {
 const KNOWN_TOOLS = [
     'Vercel', 'Next.js', 'React', 'Vue', 'Angular', 'Svelte',
     'Supabase', 'Prisma', 'PostgreSQL', 'MongoDB', 'Redis',
-    'Stripe', 'PayPal', 'Stripe',
+    'Stripe', 'PayPal',
     'Zustand', 'Redux', 'MobX', 'Recoil',
     'Figma', 'Sketch', 'Adobe XD',
     'Tailwind CSS', 'CSS Modules', 'Styled Components',
@@ -146,7 +153,7 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
   "titleRu": "Перевод заголовка",
   "summary": "Краткое саммари (2-3 пред) для превью.",
   "tags": ["тег1", "тег2"],
-  "mentions": ["Spline", "Figma"],
+  "mentions": ["Tool1", "Tool2"],
   "detailedUsage": "ИСЧЕРПЫВАЮЩЕЕ саммари всего ролика/поста. Детальный разбор всех пунктов содержания, главных идей и выводов. Не ограничивай себя в объеме.",
   "usageTips": ["совет 1", "совет 2"]
 }`
@@ -237,22 +244,6 @@ JSON СТРУКТУРА:
     return parseLLMResponse(text);
 }
 
-interface SummarizeResponse {
-    titleRu: string;
-    summary: string;
-    tags: string[];
-    mentions: string[];
-    mentionsDetail?: Array<{
-        name: string;
-        category: string;
-        minPrice: string;
-        hasApi: boolean;
-        hasMcp: boolean;
-    }>;
-    detailedUsage: string;
-    usageTips: string[];
-}
-
 /**
  * Парсинг ответа LLM
  */
@@ -290,11 +281,16 @@ function generateFallbackSummary(content: string): SummarizeResponse {
     const titleMatch = content.match(/Заголовок:\s*(.*?)\n/);
     if (titleMatch) title = titleMatch[1].trim();
 
+    // Пытаемся извлечь инструменты из списка KNOWN_TOOLS в тексте
+    const extractedMentions = KNOWN_TOOLS.filter(tool =>
+        new RegExp(`\\b${tool}\\b`, 'i').test(content)
+    );
+
     return {
         titleRu: title || 'Новое обновление',
         summary: 'ИИ-анализ временно недоступен. Вероятно, превышены лимиты API или текст слишком короткий для анализа.',
         tags: ['Tech'],
-        mentions: [],
+        mentions: extractedMentions,
         mentionsDetail: [],
         detailedUsage: 'К сожалению, нам не удалось сгенерировать подробный разбор этого контента. Это может быть связано с техническими ограничениями или отсутствием развернутого описания в источнике.',
         usageTips: [

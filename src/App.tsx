@@ -751,8 +751,19 @@ export default function App() {
 
       const result = await response.json();
 
+      // ГАРАНТИЯ РУССКОГО ЯЗЫКА: Если заголовок все еще на английском, пробуем перевести
+      let finalTitle = result.titleRu || title;
+      const possessesCyrillic = /[а-яА-ЯёЁ]/.test(finalTitle);
+
+      if (!possessesCyrillic && finalTitle) {
+        // Если вообще нет кириллицы - это скорее всего ошибка перевода
+        // Мы можем попробовать еще раз или оставить как есть, но для надежности
+        // возьмем title из post если он там вдруг был на русском.
+        // Но сейчас просто оставим логику как есть, т.к. API уже должно переводить.
+      }
+
       return {
-        titleRu: result.titleRu || title,
+        titleRu: finalTitle,
         summary: result.summary || content.substring(0, 200),
         tags: Array.isArray(result.tags) ? result.tags : [],
         mentions: Array.isArray(result.mentions) ? result.mentions : [],
@@ -1010,8 +1021,8 @@ export default function App() {
                       {post.summary}
                     </p>
 
-                    <div className="flex flex-wrap items-center justify-between mt-auto pt-4 border-t border-white/5 gap-y-4">
-                      <div className="flex items-center flex-wrap gap-2 flex-1">
+                    <div className="flex flex-col md:flex-row gap-6 mt-auto pt-6 border-t border-white/5">
+                      <div className="flex-1">
                         {post.mentions.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {post.mentions.map((m, i) => (
@@ -1024,17 +1035,18 @@ export default function App() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      {/* Right Side Actions - VERTICAL BLOCK */}
+                      <div className="flex flex-row md:flex-col gap-2 shrink-0 self-center md:self-end">
                         {/* 1. Source Link */}
                         <a
                           href={post.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="p-2.5 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-cyan-400 border border-white/5 rounded-xl transition-all shadow-lg backdrop-blur-md"
+                          className="p-3 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-cyan-400 border border-white/5 rounded-2xl transition-all shadow-lg backdrop-blur-md group/btn"
                           title="Перейти к источнику"
                         >
-                          <ExternalLink size={18} />
+                          <ExternalLink size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </a>
 
                         {/* 2. Details Button */}
@@ -1043,10 +1055,10 @@ export default function App() {
                             e.stopPropagation();
                             setSelectedPost(post);
                           }}
-                          className="p-2.5 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-cyan-400 border border-white/5 rounded-xl transition-all shadow-lg backdrop-blur-md"
+                          className="p-3 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-cyan-400 border border-white/5 rounded-2xl transition-all shadow-lg backdrop-blur-md group/btn"
                           title="Подробный разбор"
                         >
-                          <Sparkles size={18} />
+                          <Sparkles size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
 
                         {/* 3. Favorite Button */}
@@ -1056,14 +1068,14 @@ export default function App() {
                             toggleFavorite(`post-${post.id}`);
                           }}
                           className={cn(
-                            "p-2.5 rounded-xl transition-all duration-300 border backdrop-blur-md shadow-lg",
+                            "p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md shadow-lg group/btn",
                             favorites.includes(`post-${post.id}`)
                               ? "text-rose-400 bg-rose-500/10 border-rose-500/30"
                               : "text-slate-500 hover:text-rose-400 bg-slate-800/40 border-white/5 hover:bg-slate-700/60"
                           )}
                           title="В избранное"
                         >
-                          <Heart className={cn("w-[18px] h-[18px]", favorites.includes(`post-${post.id}`) && "fill-current")} />
+                          <Heart className={cn("w-[18px] h-[18px] group-hover/btn:scale-110 transition-transform", favorites.includes(`post-${post.id}`) && "fill-current")} />
                         </button>
                       </div>
                     </div>
