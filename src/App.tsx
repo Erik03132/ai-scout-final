@@ -1105,7 +1105,10 @@ export default function App() {
                         <span className="text-xs text-slate-500 ml-auto">{post.views} просмотров</span>
                       </div>
 
-                      <h3 className="font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors cursor-pointer">
+                      <h3
+                        onClick={() => setSelectedPost(post)}
+                        className="font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors cursor-pointer"
+                      >
                         {post.title}
                       </h3>
                       <p className="text-sm text-slate-400 line-clamp-2 mb-3">{post.summary}</p>
@@ -1489,7 +1492,12 @@ export default function App() {
                                 }
                               }} className="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-xl flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-white mb-1">{post.title}</h3>
+                                <h3
+                                  onClick={() => setSelectedPost(post)}
+                                  className="font-semibold text-white mb-1 cursor-pointer hover:text-cyan-400 transition-colors"
+                                >
+                                  {post.title}
+                                </h3>
                                 <p className="text-sm text-slate-400 line-clamp-1">{post.summary}</p>
                                 <div className="flex items-center gap-3 mt-2">
                                   <span className="text-xs text-slate-500">{post.channel}</span>

@@ -137,8 +137,8 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
 - общие ИТ-комбинации (типа Fullstack Developer, Backend, Frontend и т.д.)
 - языки программирования и фреймворки (Python, React, Go, Node.js и т.д.)
 - общие термины и концепции (LLM, RAG, API, Database и т.д. — если это не название конкретного сервиса).
-4. В поле "detailedUsage" создай максимально подробное, ИСЧЕРПЫВАЮЩЕЕ текстовое саммари. Напиши столько предложений и абзацев, сколько нужно, чтобы передать ВСЮ суть, все этапы и ключевые пункты контента. Это должно быть полноценным пересказом.
-5. В поле "detailedUsage" допускается использование Markdown (списки, выделение жирным), чтобы текст легко читался.
+4. В поле "detailedUsage" создай максимально подробное, ИСЧЕРПЫВАЮЩЕЕ текстовое саммари. Напиши столько предложений и абзацев, сколько нужно, чтобы передать ВСЮ суть, все этапы и ключевые пункты контента. Это должно быть полноценным пересказом. ОБЯЗАТЕЛЬНО ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.
+5. В поле "detailedUsage" допускается использование Markdown (списки, выделение жирным), чтобы текст легко читался. В поле "summary" и "titleRu" также ОБЯЗАТЕЛЬНО ИСПОЛЬЗУЙ ТОЛЬКО РУССКИЙ ЯЗЫК.
 6. Верни ТОЛЬКО JSON без markdown и \`\`\`json.
 {
   "titleRu": "Перевод заголовка",
@@ -174,7 +174,7 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
  */
 async function callGemini(content: string): Promise<SummarizeResponse> {
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: {
@@ -193,8 +193,8 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
 - общие ИТ-комбинации (типа Fullstack Developer, Backend, Frontend и т.д.)
 - языки программирования и фреймворки (Python, React, Go, Node.js и т.д.)
 - общие термины и концепции (LLM, RAG, API, Database и т.д. — если это не название конкретного сервиса).
-4. В поле "detailedUsage" создай максимально подробное, ИСЧЕРПЫВАЮЩЕЕ текстовое саммари. Напиши столько предложений и абзацев, сколько нужно, чтобы передать ВСЮ суть, все этапы и ключевые пункты контента. Это должно быть полноценным пересказом.
-5. В поле "detailedUsage" допускается использование Markdown (списки, выделение жирным), чтобы текст легко читался.
+4. В поле "detailedUsage" создай максимально подробное, ИСЧЕРПЫВАЮЩЕЕ текстовое саммари. Напиши столько предложений и абзацев, сколько нужно, чтобы передать ВСЮ суть, все этапы и ключевые пункты контента. Это должно быть полноценным пересказом. ОБЯЗАТЕЛЬНО ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.
+5. В поле "detailedUsage" допускается использование Markdown (списки, выделение жирным), чтобы текст легко читался. В поле "summary" и "titleRu" также ОБЯЗАТЕЛЬНО ИСПОЛЬЗУЙ ТОЛЬКО РУССКИЙ ЯЗЫК.
 6. Верни ТОЛЬКО JSON без markdown и \`\`\`json.
 {
   "titleRu": "Перевод заголовка",
