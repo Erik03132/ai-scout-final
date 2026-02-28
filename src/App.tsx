@@ -1132,10 +1132,9 @@ export default function App() {
                         {post.mentions.length > 0 && (
                           <>
                             <span className="text-slate-600">|</span>
-                            <span className="text-xs text-slate-500">Упомянуто:</span>
                             <div className="flex flex-wrap gap-1">
                               {post.mentions
-                                .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.trim().toLowerCase()))
+                                .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express', 'fullstack', 'frontend', 'backend', 'developer', 'engineer', 'api', 'database', 'cloud', 'deployment'].some(word => m.trim().toLowerCase().includes(word)))
                                 .map((toolName: string) => {
                                   const existingToolObj = allTools.find((t) =>
                                     t.name.toLowerCase() === toolName.toLowerCase() ||
@@ -1797,7 +1796,7 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {selectedPost.mentions
-                        .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'].includes(m.trim().toLowerCase()))
+                        .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express', 'fullstack', 'frontend', 'backend', 'developer', 'engineer', 'api', 'database', 'cloud', 'deployment'].some(word => m.trim().toLowerCase().includes(word)))
                         .map(toolName => {
                           const existingToolObj = allTools.find(t => t.name.toLowerCase() === toolName.toLowerCase() || toolName.toLowerCase().includes(t.name.toLowerCase()));
                           const toolObj = existingToolObj || {
