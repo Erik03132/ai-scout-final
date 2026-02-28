@@ -216,7 +216,7 @@ async function generateSummary(title: string, description: string): Promise<{ ti
     const content = `Title: ${title}\nDescription: ${description}`.substring(0, 8000);
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: {
@@ -242,7 +242,8 @@ JSON СТРУКТУРА:
           }],
           generationConfig: {
             temperature: 0.3,
-            maxOutputTokens: 500
+            maxOutputTokens: 500,
+            responseMimeType: "application/json"
           }
         })
       }
