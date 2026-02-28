@@ -771,17 +771,20 @@ export default function App() {
     // Fallback функция при ошибке API
     const getFallbackSummary = (fallbackPost: Partial<Post>) => {
       const fallbackTitle = fallbackPost.title || title;
-      const fallbackContent = fallbackPost.content || content;
+      const hasCyrillic = (text: string) => /[а-яА-ЯёЁ]/.test(text);
+
       return {
-        titleRu: fallbackTitle,
-        summary: fallbackPost.summary || fallbackContent.substring(0, 200) || fallbackTitle || 'Контент недоступен',
+        titleRu: hasCyrillic(fallbackTitle) ? fallbackTitle : 'Требуется перевод заголовка',
+        summary: hasCyrillic(fallbackPost.summary || '')
+          ? fallbackPost.summary!
+          : 'Описание на английском. AI-анализ и перевод скоро будут готовы...',
         tags: fallbackPost.tags && fallbackPost.tags.length > 0 ? fallbackPost.tags : ['Tech'],
         mentions: fallbackPost.mentions || [],
-        detailedUsage: fallbackPost.detailedUsage || '',
-        usageTips: fallbackPost.usageTips || [
-          'Изучите официальную документацию',
-          'Попробуйте на практике',
-          'Следите за обновлениями'
+        detailedUsage: 'Подробный анализ этого контента на русском языке находится в очереди на обработку. Пожалуйста, обновите страницу через несколько минут.',
+        usageTips: [
+          'Проверьте оригинальный источник',
+          'Попробуйте зайти позже для просмотра полного анализа',
+          'Следите за обновлениями в ленте'
         ]
       };
     };
@@ -2072,11 +2075,8 @@ export default function App() {
                       // Всегда генерируем полное AI-саммари через API, чтобы получить теги и упомянутые сервисы
                       const aiSummary = await generateAISummary(latestPost);
 
-                      // Если API анализа вернуло ошибку, но у нас есть краткое описание из YouTube/Telegram, используем его
-                      const isAiError = aiSummary.summary.includes('ИИ-анализ временно недоступен') || aiSummary.summary === 'Контент недоступен';
-                      if (latestPost.summary && isAiError) {
-                        aiSummary.summary = latestPost.summary;
-                      }
+                      // Если API анализа вернуло ошибку, мы уже получили русскую заглушку в aiSummary через generateAISummary
+                      // Поэтому здесь больше не нужно откатываться на latestPost.summary, который может быть на английском.
 
                       // АВТО-ОТКРЫТИЕ ИНСТРУМЕНТОВ: Сохраняем новые инструменты в базу
                       if (supabase && (aiSummary as any).mentionsDetail) {
