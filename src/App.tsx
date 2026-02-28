@@ -571,7 +571,7 @@ export default function App() {
           );
 
           if (needsTranslation.length > 0) {
-            // Переводим по одному в фоне
+            // Переводим по одному в фоне (сравниваем по URL, а не ID)
             (async () => {
               for (const rawPost of needsTranslation.slice(0, 5)) { // max 5 за раз
                 try {
@@ -585,11 +585,9 @@ export default function App() {
                   const translated = await res.json();
 
                   if (translated.titleRu && hasCyrillic(translated.titleRu)) {
-                    const postId = typeof rawPost.id === 'string' ? parseInt(rawPost.id.slice(0, 8), 16) : rawPost.id;
-
-                    // Обновляем state
+                    // ИСПРАВЛЕНИЕ: сравниваем по URL, т.к. ID из Supabase — UUID
                     setPosts(prev => prev.map(p =>
-                      p.id === postId
+                      p.url === rawPost.url
                         ? {
                           ...p,
                           title: translated.titleRu,
@@ -1095,46 +1093,46 @@ export default function App() {
                       </div>
 
                       {/* Right Side Actions - VERTICAL BLOCK */}
-                      <div className="flex flex-row md:flex-col gap-2 shrink-0 self-center md:self-end">
-                        {/* 1. Source Link */}
+                      <div className="flex flex-row md:flex-col gap-2.5 shrink-0 self-center md:self-end">
+                        {/* 1. Source Link - cyan */}
                         <a
                           href={post.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="p-3 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-cyan-400 border border-white/5 rounded-2xl transition-all shadow-lg backdrop-blur-md group/btn"
+                          className="group/btn w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-cyan-500/20 text-slate-500 hover:text-cyan-400 border border-slate-700 hover:border-cyan-500/50 rounded-2xl transition-all duration-200 shadow-md hover:shadow-cyan-500/10"
                           title="Перейти к источнику"
                         >
-                          <ExternalLink size={18} className="group-hover/btn:scale-110 transition-transform" />
+                          <ExternalLink size={16} className="group-hover/btn:scale-110 transition-transform" />
                         </a>
 
-                        {/* 2. Details Button */}
+                        {/* 2. Details Button - violet */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedPost(post);
                           }}
-                          className="p-3 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-cyan-400 border border-white/5 rounded-2xl transition-all shadow-lg backdrop-blur-md group/btn"
+                          className="group/btn w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-violet-500/20 text-slate-500 hover:text-violet-400 border border-slate-700 hover:border-violet-500/50 rounded-2xl transition-all duration-200 shadow-md hover:shadow-violet-500/10"
                           title="Подробный разбор"
                         >
-                          <Sparkles size={18} className="group-hover/btn:scale-110 transition-transform" />
+                          <Sparkles size={16} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
 
-                        {/* 3. Favorite Button */}
+                        {/* 3. Favorite Button - rose */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavorite(`post-${post.id}`);
                           }}
                           className={cn(
-                            "p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md shadow-lg group/btn",
+                            "group/btn w-10 h-10 flex items-center justify-center rounded-2xl transition-all duration-200 border shadow-md",
                             favorites.includes(`post-${post.id}`)
-                              ? "text-rose-400 bg-rose-500/10 border-rose-500/30"
-                              : "text-slate-500 hover:text-rose-400 bg-slate-800/40 border-white/5 hover:bg-slate-700/60"
+                              ? "text-rose-400 bg-rose-500/20 border-rose-500/50 shadow-rose-500/10"
+                              : "text-slate-500 hover:text-rose-400 bg-slate-800 border-slate-700 hover:bg-rose-500/20 hover:border-rose-500/50 hover:shadow-rose-500/10"
                           )}
                           title="В избранное"
                         >
-                          <Heart className={cn("w-[18px] h-[18px] group-hover/btn:scale-110 transition-transform", favorites.includes(`post-${post.id}`) && "fill-current")} />
+                          <Heart className={cn("w-4 h-4 group-hover/btn:scale-110 transition-transform", favorites.includes(`post-${post.id}`) && "fill-current")} />
                         </button>
                       </div>
                     </div>
