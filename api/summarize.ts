@@ -208,13 +208,14 @@ JSON СТРУКТУРА:
   "usageTips": ["Совет 1 на русском", "Совет 2 на русском"]
 }
 
+Верни ТОЛЬКО чистый JSON без markdown блоков.
+
 Контент для анализа: ${content.substring(0, 20000)}`
                     }]
                 }],
                 generationConfig: {
-                    temperature: 0.2,
-                    maxOutputTokens: 4000,
-                    responseMimeType: "application/json"
+                    temperature: 0.3,
+                    maxOutputTokens: 500
                 }
             })
         }

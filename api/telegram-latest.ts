@@ -243,8 +243,7 @@ JSON СТРУКТУРА:
                     }],
                     generationConfig: {
                         temperature: 0.4,
-                        maxOutputTokens: 400,
-                        responseMimeType: "application/json"
+                        maxOutputTokens: 400
                     }
                 })
             }
