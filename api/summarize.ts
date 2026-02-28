@@ -73,13 +73,10 @@ export default async function handler(
     }
 
     try {
-        // Пытаемся использовать LLM API
         const result = await generateSummaryWithLLM(content);
         return res.status(200).json(result);
     } catch (error) {
-        console.error('LLM summarization failed, using fallback:', error);
-
-        // Fallback: простое извлечение информации
+        console.error('LLM summarization failed:', error);
         const fallbackResult = generateFallbackSummary(content);
         return res.status(200).json(fallbackResult);
     }
@@ -101,12 +98,18 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
             return await callGemini(content);
         } catch (e) {
             console.error("Gemini failed, falling back to OpenAI", e);
+            if (!process.env.OPENAI_API_KEY) throw e;
         }
     }
 
     // Резервный вариант: OpenAI API
     if (process.env.OPENAI_API_KEY) {
-        return await callOpenAI(content);
+        try {
+            return await callOpenAI(content);
+        } catch (e) {
+            console.error("OpenAI failed too", e);
+            throw e;
+        }
     }
 
     throw new Error('No LLM provider configured');
@@ -173,7 +176,7 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
  */
 async function callGemini(content: string): Promise<SummarizeResponse> {
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: {
@@ -182,40 +185,40 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `Ты — профессиональный ИИ-аналитик и технологический исследователь. Ознакомься с предоставленным контентом (описание видео YouTube, статья или пост).
-Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке и собрать первичные данные о упомянутых сервисах.
+                        text: `Ты — профи ИИ-аналитик. Проанализируй контент и верни JSON на РУССКОМ.
+Задачи:
+1. "titleRu": Переведи заголовок на русский.
+2. "mentions": Список софта (Figma, Supabase и т.д.).
+3. "mentionsDetail": Тех. детали (name, category, minPrice, hasApi: bool, hasMcp: bool).
+4. "detailedUsage": Глубокий пересказ (Markdown разрешен).
 
-Правила:
-1. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Если он уже на русском — оставь как есть.
-2. В поле "mentions" — извлеки названия софта (Figma, Supabase, Claude и т.д.). Игнорируй языки программирования и общие термины.
-3. В поле "mentionsDetail" — для КАЖДОГО извлеченного инструмента из "mentions" предоставь краткую информацию на основе своих знаний (даже если данных нет в тексте):
-   - name: Название
-   - category: Категория (Design, AI, Database и т.д.)
-   - minPrice: Минимальная цена (например, "$0" или "$20/мес"). Если не знаешь точно — напиши "Бесплатно" или "Платный".
-   - hasApi: true/false (есть ли у сервиса API)
-   - hasMcp: true/false (есть ли поддержка Model Context Protocol)
-4. В поле "detailedUsage" создай подробное текстовое саммари. Сделай его максимально глубоким, перескажи все ключевые моменты.
-5. Верни ТОЛЬКО JSON:
+JSON:
 {
-  "titleRu": "Заголовок",
-  "summary": "Краткое саммари для карточки.",
-  "tags": ["тег1", "тег2"],
-  "mentions": ["Tool1", "Tool2"],
+  "titleRu": "...",
+  "summary": "...",
+  "tags": ["...", "..."],
+  "mentions": ["...", "..."],
   "mentionsDetail": [
-    { "name": "Tool1", "category": "AI", "minPrice": "$0", "hasApi": true, "hasMcp": false }
+    { "name": "...", "category": "...", "minPrice": "...", "hasApi": true, "hasMcp": false }
   ],
-  "detailedUsage": "Детальный пересказ контента с Markdown.",
-  "usageTips": ["совет 1", "совет 2"]
+  "detailedUsage": "...",
+  "usageTips": ["...", "..."]
 }
 
-Контент: ${content.substring(0, 10000)}`
+Контент: ${content.substring(0, 15000)}`
                     }]
                 }],
                 generationConfig: {
                     temperature: 0.4,
                     maxOutputTokens: 4000,
                     responseMimeType: "application/json"
-                }
+                },
+                safetySettings: [
+                    { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" }
+                ]
             })
         }
     );

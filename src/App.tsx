@@ -1980,8 +1980,9 @@ export default function App() {
                       // Всегда генерируем полное AI-саммари через API, чтобы получить теги и упомянутые сервисы
                       const aiSummary = await generateAISummary(latestPost);
 
-                      // Если API канала уже вернуло хорошее саммари, а у нас заглушка, берем API саммари
-                      if (latestPost.summary && aiSummary.summary === 'Контент недоступен') {
+                      // Если API анализа вернуло ошибку, но у нас есть краткое описание из YouTube/Telegram, используем его
+                      const isAiError = aiSummary.summary.includes('ИИ-анализ временно недоступен') || aiSummary.summary === 'Контент недоступен';
+                      if (latestPost.summary && isAiError) {
                         aiSummary.summary = latestPost.summary;
                       }
 

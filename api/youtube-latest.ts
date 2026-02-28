@@ -189,14 +189,14 @@ async function getVideoDetails(videoId: string, apiKey: string): Promise<YouTube
 
   const snippet = data.items[0].snippet;
 
-  // Генерируем саммари через Gemini
-  const summary = await generateSummary(snippet.title, snippet.description);
+  // Генерируем саммари и перевод через Gemini
+  const aiResult = await generateSummary(snippet.title, snippet.description);
 
   return {
     videoId,
-    title: snippet.title,
+    title: aiResult.title || snippet.title,
     description: snippet.description,
-    summary,
+    summary: aiResult.summary,
     channelTitle: snippet.channelTitle,
     publishedAt: snippet.publishedAt,
   };
@@ -205,12 +205,11 @@ async function getVideoDetails(videoId: string, apiKey: string): Promise<YouTube
 /**
  * Генерация саммари через Gemini API
  */
-async function generateSummary(title: string, description: string): Promise<string> {
+async function generateSummary(title: string, description: string): Promise<{ title: string; summary: string }> {
   const geminiApiKey = process.env.GEMINI_API_KEY;
 
   if (!geminiApiKey) {
-    // Fallback: обрезаем description
-    return createFallbackSummary(description);
+    return { title, summary: createFallbackSummary(description) };
   }
 
   try {
@@ -226,33 +225,50 @@ async function generateSummary(title: string, description: string): Promise<stri
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Ты — редактор новостей. Напиши краткое саммари (1-2 предложения) на РУССКОМ языке про это видео. 
-Очень важно: ИГНОРИРУЙ любые технические ссылки (t.me, http, me/...), промокоды, призывы подписаться на канал, таймкоды и прочий мусор. Возвращай ТОЛЬКО СУТЬ самого контента.
-Без ссылок, без url, без эмодзи.
-Верни ТОЛЬКО текст саммари без JSON и без markdown.
+              text: `Ты — редактор новостей. Проанализируй это видео и верни ответ на РУССКОМ языке.
+1. TITLE: Переведи заголовок на русский.
+2. SUMMARY: Краткое саммари (1-2 предложения).
 
-Текст: ${content}`
+Очень важно: ИГНОРИРУЙ любые технические ссылки, промокоды, призывы подписаться.
+Верни ТОЛЬКО текст в формате:
+TITLE: [перевод]
+SUMMARY: [текст]
+
+Текст видео: ${content}`
             }]
           }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 200
+            maxOutputTokens: 300
           }
         })
       }
     );
 
     if (!response.ok) {
-      return createFallbackSummary(description);
+      return { title, summary: createFallbackSummary(description) };
     }
 
     const data = await response.json();
-    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    return summary.trim() || createFallbackSummary(description);
+    // Парсим результат
+    let aiTitle = title;
+    let aiSummary = '';
+
+    const titleMatch = text.match(/TITLE:\s*(.*?)(?:\n|$)/i);
+    const summaryMatch = text.match(/SUMMARY:\s*([\s\S]*)/i);
+
+    if (titleMatch) aiTitle = titleMatch[1].trim();
+    if (summaryMatch) aiSummary = summaryMatch[1].trim();
+
+    return {
+      title: aiTitle,
+      summary: aiSummary || createFallbackSummary(description)
+    };
   } catch (error) {
     console.error('Gemini summarization failed:', error);
-    return createFallbackSummary(description);
+    return { title, summary: createFallbackSummary(description) };
   }
 }
 
