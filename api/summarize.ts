@@ -282,14 +282,9 @@ function generateFallbackSummary(content: string, error?: string): SummarizeResp
     const titleMatch = content.match(/Заголовок:\s*(.*?)\n/);
     if (titleMatch) title = titleMatch[1].trim();
 
-    const isEnglish = (text: string) => text && !/[а-яА-ЯёЁ]/.test(text) && /[a-zA-Z]/.test(text);
+    let displayTitle = title || 'Обновление';
 
-    let displayTitle = title || 'Новое обновление';
-    if (isEnglish(displayTitle)) {
-        displayTitle = `[Требуется перевод] ${displayTitle}`;
-    }
-
-    let summaryMessage = 'ИИ-анализ временно недоступен. Вероятно, превышены лимиты API или текст слишком короткий для анализа.';
+    let summaryMessage = 'ИИ-анализ в очереди или временно недоступен.';
     if (error?.includes('429')) {
         summaryMessage = 'Превышена квота запросов к ИИ. Пожалуйста, попробуйте обновить через минуту.';
     } else if (error?.toLowerCase().includes('empty')) {

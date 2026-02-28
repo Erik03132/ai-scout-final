@@ -209,7 +209,7 @@ async function generateSummary(title: string, description: string): Promise<{ ti
   const geminiApiKey = process.env.GEMINI_API_KEY;
 
   if (!geminiApiKey) {
-    return { title: `[Need Translation] ${title}`, summary: createFallbackSummary(description) };
+    return { title: title, summary: createFallbackSummary(description) };
   }
 
   try {
@@ -252,7 +252,7 @@ JSON СТРУКТУРА:
     if (!response.ok) {
       const errText = await response.text();
       console.error('Gemini API error in youtube-latest:', errText);
-      return { title: `[Need Translation] ${title}`, summary: createFallbackSummary(description) };
+      return { title: title, summary: createFallbackSummary(description) };
     }
 
     const data = await response.json();
@@ -266,11 +266,11 @@ JSON СТРУКТУРА:
       };
     } catch (e) {
       console.error('Failed to parse Gemini JSON in youtube-latest:', text);
-      return { title: `[Need Translation] ${title}`, summary: createFallbackSummary(description) };
+      return { title: title, summary: createFallbackSummary(description) };
     }
   } catch (error) {
     console.error('Gemini summarization failed in youtube-latest:', error);
-    return { title: `[Need Translation] ${title}`, summary: createFallbackSummary(description) };
+    return { title: title, summary: createFallbackSummary(description) };
   }
 }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, Lightbulb, Code, Terminal, Layers, ArrowUpRight } from 'lucide-react';
+import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
@@ -565,16 +565,19 @@ export default function App() {
           setPosts(formattedPosts);
 
           // Фоновый перевод постов без кириллицы в названии
-          const hasCyrillic = (text: string) => /[а-яА-ЯёЁ]/.test(text);
+          const hasCyrillic = (text: string) => text && /[а-яА-ЯёЁ]/.test(text);
           const needsTranslation = postsResult.data.filter(p =>
-            p.title && !hasCyrillic(p.title) && p.url
+            p.title && !hasCyrillic(p.title.replace(/\[.*?\]/g, '').trim()) && p.url
           );
 
           if (needsTranslation.length > 0) {
             // Переводим по одному в фоне (сравниваем по URL, а не ID)
             (async () => {
-              for (const rawPost of needsTranslation.slice(0, 5)) { // max 5 за раз
+              for (const rawPost of needsTranslation.slice(0, 10)) { // max 10
                 try {
+                  // Пауза 4.5 секунды между запросами для строгого соблюдения лимитов Gemini (15 RPM = 1 запр / 4 сек)
+                  await new Promise(resolve => setTimeout(resolve, 4500));
+
                   const content = `Заголовок: ${rawPost.title}\n\nОписание: ${(rawPost as any).description || rawPost.summary || ''}`;
                   const res = await fetch('/api/summarize', {
                     method: 'POST',
@@ -584,13 +587,15 @@ export default function App() {
                   if (!res.ok) continue;
                   const translated = await res.json();
 
-                  if (translated.titleRu && hasCyrillic(translated.titleRu)) {
-                    // ИСПРАВЛЕНИЕ: сравниваем по URL, т.к. ID из Supabase — UUID
+                  // Очищаем заголовок от служебных тегов
+                  const cleanTitle = (translated.titleRu || '').replace(/\[.*?\]/g, '').trim();
+
+                  if (cleanTitle && hasCyrillic(cleanTitle)) {
                     setPosts(prev => prev.map(p =>
                       p.url === rawPost.url
                         ? {
                           ...p,
-                          title: translated.titleRu,
+                          title: cleanTitle,
                           summary: hasCyrillic(translated.summary) ? translated.summary : p.summary,
                           tags: translated.tags?.length ? translated.tags : p.tags,
                           mentions: translated.mentions?.length ? translated.mentions : p.mentions,
@@ -604,12 +609,13 @@ export default function App() {
                     const supabaseClient = getClient();
                     if (supabaseClient && rawPost.url) {
                       await supabaseClient.from('posts').update({
-                        title: translated.titleRu,
+                        title: cleanTitle,
                         summary: hasCyrillic(translated.summary) ? translated.summary : rawPost.summary,
                         tags: translated.tags,
                         mentions: translated.mentions,
                         detailed_usage: translated.detailedUsage,
                         usage_tips: translated.usageTips,
+                        is_analyzed: true
                       }).eq('url', rawPost.url);
                     }
                   }
@@ -2122,9 +2128,10 @@ export default function App() {
                       };
 
                       // Создаем новый пост с реальными данными
+                      const cleanTitle = (aiSummary.titleRu || latestPost.title || 'Новое обновление').replace(/\[.*?\]/g, '').trim();
                       const newPost: Post = {
                         id: Date.now(),
-                        title: aiSummary.titleRu || latestPost.title || 'Новое обновление',
+                        title: cleanTitle,
                         summary: aiSummary.summary || 'Краткое описание готовится...',
                         source: source,
                         channel: latestPost.channel || name,
