@@ -552,16 +552,75 @@ export default function App() {
             summary: p.summary || '',
             source: p.source,
             channel: p.channel,
-            date: p.date ? new Date(p.date).toLocaleDateString() : '',
+            date: p.date ? new Date(p.date).toLocaleDateString('ru-RU') : '',
             tags: p.tags || [],
             mentions: p.mentions || [],
             views: p.views || '0',
             image: p.image || '',
             url: p.url,
             detailedUsage: p.detailed_usage || '',
-            usageTips: p.usage_tips || []
+            usageTips: p.usage_tips || [],
+            content: (p as any).content || ''
           }));
           setPosts(formattedPosts);
+
+          // Фоновый перевод постов без кириллицы в названии
+          const hasCyrillic = (text: string) => /[а-яА-ЯёЁ]/.test(text);
+          const needsTranslation = postsResult.data.filter(p =>
+            p.title && !hasCyrillic(p.title) && p.url
+          );
+
+          if (needsTranslation.length > 0) {
+            // Переводим по одному в фоне
+            (async () => {
+              for (const rawPost of needsTranslation.slice(0, 5)) { // max 5 за раз
+                try {
+                  const content = `Заголовок: ${rawPost.title}\n\nОписание: ${(rawPost as any).description || rawPost.summary || ''}`;
+                  const res = await fetch('/api/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content }),
+                  });
+                  if (!res.ok) continue;
+                  const translated = await res.json();
+
+                  if (translated.titleRu && hasCyrillic(translated.titleRu)) {
+                    const postId = typeof rawPost.id === 'string' ? parseInt(rawPost.id.slice(0, 8), 16) : rawPost.id;
+
+                    // Обновляем state
+                    setPosts(prev => prev.map(p =>
+                      p.id === postId
+                        ? {
+                          ...p,
+                          title: translated.titleRu,
+                          summary: hasCyrillic(translated.summary) ? translated.summary : p.summary,
+                          tags: translated.tags?.length ? translated.tags : p.tags,
+                          mentions: translated.mentions?.length ? translated.mentions : p.mentions,
+                          detailedUsage: translated.detailedUsage || p.detailedUsage,
+                          usageTips: translated.usageTips?.length ? translated.usageTips : p.usageTips,
+                        }
+                        : p
+                    ));
+
+                    // Сохраняем перевод обратно в БД
+                    const supabaseClient = getClient();
+                    if (supabaseClient && rawPost.url) {
+                      await supabaseClient.from('posts').update({
+                        title: translated.titleRu,
+                        summary: hasCyrillic(translated.summary) ? translated.summary : rawPost.summary,
+                        tags: translated.tags,
+                        mentions: translated.mentions,
+                        detailed_usage: translated.detailedUsage,
+                        usage_tips: translated.usageTips,
+                      }).eq('url', rawPost.url);
+                    }
+                  }
+                } catch (e) {
+                  console.error('Background translation failed for:', rawPost.title, e);
+                }
+              }
+            })();
+          }
         }
 
         // Обрабатываем каналы
