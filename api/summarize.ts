@@ -93,11 +93,11 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
     // Приоритет отдаем Gemini API
     if (process.env.GEMINI_API_KEY) {
         try {
+            console.log("Starting Gemini summarization...");
             return await callGemini(content);
         } catch (e: any) {
-            console.error("Gemini failed:", e.message);
+            console.error("Gemini failed, trying OpenAI fallback:", e.message);
             if (!process.env.OPENAI_API_KEY) throw e;
-            // else continue to OpenAI
         }
     }
 
@@ -177,7 +177,7 @@ JSON СТРУКТУРА:
  */
 async function callGemini(content: string): Promise<SummarizeResponse> {
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: {
