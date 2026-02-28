@@ -413,6 +413,8 @@ export default function App() {
   const [tools, setTools] = useState<typeof mockTools>(mockTools);
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
+  const [archivedPostIds, setArchivedPostIds] = useLocalStorage<number[]>('ai-scout-archived-posts', []);
+  const [dismissedPostIds, setDismissedPostIds] = useLocalStorage<number[]>('ai-scout-dismissed-posts', []);
   const [showFilters, setShowFilters] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [filterMention, setFilterMention] = useState<string | null>(null);
@@ -749,15 +751,35 @@ export default function App() {
     return Array.from(new Set(allMentions)).sort();
   }, [posts]);
 
-  // Отфильтрованные посты
+  // Архивирование и удаление
+  const archivePost = (postId: number) => {
+    setArchivedPostIds(prev => prev.includes(postId) ? prev : [...prev, postId]);
+    setSelectedPost(null);
+  };
+
+  const dismissPost = (postId: number) => {
+    setDismissedPostIds(prev => prev.includes(postId) ? prev : [...prev, postId]);
+    setSelectedPost(null);
+  };
+
+  const removeFromArchive = (postId: number) => {
+    setArchivedPostIds(prev => prev.filter(id => id !== postId));
+  };
+
+  // Посты для архива и ленты
+  const archivedPosts = useMemo(() => posts.filter(p => archivedPostIds.includes(p.id)), [posts, archivedPostIds]);
+
+  // Отфильтрованные посты (без удалённых и архивированных)
   const filteredPosts = useMemo(() => {
     return posts.filter(p => {
+      if (dismissedPostIds.includes(p.id)) return false;
+      if (archivedPostIds.includes(p.id)) return false;
       if (filterSource !== 'all' && p.source !== filterSource) return false;
       if (filterTag && !(p.tags || []).includes(filterTag)) return false;
       if (filterMention && !(p.mentions || []).map(m => m.toLowerCase()).includes(filterMention.toLowerCase())) return false;
       return true;
     });
-  }, [posts, filterSource, filterTag, filterMention]);
+  }, [posts, filterSource, filterTag, filterMention, dismissedPostIds, archivedPostIds]);
 
   const activeFiltersCount = [filterSource !== 'all', filterTag, filterMention].filter(Boolean).length;
 
@@ -1290,124 +1312,96 @@ export default function App() {
             <div className="space-y-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Архив инструментов</h2>
-                  <p className="text-slate-400 text-sm mt-1">Каталог технологий и сервисов с AI-анализом</p>
+                  <h2 className="text-2xl font-bold text-white">📁 Мой архив</h2>
+                  <p className="text-slate-400 text-sm mt-1">Новости, которые вы сохранили как важные</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-400">{filteredTools.length} инструментов</span>
-                </div>
+                <span className="text-sm text-slate-400">{archivedPosts.length} сохранено</span>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-6">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={cn(
-                      "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
-                      selectedCategory === cat
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-blue-500/25"
-                        : "bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700/50 border border-slate-700/50"
-                    )}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
+              {archivedPosts.length === 0 ? (
+                <div className="text-center py-24 bg-slate-800/20 rounded-3xl border border-dashed border-slate-700">
+                  <div className="text-6xl mb-4">📁</div>
+                  <h3 className="text-lg font-semibold text-slate-400 mb-2">Архив пуст</h3>
+                  <p className="text-slate-500 text-sm max-w-sm mx-auto">
+                    Откройте любую новость в ленте и нажмите <strong className="text-emerald-400">«В архив»</strong> — она появится здесь.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredTools.map(tool => (
-                  <div
-                    key={tool.id}
-                    className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:border-cyan-500/40 hover:bg-slate-800/60 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 cursor-pointer flex flex-col h-full relative overflow-hidden"
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-20 h-20 bg-cyan-500/10 blur-3xl rounded-full" />
-                    </div>
-
-                    <div className="flex items-start justify-between mb-6 relative">
-                      <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
-                        {tool.icon}
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite(`tool-${tool.id}`);
-                        }}
-                        className={cn(
-                          "p-3 rounded-2xl transition-all duration-300 border backdrop-blur-md",
-                          favorites.includes(`tool-${tool.id}`)
-                            ? "text-red-400 bg-red-500/10 border-red-500/20 shadow-lg shadow-red-500/10"
-                            : "text-slate-500 hover:text-red-400 hover:bg-slate-700/50 border-white/5"
-                        )}
-                      >
-                        <Heart className={cn("w-6 h-6", favorites.includes(`tool-${tool.id}`) && "fill-current")} />
-                      </button>
-                    </div>
-
-                    <div className="mb-5 relative">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/20">
-                          {tool.category}
-                        </span>
-                        <div className="flex items-center gap-1 text-amber-400 text-xs font-bold">
-                          ★ {tool.rating}
+                  {archivedPosts.map(post => (
+                    <div
+                      key={post.id}
+                      className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-emerald-900/30 rounded-2xl p-5 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10"
+                    >
+                      <div className="flex gap-4">
+                        <img
+                          src={post.image}
+                          alt={post.title}
+                          loading="lazy"
+                          onError={(e) => {
+                            const t = e.target as HTMLImageElement;
+                            if (!t.src.includes('unsplash.com')) t.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                          }}
+                          className="w-32 h-20 object-cover rounded-xl flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={cn(
+                              "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                              post.source === 'YouTube' ? "bg-red-500/10 text-red-400" : "bg-sky-500/10 text-sky-400"
+                            )}>
+                              {post.source === 'YouTube' ? <Youtube className="w-3 h-3" /> : <MessageCircle className="w-3 h-3" />}
+                              {post.source}
+                            </span>
+                            <span className="text-xs text-slate-500">{post.channel}</span>
+                            <span className="text-xs text-slate-500 ml-auto flex items-center gap-1">
+                              <Clock className="w-3 h-3" />{post.date}
+                            </span>
+                          </div>
+                          <h3 className="font-semibold text-white text-sm mb-1 line-clamp-2 group-hover:text-emerald-400 transition-colors">
+                            {post.title}
+                          </h3>
+                          <p className="text-xs text-slate-400 line-clamp-2">{post.summary}</p>
+                        </div>
+                        <div className="flex flex-col gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => setSelectedPost(post)}
+                            className="p-2 rounded-xl text-slate-500 hover:text-blue-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-blue-500/20"
+                            title="Открыть"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          <a
+                            href={post.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="p-2 rounded-xl text-slate-500 hover:text-amber-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-amber-500/20"
+                            title="Источник"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                          <button
+                            onClick={() => removeFromArchive(post.id)}
+                            className="p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-red-500/20"
+                            title="Убрать из архива"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                      <h3 className="font-black text-2xl text-white group-hover:text-cyan-400 transition-colors uppercase tracking-tight leading-none mb-3">
-                        {tool.name}
-                      </h3>
-                    </div>
-
-                    <p className="text-sm text-slate-400 leading-relaxed mb-6 flex-grow line-clamp-3 font-medium">
-                      {tool.description}
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-cyan-500/20 transition-colors">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                          <Zap size={12} className="text-cyan-400" /> Daily
-                        </p>
-                        <p className="text-sm font-black text-white">{tool.dailyCredits}</p>
-                      </div>
-                      <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 hover:border-blue-500/20 transition-colors">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                          <Clock size={12} className="text-blue-400" /> Monthly
-                        </p>
-                        <p className="text-sm font-black text-white">{tool.monthlyCredits}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2.5 mb-8">
-                      {tool.details?.slice(0, 3).map((detail: any, i: number) => (
-                        <div key={i} className="flex items-center gap-3 text-xs text-slate-300 font-semibold group-hover:text-white transition-colors">
-                          <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-sm" />
-                          {detail.title}
+                      {post.tags && post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-slate-700/30">
+                          {post.tags.slice(0, 5).map(tag => (
+                            <span key={tag} className="px-2 py-0.5 bg-slate-700/50 text-slate-400 rounded-full text-xs">#{tag}</span>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-
-                    <div className="mt-auto pt-6 border-t border-slate-700/50 flex items-end justify-between">
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Plan</p>
-                        <p className="text-xl font-black text-emerald-400 tracking-tighter">{tool.minPrice}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        {tool.hasApi && (
-                          <div className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase tracking-tighter">API</div>
-                        )}
-                        {tool.hasMcp && (
-                          <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-black uppercase tracking-tighter">MCP</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <button className="mt-7 w-full h-14 bg-gradient-to-r from-slate-700/50 to-slate-800/50 hover:from-cyan-500 hover:to-blue-600 hover:text-white text-slate-300 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-500 flex items-center justify-center gap-3 border border-white/5 hover:border-transparent hover:shadow-xl hover:shadow-blue-500/20">
-                      Открыть в Scout <ExternalLink size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )
         }
@@ -1902,14 +1896,35 @@ export default function App() {
                         <p className="text-lg font-black text-slate-300 leading-none mt-1">{selectedPost.date}</p>
                       </div>
                     </div>
-                    <a
-                      href={selectedPost.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-14 px-8 bg-white text-black font-black uppercase tracking-widest rounded-2xl flex items-center gap-3 hover:bg-cyan-400 transition-all hover:shadow-xl hover:shadow-cyan-400/20"
-                    >
-                      Смотреть источник <ExternalLink size={18} />
-                    </a>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => dismissPost(selectedPost.id)}
+                        title="Удалить из ленты"
+                        className="h-14 px-5 bg-slate-800 hover:bg-red-500/10 border border-slate-700 hover:border-red-500/40 text-slate-400 hover:text-red-400 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all"
+                      >
+                        <X size={16} /> Удалить
+                      </button>
+                      <button
+                        onClick={() => archivePost(selectedPost.id)}
+                        title="Сохранить в архив"
+                        className={cn(
+                          "h-14 px-5 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all border",
+                          archivedPostIds.includes(selectedPost.id)
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                            : "bg-slate-800 border-slate-700 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-slate-400 hover:text-emerald-400"
+                        )}
+                      >
+                        {archivedPostIds.includes(selectedPost.id) ? '✓ В архиве' : '📁 В архив'}
+                      </button>
+                      <a
+                        href={selectedPost.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-14 px-8 bg-white text-black font-black uppercase tracking-widest rounded-2xl flex items-center gap-3 hover:bg-cyan-400 transition-all hover:shadow-xl hover:shadow-cyan-400/20"
+                      >
+                        Источник <ExternalLink size={18} />
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
