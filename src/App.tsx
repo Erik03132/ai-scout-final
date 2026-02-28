@@ -3,10 +3,7 @@ import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Hea
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
-import { FeedTab } from './components/Tabs/FeedTab';
-import { InsightsTab } from './components/Tabs/InsightsTab';
-import { ArchiveTab } from './components/Tabs/ArchiveTab';
-import { FavoritesTab } from './components/Tabs/FavoritesTab';
+// Unused component imports removed — feed/archive/insights rendered inline in App
 
 // Types
 interface Post {
@@ -416,6 +413,11 @@ export default function App() {
   const [tools, setTools] = useState<typeof mockTools>(mockTools);
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [filterMention, setFilterMention] = useState<string | null>(null);
+  const [filterSource, setFilterSource] = useState<'all' | 'YouTube' | 'Telegram'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   useEffect(() => {
     setCachedDynamicTools(prev => {
@@ -656,7 +658,7 @@ export default function App() {
     const fullText = `Заголовок: ${title}\n\nОписание: ${content}`;
 
     // Fallback функция при ошибке API
-    const getFallbackSummary = (post: Partial<Post>) => {
+    const getFallbackSummary = (_post: Partial<Post>) => {
       return {
         titleRu: title,
         summary: content.substring(0, 200) || title || 'Контент недоступен',
@@ -734,6 +736,36 @@ export default function App() {
     [allTools, favorites]
   );
   const favoritePosts = posts.filter(post => favorites.includes(`post-${post.id}`));
+
+  // Уникальные теги и упоминания для фильтров
+  const uniqueTags = useMemo(() => {
+    const allTags = posts.flatMap(p => p.tags || []);
+    return Array.from(new Set(allTags)).sort();
+  }, [posts]);
+
+  const uniqueMentions = useMemo(() => {
+    const excludeList = ['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'];
+    const allMentions = posts.flatMap(p => (p.mentions || []).filter(m => !excludeList.includes(m.trim().toLowerCase())));
+    return Array.from(new Set(allMentions)).sort();
+  }, [posts]);
+
+  // Отфильтрованные посты
+  const filteredPosts = useMemo(() => {
+    return posts.filter(p => {
+      if (filterSource !== 'all' && p.source !== filterSource) return false;
+      if (filterTag && !(p.tags || []).includes(filterTag)) return false;
+      if (filterMention && !(p.mentions || []).map(m => m.toLowerCase()).includes(filterMention.toLowerCase())) return false;
+      return true;
+    });
+  }, [posts, filterSource, filterTag, filterMention]);
+
+  const activeFiltersCount = [filterSource !== 'all', filterTag, filterMention].filter(Boolean).length;
+
+  // Фильтрация инструментов для Archive tab
+  const filteredTools = useMemo(() =>
+    allTools.filter(tool => selectedCategory === 'All' || tool.category === selectedCategory),
+    [allTools, selectedCategory]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white selection:bg-cyan-500/30">
@@ -883,19 +915,144 @@ export default function App() {
         {/* Feed Tab */}
         {activeTab === 'feed' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="text-2xl font-bold text-white">Последние новости</h2>
                 <p className="text-slate-400 text-sm mt-1">AI-анализ контента из ваших источников</p>
               </div>
-              <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(
+                  "flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-all",
+                  showFilters || activeFiltersCount > 0
+                    ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
+                    : "text-slate-400 border-slate-700 hover:text-white hover:border-slate-600"
+                )}
+              >
                 <Filter className="w-4 h-4" />
                 Фильтры
+                {activeFiltersCount > 0 && (
+                  <span className="ml-1 w-5 h-5 bg-cyan-500 text-black text-xs font-bold rounded-full flex items-center justify-center">
+                    {activeFiltersCount}
+                  </span>
+                )}
               </button>
             </div>
 
+            {/* Панель фильтров */}
+            {showFilters && (
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                {/* Источник */}
+                <div>
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2 block">Источник</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(['all', 'YouTube', 'Telegram'] as const).map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setFilterSource(s)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
+                          filterSource === s
+                            ? "bg-cyan-500 text-black shadow-lg shadow-cyan-500/20"
+                            : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
+                        )}
+                      >
+                        {s === 'all' ? '📋 Все' : s === 'YouTube' ? '🎬 YouTube' : '📱 Telegram'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Теги */}
+                {uniqueTags.length > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2 block">Хештеги / Теги</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => setFilterTag(null)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
+                          !filterTag
+                            ? "bg-blue-500 text-white"
+                            : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white"
+                        )}
+                      >
+                        Все
+                      </button>
+                      {uniqueTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
+                            filterTag === tag
+                              ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                              : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white"
+                          )}
+                        >
+                          #{tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Упомянутые сервисы */}
+                {uniqueMentions.length > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2 block">Сервисы / Программы</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => setFilterMention(null)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
+                          !filterMention
+                            ? "bg-emerald-500 text-white"
+                            : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white"
+                        )}
+                      >
+                        Все
+                      </button>
+                      {uniqueMentions.map(mention => (
+                        <button
+                          key={mention}
+                          onClick={() => setFilterMention(filterMention === mention ? null : mention)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1",
+                            filterMention === mention
+                              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                              : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white"
+                          )}
+                        >
+                          ⚡ {mention}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Сброс фильтров */}
+                {activeFiltersCount > 0 && (
+                  <button
+                    onClick={() => { setFilterSource('all'); setFilterTag(null); setFilterMention(null); }}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+                  >
+                    <X className="w-3 h-3" />
+                    Сбросить все фильтры
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Счётчик результатов */}
+            {activeFiltersCount > 0 && (
+              <div className="text-xs text-slate-500">
+                Найдено: {filteredPosts.length} из {posts.length} новостей
+              </div>
+            )}
+
             <div className="grid gap-4">
-              {posts.map(post => (
+              {filteredPosts.map(post => (
                 <div
                   key={post.id}
                   className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-slate-700 rounded-2xl p-6 mb-4 hover:border-cyan-500/50 hover:bg-slate-800/90 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1"
