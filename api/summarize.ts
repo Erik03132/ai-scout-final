@@ -185,27 +185,29 @@ async function callGemini(content: string): Promise<SummarizeResponse> {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `Ты — профи ИИ-аналитик. Проанализируй контент и верни JSON на РУССКОМ.
-Задачи:
-1. "titleRu": Переведи заголовок на русский.
-2. "mentions": Список софта (Figma, Supabase и т.д.).
-3. "mentionsDetail": Тех. детали (name, category, minPrice, hasApi: bool, hasMcp: bool).
-4. "detailedUsage": Глубокий пересказ (Markdown разрешен).
+                        text: `Ты — ведущий ИИ-аналитик. Твоя задача: сделать глубокий разбор контента на РУССКОМ ЯЗЫКЕ.
 
-JSON:
+ИНСТРУКЦИИ:
+1. "titleRu": ОБЯЗАТЕЛЬНО переведи заголовок на качественный русский язык.
+2. "summary": Напиши ПЛОТНОЕ информативное саммари (3-4 длинных предложения), передающее суть.
+3. "mentions": Извлеки ВСЕ конкретные сервисы/нейросети. Игнорируй общие понятия (AI, LLM, Cloud).
+4. "mentionsDetail": Для каждого из "mentions" укажи: category, minPrice (или "Бесплатно"), hasApi (boolean), hasMcp (boolean).
+5. "detailedUsage": Сделай максимально подробный пересказ всего контента. Минимум 3-5 абзацев с Markdown (списки, жирный текст).
+
+JSON СТРУКТУРА:
 {
-  "titleRu": "...",
-  "summary": "...",
-  "tags": ["...", "..."],
-  "mentions": ["...", "..."],
+  "titleRu": "Лучший перевод заголовка",
+  "summary": "Краткое, но емкое описание контента для ленты.",
+  "tags": ["AI", "Automation", "Tools"],
+  "mentions": ["Tool1", "Tool2"],
   "mentionsDetail": [
-    { "name": "...", "category": "...", "minPrice": "...", "hasApi": true, "hasMcp": false }
+    { "name": "Tool1", "category": "AI", "minPrice": "Бесплатно", "hasApi": true, "hasMcp": false }
   ],
-  "detailedUsage": "...",
-  "usageTips": ["...", "..."]
+  "detailedUsage": "### Основные идеи\\n...подробности...\\n### Как использовать\\n...подробности...",
+  "usageTips": ["Совет 1", "Совет 2"]
 }
 
-Контент: ${content.substring(0, 15000)}`
+Контент для анализа: ${content.substring(0, 15000)}`
                     }]
                 }],
                 generationConfig: {

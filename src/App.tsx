@@ -717,11 +717,11 @@ export default function App() {
       const fallbackContent = fallbackPost.content || content;
       return {
         titleRu: fallbackTitle,
-        summary: fallbackContent.substring(0, 200) || fallbackTitle || 'Контент недоступен',
-        tags: ['Tech'],
-        mentions: [],
-        detailedUsage: '',
-        usageTips: [
+        summary: fallbackPost.summary || fallbackContent.substring(0, 200) || fallbackTitle || 'Контент недоступен',
+        tags: fallbackPost.tags && fallbackPost.tags.length > 0 ? fallbackPost.tags : ['Tech'],
+        mentions: fallbackPost.mentions || [],
+        detailedUsage: fallbackPost.detailedUsage || '',
+        usageTips: fallbackPost.usageTips || [
           'Изучите официальную документацию',
           'Попробуйте на практике',
           'Следите за обновлениями'
@@ -1024,23 +1024,46 @@ export default function App() {
                         )}
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
+                        {/* 1. Source Link */}
+                        <a
+                          href={post.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-2.5 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-cyan-400 border border-white/5 rounded-xl transition-all shadow-lg backdrop-blur-md"
+                          title="Перейти к источнику"
+                        >
+                          <ExternalLink size={18} />
+                        </a>
+
+                        {/* 2. Details Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPost(post);
+                          }}
+                          className="p-2.5 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-cyan-400 border border-white/5 rounded-xl transition-all shadow-lg backdrop-blur-md"
+                          title="Подробный разбор"
+                        >
+                          <Sparkles size={18} />
+                        </button>
+
+                        {/* 3. Favorite Button */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavorite(`post-${post.id}`);
                           }}
                           className={cn(
-                            "p-2.5 rounded-xl transition-all duration-300 border backdrop-blur-md",
+                            "p-2.5 rounded-xl transition-all duration-300 border backdrop-blur-md shadow-lg",
                             favorites.includes(`post-${post.id}`)
-                              ? "text-rose-400 bg-rose-500/10 border-rose-500/30 shadow-lg shadow-rose-500/10"
-                              : "text-slate-500 hover:text-rose-400 hover:bg-slate-700/50 border-white/5"
+                              ? "text-rose-400 bg-rose-500/10 border-rose-500/30"
+                              : "text-slate-500 hover:text-rose-400 bg-slate-800/40 border-white/5 hover:bg-slate-700/60"
                           )}
+                          title="В избранное"
                         >
-                          <Heart className={cn("w-5 h-5", favorites.includes(`post-${post.id}`) && "fill-current")} />
-                        </button>
-                        <button className="p-2.5 bg-slate-800 rounded-xl text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 transition-all">
-                          <ArrowUpRight size={20} />
+                          <Heart className={cn("w-[18px] h-[18px]", favorites.includes(`post-${post.id}`) && "fill-current")} />
                         </button>
                       </div>
                     </div>
