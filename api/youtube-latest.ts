@@ -205,11 +205,11 @@ async function getVideoDetails(videoId: string, apiKey: string): Promise<YouTube
 /**
  * Генерация саммари через Gemini API
  */
-async function generateSummary(title: string, description: string): Promise<{ title: string; summary: string }> {
+async function generateSummary(title: string, description: string): Promise<{ title: string; summary: string; mentions?: string[] }> {
   const geminiApiKey = process.env.GEMINI_API_KEY;
 
   if (!geminiApiKey) {
-    return { title: title, summary: createFallbackSummary(description) };
+    return { title: title, summary: createFallbackSummary(description), mentions: [] };
   }
 
   try {
@@ -234,8 +234,13 @@ async function generateSummary(title: string, description: string): Promise<{ ti
 JSON СТРУКТУРА:
 {
   "title": "Шикарный перевод заголовка",
-  "summary": "Информативное описание видео на русском языке."
+  "summary": "Информативное описание видео на русском языке.",
+  "mentions": ["Tool1", "Tool2"]
 }
+
+КРИТЕРИИ ИЗВЛЕЧЕНИЯ:
+- Извлеки ВСЕ конкретные сервисы, нейросети и модели (например: GLM-5, Qwen 3.5, Gemini).
+- ИГНОРИРУЙ общие термины (AI, LLM) и языки программирования.
 
 Контент: ${content}`
             }]
@@ -252,7 +257,7 @@ JSON СТРУКТУРА:
     if (!response.ok) {
       const errText = await response.text();
       console.error('Gemini API error in youtube-latest:', errText);
-      return { title: title, summary: createFallbackSummary(description) };
+      return { title: title, summary: createFallbackSummary(description), mentions: [] };
     }
 
     const data = await response.json();
@@ -262,15 +267,16 @@ JSON СТРУКТУРА:
       const parsed = JSON.parse(text);
       return {
         title: parsed.title || title,
-        summary: parsed.summary || createFallbackSummary(description)
+        summary: parsed.summary || createFallbackSummary(description),
+        mentions: parsed.mentions || []
       };
     } catch (e) {
       console.error('Failed to parse Gemini JSON in youtube-latest:', text);
-      return { title: title, summary: createFallbackSummary(description) };
+      return { title: title, summary: createFallbackSummary(description), mentions: [] };
     }
   } catch (error) {
     console.error('Gemini summarization failed in youtube-latest:', error);
-    return { title: title, summary: createFallbackSummary(description) };
+    return { title: title, summary: createFallbackSummary(description), mentions: [] };
   }
 }
 

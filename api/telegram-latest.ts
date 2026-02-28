@@ -208,11 +208,11 @@ function extractTitle(text: string): string | null {
 /**
  * Генерация саммари и заголовка через Gemini API
  */
-async function generateSummaryDetailed(text: string): Promise<{ title: string; summary: string }> {
+async function generateSummaryDetailed(text: string): Promise<{ title: string; summary: string; mentions?: string[] }> {
     const geminiApiKey = process.env.GEMINI_API_KEY;
 
     if (!geminiApiKey) {
-        return { title: '', summary: createFallbackSummary(text) };
+        return { title: '', summary: createFallbackSummary(text), mentions: [] };
     }
 
     try {
@@ -235,8 +235,13 @@ async function generateSummaryDetailed(text: string): Promise<{ title: string; s
 JSON СТРУКТУРА:
 {
   "title": "Заголовок на русском",
-  "summary": "Текст саммари на русском"
+  "summary": "Текст саммари на русском",
+  "mentions": ["Tool1", "Tool2"]
 }
+
+КРИТЕРИИ ИЗВЛЕЧЕНИЯ:
+- Извлеки ВСЕ конкретные сервисы, нейросети и модели (например: GLM-5, Qwen 3.5, Gemini).
+- ИГНОРИРУЙ общие термины (AI, LLM) и языки программирования.
 
 Текст: ${content}`
                         }]
@@ -251,7 +256,7 @@ JSON СТРУКТУРА:
         );
 
         if (!response.ok) {
-            return { title: '', summary: createFallbackSummary(text) };
+            return { title: '', summary: createFallbackSummary(text), mentions: [] };
         }
 
         const data = await response.json();
@@ -261,14 +266,15 @@ JSON СТРУКТУРА:
             const parsed = JSON.parse(resText);
             return {
                 title: parsed.title || '',
-                summary: parsed.summary || createFallbackSummary(text)
+                summary: parsed.summary || createFallbackSummary(text),
+                mentions: parsed.mentions || []
             };
         } catch (e) {
-            return { title: '', summary: createFallbackSummary(text) };
+            return { title: '', summary: createFallbackSummary(text), mentions: [] };
         }
     } catch (error) {
         console.error('Gemini summarization failed in telegram-latest:', error);
-        return { title: '', summary: createFallbackSummary(text) };
+        return { title: '', summary: createFallbackSummary(text), mentions: [] };
     }
 }
 
