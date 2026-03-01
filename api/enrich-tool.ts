@@ -20,15 +20,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         Нужны: суть (2 предложения), категория, иконка-эмодзи, цена, лимиты, 3 фишки.
         ОТВЕЧАЙ ТОЛЬКО ЧИСТЫМ JSON на русском.`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                // Убираем google_search для скорости на Vercel Hobby
                 generationConfig: {
-                    temperature: 0.1,
-                    responseMimeType: "application/json"
+                    temperature: 0.1
                 }
             }),
             signal: controller.signal
@@ -36,8 +34,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-            const errText = await response.text();
-            return res.status(response.status).json({ error: 'AI failed', details: errText });
+            const errBody = await response.json().catch(() => ({}));
+            const errText = JSON.stringify(errBody);
+            console.error(`Gemini Error (${response.status}):`, errText);
+            return res.status(response.status).json({
+                error: 'AI Provider Error',
+                details: errBody.error?.message || response.statusText
+            });
         }
 
         const data = await response.json();

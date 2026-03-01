@@ -797,7 +797,16 @@ export default function App() {
       });
       clearTimeout(timer);
 
-      if (!response.ok) throw new Error('Enrichment API failed');
+      if (!response.ok) {
+        let errorMessage = 'Enrichment API failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (e) {
+          errorMessage = `Server Error (${response.status})`;
+        }
+        throw new Error(errorMessage);
+      }
       const enriched = await response.json();
 
       const supabase = getClient();
