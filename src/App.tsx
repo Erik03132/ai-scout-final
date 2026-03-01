@@ -491,6 +491,13 @@ export default function App() {
             docsUrl: t.docs_url
           }));
           setTools(formattedTools);
+          // Восстанавливаем избранные ИНСТРУМЕНТЫ из Supabase
+          const dbFavToolIds = toolsResult.data
+            .filter(t => t.is_favorite)
+            .map(t => `tool-${t.id}`);
+          if (dbFavToolIds.length > 0) {
+            setFavorites(prev => Array.from(new Set([...prev, ...dbFavToolIds])));
+          }
         }
 
         // Обрабатываем посты
@@ -737,36 +744,44 @@ export default function App() {
   };
 
   // Хелпер получения supabaseId поста по числовому id
+  // Хелпер получения supabaseId поста по числовому id
   const getSupabasePostId = (postId: number): string | undefined => {
     const post = posts.find(p => p.id === postId);
     return (post as any)?.supabaseId;
   };
 
+  // toggleFavorite — работает ТОЛЬКО для инструментов
   const toggleFavorite = async (id: string) => {
-    // Обновляем localStorage (для инструментов и быстрого UI)
-    setFavorites(prev =>
-      prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
-    );
-    // Если это пост — синхронизируем с Supabase
-    if (id.startsWith('post-')) {
-      const numericId = parseInt(id.replace('post-', ''));
-      const supabaseId = getSupabasePostId(numericId);
-      if (supabaseId) {
-        const supabase = getClient();
-        const isFav = !favorites.includes(id); // новое значение (после toggle)
-        if (supabase) {
-          await supabase.from('posts').update({ is_favorite: isFav }).eq('id', supabaseId);
+    const isCurrentlyFav = favorites.includes(id);
+    const newFav = isCurrentlyFav
+      ? favorites.filter(f => f !== id)
+      : [...favorites, id];
+    setFavorites(newFav);
+
+    // Синхронизируем инструмент с Supabase
+    if (id.startsWith('tool-')) {
+      const toolId = id.replace('tool-', '');
+      const supabase = getClient();
+      if (supabase) {
+        const isFav = !isCurrentlyFav;
+        // Для динамических (dyn-) — убедитесь, что инструмент есть в БД
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(toolId);
+        if (isUUID) {
+          await supabase.from('tools').update({ is_favorite: isFav }).eq('id', toolId);
+        } else {
+          // Динамический инструмент — сохраняем в favorites (в localStorage)
+          // TODO: при необходимости можно создать запись в tools
+          console.log('Dynamic tool favorite saved to localStorage:', toolId);
         }
       }
     }
   };
 
-
   const favoriteTools = useMemo(() =>
     allTools.filter(tool => favorites.includes(`tool-${tool.id}`)),
     [allTools, favorites]
   );
-  const favoritePosts = posts.filter(post => favorites.includes(`post-${post.id}`));
+  // Посты в избранном больше не используем — посты идут в Архив
 
   // Уникальные теги и упоминания для фильтров
   const uniqueTags = useMemo(() => {
@@ -1246,17 +1261,6 @@ export default function App() {
                       >
                         <FileText className="w-5 h-5" />
                       </button>
-                      <button
-                        onClick={() => toggleFavorite(`post-${post.id}`)}
-                        className={cn(
-                          "p-2 rounded-xl transition-all duration-200 border",
-                          favorites.includes(`post-${post.id}`)
-                            ? "text-red-400 bg-red-500/10 border-red-500/20"
-                            : "text-slate-500 hover:text-red-400 hover:bg-slate-700/50 border-transparent"
-                        )}
-                      >
-                        <Heart className={cn("w-5 h-5", favorites.includes(`post-${post.id}`) && "fill-current")} />
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -1451,134 +1455,65 @@ export default function App() {
           )
         }
 
-        {/* Favorites Tab */}
+        {/* Favorites Tab — Только Инструменты/Приложения */}
         {
           activeTab === 'favorites' && (
             <div className="space-y-8 animate-in fade-in duration-500">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-white">Ваше избранное</h2>
-                <p className="text-slate-400 text-sm mt-1">Сохраненные новости и инструменты</p>
+                <h2 className="text-2xl font-bold text-white">❤️ Мои инструменты</h2>
+                <p className="text-slate-400 text-sm mt-1">AI-приложения, которые вы отметили в развёрнутых карточках новостей</p>
               </div>
 
-              {favoriteTools.length === 0 && favoritePosts.length === 0 ? (
+              {favoriteTools.length === 0 ? (
                 <div className="text-center py-20 bg-slate-800/20 rounded-3xl border border-dashed border-slate-700">
                   <Heart className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-slate-400">Список пуст</h3>
-                  <p className="text-slate-500 text-sm mt-2">Добавляйте инструменты и новости в избранное, чтобы они появились здесь</p>
+                  <h3 className="text-lg font-medium text-slate-400">Избранное пусто</h3>
+                  <p className="text-slate-500 text-sm mt-2 max-w-sm mx-auto">
+                    Откройте любую новость, найдите упомянутое приложение и нажмите <strong className="text-red-400">«В избранное»</strong> — оно появится здесь.
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-12">
-                  {favoriteTools.length > 0 && (
-                    <section>
-                      <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                        <Wrench className="w-5 h-5 text-cyan-400" />
-                        Инструменты
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {favoriteTools.map(tool => (
-                          <div
-                            key={tool.id}
-                            className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:shadow-2xl transition-all duration-300 relative overflow-hidden"
-                          >
-                            <div className="flex items-start justify-between mb-6">
-                              <div className="w-14 h-14 bg-slate-700/50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                                {tool.icon}
-                              </div>
-                              <button
-                                onClick={() => toggleFavorite(`tool-${tool.id}`)}
-                                className="p-3 rounded-2xl text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20 shadow-lg shadow-red-500/5"
-                              >
-                                <Heart className="w-5 h-5 fill-current" />
-                              </button>
-                            </div>
-                            <h3 className="font-black text-xl text-white mb-1 group-hover:text-cyan-400 transition-colors uppercase tracking-tight">{tool.name}</h3>
-                            <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg uppercase tracking-widest mb-4 inline-block border border-cyan-500/20">
-                              {tool.category}
-                            </span>
-                            <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed mb-6 font-medium">{tool.description}</p>
-
-                            <div className="grid grid-cols-2 gap-3 mb-6">
-                              <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> {tool.dailyCredits}</p>
-                              </div>
-                              <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Clock size={10} /> {tool.monthlyCredits}</p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-6 border-t border-slate-700/50 mt-auto">
-                              <div className="space-y-0.5">
-                                <p className="text-[9px] font-black text-slate-500 uppercase">Tariff</p>
-                                <p className="text-lg font-black text-emerald-400">{tool.minPrice}</p>
-                              </div>
-                              <div className="flex gap-1.5">
-                                {tool.hasApi && <span className="bg-blue-400/10 text-blue-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-blue-500/20">API</span>}
-                                {tool.hasMcp && <span className="bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-emerald-500/20">MCP</span>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {favoriteTools.map(tool => (
+                    <div
+                      key={tool.id}
+                      className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:shadow-2xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+                      onClick={() => setSelectedTool(tool)}
+                    >
+                      <div className="flex items-start justify-between mb-6">
+                        <div className="w-14 h-14 bg-slate-700/50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                          {tool.icon}
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(`tool-${tool.id}`); }}
+                          className="p-3 rounded-2xl text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20 shadow-lg shadow-red-500/5"
+                          title="Убрать из избранного"
+                        >
+                          <Heart className="w-5 h-5 fill-current" />
+                        </button>
                       </div>
-                    </section>
-                  )}
-
-                  {favoritePosts.length > 0 && (
-                    <section>
-                      <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-blue-400" />
-                        Новости и посты
-                      </h3>
-                      <div className="grid gap-4">
-                        {favoritePosts.map(post => (
-                          <div
-                            key={post.id}
-                            className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-slate-700 rounded-2xl p-6"
-                          >
-                            <div className="flex flex-col sm:flex-row gap-4">
-                              <img src={post.image} alt={post.title} loading="lazy" onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                if (target.src.includes('maxresdefault.jpg')) {
-                                  target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
-                                } else if (target.src.includes('hqdefault.jpg')) {
-                                  target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
-                                } else if (!target.src.includes('unsplash.com')) {
-                                  target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
-                                }
-                              }} className="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-xl flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <h3
-                                  onClick={() => setSelectedPost(post)}
-                                  className="font-semibold text-white mb-1 cursor-pointer hover:text-cyan-400 transition-colors"
-                                >
-                                  {post.title}
-                                </h3>
-                                <p className="text-sm text-slate-400 line-clamp-1">{post.summary}</p>
-                                <div className="flex items-center gap-3 mt-2">
-                                  <span className="text-xs text-slate-500">{post.channel}</span>
-                                  <div className="flex items-center gap-2 ml-auto">
-                                    <a
-                                      href={post.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-amber-500 hover:text-amber-400 transition-colors"
-                                    >
-                                      <ExternalLink size={14} />
-                                    </a>
-                                    <button
-                                      onClick={() => toggleFavorite(`post-${post.id}`)}
-                                      className="text-red-400 text-xs font-medium hover:underline"
-                                    >
-                                      Удалить
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                      <h3 className="font-black text-xl text-white mb-1 group-hover:text-cyan-400 transition-colors uppercase tracking-tight">{tool.name}</h3>
+                      <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg uppercase tracking-widest mb-4 inline-block border border-cyan-500/20">
+                        {tool.category}
+                      </span>
+                      <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed mb-6 font-medium">{tool.description}</p>
+                      <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> {tool.dailyCredits}</p>
+                        </div>
+                        <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Clock size={10} /> {tool.monthlyCredits}</p>
+                        </div>
                       </div>
-                    </section>
-                  )}
+                      <div className="flex items-center justify-between pt-6 border-t border-slate-700/50">
+                        <p className="text-lg font-black text-emerald-400">{tool.minPrice}</p>
+                        <div className="flex gap-1.5">
+                          {tool.hasApi && <span className="bg-blue-400/10 text-blue-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-blue-500/20">API</span>}
+                          {tool.hasMcp && <span className="bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-emerald-500/20">MCP</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
