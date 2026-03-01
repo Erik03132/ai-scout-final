@@ -409,6 +409,7 @@ export default function App() {
   const [selectedPost, setSelectedPost] = useState<typeof mockPosts[0] | null>(null);
   const [selectedUseCase, setSelectedUseCase] = useState<{ tool: string, case: any } | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<{ title: string, description: string } | null>(null);
+  const [isEnriching, setIsEnriching] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [channels, setChannels] = useState<Array<{ id: string, url: string, source: 'YouTube' | 'Telegram', name: string }>>([]);
   const [posts, setPosts] = useState<Post[]>(mockPosts);
@@ -754,10 +755,91 @@ export default function App() {
   };
 
   // Хелпер получения supabaseId поста по числовому id
-  // Хелпер получения supabaseId поста по числовому id
   const getSupabasePostId = (postId: number): string | undefined => {
     const post = posts.find(p => p.id === postId);
     return (post as any)?.supabaseId;
+  };
+
+  // Функция для обогащения данных об инструменте через ИИ
+  const enrichToolData = async (toolName: string) => {
+    try {
+      console.log(`Enriching data for: ${toolName}...`);
+      const response = await fetch('/api/enrich-tool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: toolName })
+      });
+
+      if (!response.ok) throw new Error('Enrichment API failed');
+      const enriched = await response.json();
+
+      const supabase = getClient();
+      if (!supabase) return enriched;
+
+      // 1. Сохраняем/обновляем основной инструмент (Upsert по имени)
+      const { data: toolData, error: toolError } = await supabase
+        .from('tools')
+        .upsert({
+          name: toolName,
+          category: enriched.category,
+          description: enriched.description,
+          icon: enriched.icon,
+          daily_credits: enriched.dailyCredits,
+          monthly_credits: enriched.monthlyCredits,
+          min_price: enriched.minPrice,
+          has_api: enriched.hasApi,
+          has_mcp: enriched.hasMcp,
+          docs_url: enriched.docsUrl,
+          pros: enriched.pros || []
+        }, { onConflict: 'name' })
+        .select()
+        .single();
+
+      if (toolError) throw toolError;
+
+      // 2. Сохраняем детали (фичи)
+      if (enriched.features && enriched.features.length > 0) {
+        const featuresToInsert = enriched.features.map((f: any) => ({
+          tool_id: toolData.id,
+          title: f.title,
+          description: f.description,
+          type: 'detail'
+        }));
+        await supabase.from('tool_details').delete().eq('tool_id', toolData.id); // очистка старых
+        await supabase.from('tool_details').insert(featuresToInsert);
+      }
+
+      // Обновляем локальный стейт инструментов
+      const finalTool = {
+        id: toolData.id,
+        name: toolData.name,
+        category: toolData.category,
+        description: toolData.description,
+        icon: toolData.icon,
+        rating: 4.5,
+        dailyCredits: toolData.daily_credits,
+        monthlyCredits: toolData.monthly_credits,
+        minPrice: toolData.min_price,
+        hasApi: toolData.has_api,
+        hasMcp: toolData.has_mcp,
+        pros: toolData.pros,
+        docsUrl: toolData.docs_url,
+        details: enriched.features || []
+      };
+
+      setTools(prev => {
+        const exists = prev.find(t => t.name.toLowerCase() === toolName.toLowerCase());
+        if (exists) {
+          return prev.map(t => t.name.toLowerCase() === toolName.toLowerCase() ? finalTool : t);
+        }
+        return [...prev, finalTool];
+      });
+
+      return finalTool;
+    } catch (e) {
+      console.error('Failed to enrich tool:', e);
+      return null;
+    }
   };
 
   // toggleFavorite — работает ТОЛЬКО для инструментов
@@ -771,17 +853,24 @@ export default function App() {
     // Синхронизируем инструмент с Supabase
     if (id.startsWith('tool-')) {
       const toolId = id.replace('tool-', '');
+      const tool = (allTools as any[]).find(t => t.id.toString() === toolId.toString());
+
       const supabase = getClient();
-      if (supabase) {
+      if (supabase && tool) {
         const isFav = !isCurrentlyFav;
-        // Для динамических (dyn-) — убедитесь, что инструмент есть в БД
+
+        // Если это "пустой" инструмент (заглушка), сначала обогащаем его
+        if (tool.description?.includes('был упомянут')) {
+          await enrichToolData(tool.name);
+        }
+
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(toolId);
         if (isUUID) {
           await supabase.from('tools').update({ is_favorite: isFav }).eq('id', toolId);
         } else {
-          // Динамический инструмент — сохраняем в favorites (в localStorage)
-          // TODO: при необходимости можно создать запись в tools
-          console.log('Dynamic tool favorite saved to localStorage:', toolId);
+          // Если динамический — он уже должен был создаться в enrichToolData
+          // Но на всякий случай просто сохраняем в список в localStorage (через hook)
+          console.log('Syncing favorite for tool:', tool.name);
         }
       }
     }
@@ -856,6 +945,16 @@ export default function App() {
     allTools.filter(tool => selectedCategory === 'All' || tool.category === selectedCategory),
     [allTools, selectedCategory]
   );
+  // При выборе инструмента — если он пустой, запускаем обогащение
+  useEffect(() => {
+    if (selectedTool && selectedTool.description?.includes('был упомянут') && !isEnriching) {
+      setIsEnriching(true);
+      enrichToolData(selectedTool.name).then((enriched) => {
+        if (enriched) setSelectedTool(enriched);
+        setIsEnriching(false);
+      });
+    }
+  }, [selectedTool, isEnriching]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white selection:bg-cyan-500/30">
