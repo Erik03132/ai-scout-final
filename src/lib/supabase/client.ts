@@ -12,6 +12,9 @@ export function getClient(): SupabaseClient<Database> | null {
 
     if (!supabaseUrl || !supabaseAnonKey) {
         console.warn('Supabase credentials not configured. Using mock data.');
+        if (typeof window !== 'undefined') {
+            (window as any)._supabaseMissing = true;
+        }
         return null;
     }
 

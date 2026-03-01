@@ -11,61 +11,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY logic missing' });
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000); // 9 секунд (Vercel Hobby limit ~10s)
+
     try {
         console.log(`Starting enrichment for: ${name}`);
-        const prompt = `Найди актуальную, ФАКТИЧЕСКУЮ информацию о сервисе "${name}" (это AI инструмент).
-        Используй поиск Google, чтобы узнать тарифы, лимиты и основные функции.
-        
-        Верни СТРОГО JSON на русском языке:
-        - description: Реальное описание сути сервиса (2-3 предложения).
-        - category: Категория (напр. "Low-code", "LLM", "Design", "Automation").
-        - icon: Уникальный эмодзи (НЕ шестеренка ⚙️).
-        - dailyCredits: Реальные лимиты (напр. "5 кредитов" или "Н/Д").
-        - monthlyCredits: Лимиты в месяц.
-        - minPrice: Минимальная цена (напр. "$20/мес").
-        - hasApi: boolean.
-        - hasMcp: boolean.
-        - docsUrl: Ссылка на сайт.
-        - pros: Список из 3 преимуществ.
-        - features: Список [{title, description}] из 3 фишек.
-        
-        ОТВЕЧАЙ ТОЛЬКО JSON.`;
+        const prompt = `Найди ФАКТИЧЕСКУЮ информацию о AI сервисе "${name}".
+        Нужны: суть (2 предложения), категория, иконка-эмодзи, цена, лимиты, 3 фишки.
+        ОТВЕЧАЙ ТОЛЬКО ЧИСТЫМ JSON на русском.`;
 
-        // Модель 2.0-flash с поиском
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                tools: [{ google_search_retrieval: { dynamic_retrieval_config: { mode: "UNSPECIFIED", dynamic_threshold: 0.3 } } }],
+                // Убираем google_search для скорости на Vercel Hobby
                 generationConfig: {
                     temperature: 0.1,
                     responseMimeType: "application/json"
                 }
-            })
+            }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error(`Gemini Error (${response.status}):`, errText);
-            throw new Error(`Gemini fail: ${response.status}`);
+            return res.status(response.status).json({ error: 'AI failed', details: errText });
         }
 
         const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        console.log(`Gemini response for ${name}: success`);
+        let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
         let result = JSON.parse(text);
-
-        // Гарантируем наличие полей
         result.name = name;
-        if (!result.features) result.features = [];
-        if (!result.pros) result.pros = [];
-        if (!result.icon) result.icon = '✨';
+        if (!result.icon || result.icon === '⚙️') result.icon = '✨';
 
         return res.status(200).json(result);
     } catch (error: any) {
-        console.error('Enrichment handler error:', error);
-        return res.status(500).json({ error: error.message, details: 'Check server logs' });
+        clearTimeout(timeoutId);
+        console.error('Enrichment error:', error.name === 'AbortError' ? 'Timeout' : error.message);
+        return res.status(error.name === 'AbortError' ? 504 : 500).json({
+            error: error.name === 'AbortError' ? 'Timeout' : 'Internal error'
+        });
     }
 }

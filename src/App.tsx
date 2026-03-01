@@ -782,42 +782,86 @@ export default function App() {
 
     setEnrichingToolNames(prev => [...prev, toolName]);
 
+    // Тайм-аут для защиты от бесконечного колесика
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000); // 45 секунд
+
     try {
+      console.log(`[Enrichment] Fetching for ${cleanName}...`);
       const response = await fetch('/api/enrich-tool', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: cleanName })
+        body: JSON.stringify({ name: cleanName }),
+        signal: ctrl.signal
       });
+      clearTimeout(timer);
 
       if (!response.ok) throw new Error('Enrichment API failed');
       const enriched = await response.json();
 
       const supabase = getClient();
       if (!supabase) {
-        setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
         return enriched;
       }
 
-      const { data: toolData, error: toolError } = await supabase
+      console.log(`[Enrichment] Saving tool to DB: ${cleanName}`);
+
+      let toolData: any = null;
+
+      // Ручной UPSERT: сначала ищем по имени
+      const { data: existingTool } = await supabase
         .from('tools')
-        .upsert({
-          name: cleanName,
-          category: enriched.category,
-          description: enriched.description,
-          icon: enriched.icon,
-          daily_credits: enriched.dailyCredits,
-          monthly_credits: enriched.monthlyCredits,
-          min_price: enriched.minPrice,
-          has_api: enriched.hasApi,
-          has_mcp: enriched.hasMcp,
-          docs_url: enriched.docsUrl,
-          pros: enriched.pros || []
-        }, { onConflict: 'name' })
-        .select()
-        .single();
+        .select('*')
+        .eq('name', cleanName)
+        .maybeSingle();
 
-      if (toolError) throw toolError;
+      if (existingTool) {
+        console.log(`[Enrichment] Updating existing tool: ${existingTool.id}`);
+        const { data: updated, error: updateError } = await supabase
+          .from('tools')
+          .update({
+            category: enriched.category,
+            description: enriched.description,
+            icon: enriched.icon,
+            daily_credits: enriched.dailyCredits,
+            monthly_credits: enriched.monthlyCredits,
+            min_price: enriched.minPrice,
+            has_api: enriched.hasApi,
+            has_mcp: enriched.hasMcp,
+            docs_url: enriched.docsUrl,
+            pros: enriched.pros || []
+          })
+          .eq('id', existingTool.id)
+          .select()
+          .single();
 
+        if (updateError) throw updateError;
+        toolData = updated;
+      } else {
+        console.log(`[Enrichment] Inserting new tool...`);
+        const { data: inserted, error: insertError } = await supabase
+          .from('tools')
+          .insert([{
+            name: cleanName,
+            category: enriched.category,
+            description: enriched.description,
+            icon: enriched.icon,
+            daily_credits: enriched.dailyCredits,
+            monthly_credits: enriched.monthlyCredits,
+            min_price: enriched.minPrice,
+            has_api: enriched.hasApi,
+            has_mcp: enriched.hasMcp,
+            docs_url: enriched.docsUrl,
+            pros: enriched.pros || []
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        toolData = inserted;
+      }
+
+      console.log(`[Enrichment] Saving tool details for ID: ${toolData.id}`);
       if (enriched.features && enriched.features.length > 0) {
         const featuresToInsert = enriched.features.map((f: any) => ({
           tool_id: toolData.id,
@@ -826,7 +870,8 @@ export default function App() {
           type: 'detail'
         }));
         await supabase.from('tool_details').delete().eq('tool_id', toolData.id);
-        await supabase.from('tool_details').insert(featuresToInsert);
+        const { error: detailsError } = await supabase.from('tool_details').insert(featuresToInsert);
+        if (detailsError) console.error('[Enrichment] Details insert failed:', detailsError);
       }
 
       const finalTool = {
@@ -878,10 +923,15 @@ export default function App() {
 
       setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
       return finalTool;
-    } catch (e) {
-      console.error('Failed to enrich tool:', e);
-      setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        console.warn(`[Enrichment] Request for ${cleanName} timed out (45s).`);
+      } else {
+        console.error('Failed to enrich tool:', e);
+      }
       return null;
+    } finally {
+      setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
     }
   };
 
@@ -1043,9 +1093,14 @@ export default function App() {
       <header className="border-b border-slate-800/50 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50 premium-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
-            <div className="flex items-center gap-3 group cursor-pointer">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 rounded-[1.25rem] flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)] group-hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all duration-500 group-hover:rotate-6 will-change-transform">
+            <div className="flex items-center gap-3 group cursor-pointer" onClick={() => setActiveTab('feed')}>
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 rounded-[1.25rem] flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)] group-hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all duration-500 group-hover:rotate-6 will-change-transform relative">
                 <Sparkles className="w-6 h-6 md:w-7 md:h-7 text-white animate-pulse" />
+                {/* DB Status indicator */}
+                <div className={cn(
+                  "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-slate-900 shadow-lg",
+                  (window as any)._supabaseMissing ? "bg-red-500" : (getClient() ? "bg-emerald-500" : "bg-amber-500")
+                )} title={(window as any)._supabaseMissing ? "Supabase не настроен" : "Подключено к БД"} />
               </div>
               <div className="flex flex-col">
                 <span className="text-lg md:text-xl font-black bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent uppercase tracking-tighter leading-none">AI Scout</span>
@@ -2117,12 +2172,33 @@ export default function App() {
                       <div className="absolute top-0 right-0 p-8 opacity-5">
                         <Sparkles size={120} />
                       </div>
-                      <div className="text-slate-300 leading-relaxed text-lg font-medium relative z-10">
-                        {selectedPost.detailedUsage?.split('\n').map((paragraph, idx) => (
-                          <span key={idx} className="block mb-3 last:mb-0">
-                            {paragraph}
-                          </span>
-                        ))}
+                      <div className="text-slate-300 leading-relaxed text-lg font-medium relative z-10 space-y-4">
+                        {(() => {
+                          let content = selectedPost.detailedUsage || '';
+                          let paragraphs: string[] = [];
+
+                          // Если контент пришел как строковое представление массива JSON...
+                          if (typeof content === 'string' && content.trim().startsWith('[') && content.trim().endsWith(']')) {
+                            try {
+                              const parsed = JSON.parse(content);
+                              if (Array.isArray(parsed)) {
+                                paragraphs = parsed;
+                              } else {
+                                paragraphs = content.split('\n');
+                              }
+                            } catch {
+                              paragraphs = content.split('\n');
+                            }
+                          } else {
+                            paragraphs = content.split('\n');
+                          }
+
+                          return paragraphs.filter(p => p.trim()).map((paragraph, idx) => (
+                            <p key={idx} className="mb-3 last:mb-0">
+                              {paragraph.replace(/^["']|["']$/g, '')}
+                            </p>
+                          ));
+                        })()}
                       </div>
                     </div>
                   </section>
@@ -2380,25 +2456,42 @@ export default function App() {
                       const supabase = getClient();
                       if (supabase) {
                         try {
-                          const { data: insertedChannel, error: channelError } = await supabase.from('channels').upsert([{
-                            name: newChannel.name,
-                            source: newChannel.source,
-                            url: newChannel.url
-                          }], { onConflict: 'url' }).select().single();
+                          console.log('Sending channel to Supabase:', newChannel);
 
-                          if (channelError) {
-                            console.error('Error saving channel to Supabase:', channelError);
-                            // Если произошла ошибка "No index/unique constraint found", значит нужно выполнить SQL fix
-                            if (channelError.message.includes('unique constraint')) {
-                              setAddChannelError('Ошибка базы данных: отсутствуют уникальные правила для UPSERT. Пожалуйста, выполните скрипт supabase_fix.sql в консоли Supabase.');
-                              setIsLoadingChannel(false);
-                              return;
+                          // Сначала пробуем найти, есть ли такой канал (чтобы не зависеть от UNIQUE индекса в upsert)
+                          const { data: existing } = await supabase
+                            .from('channels')
+                            .select('id')
+                            .eq('url', newChannel.url)
+                            .maybeSingle();
+
+                          if (existing) {
+                            console.log('Channel already exists in DB with ID:', existing.id);
+                            newChannel.id = existing.id;
+                          } else {
+                            // Если нет — вставляем новый
+                            const { data: insertedChannel, error: channelError } = await supabase
+                              .from('channels')
+                              .insert([{
+                                name: newChannel.name,
+                                source: newChannel.source,
+                                url: newChannel.url,
+                                is_active: true
+                              }])
+                              .select()
+                              .single();
+
+                            if (channelError) {
+                              console.error('Error inserting channel to Supabase:', channelError);
+                              // Если произошла ошибка "No index/unique constraint found" или подобные
+                              setAddChannelError(`Ошибка БД при сохранении канала: ${channelError.message}`);
+                            } else if (insertedChannel) {
+                              console.log('Successfully saved channel to DB:', insertedChannel.id);
+                              newChannel.id = insertedChannel.id;
                             }
-                          } else if (insertedChannel) {
-                            newChannel.id = insertedChannel.id;
                           }
                         } catch (e) {
-                          console.error('Exception during channel upsert:', e);
+                          console.error('Exception during channel persistence:', e);
                         }
                       }
 
@@ -2454,30 +2547,45 @@ export default function App() {
                       // Сохраняем в Supabase
                       if (supabase) {
                         try {
-                          const { data: insertedPost, error } = await supabase.from('posts').upsert([{
-                            title: newPost.title,
-                            summary: newPost.summary,
-                            source: newPost.source,
-                            channel: newPost.channel,
-                            date: new Date().toISOString(), // Используем ISO формат для БД
-                            tags: newPost.tags,
-                            mentions: newPost.mentions,
-                            views: newPost.views || '0',
-                            image: newPost.image,
-                            url: newPost.url,
-                            detailed_usage: newPost.detailedUsage,
-                            usage_tips: newPost.usageTips,
-                            is_analyzed: true
-                          }], { onConflict: 'url' }).select().single();
+                          console.log('Sending post to Supabase:', newPost.title);
 
-                          if (error) {
-                            console.error('Error saving post to Supabase:', error);
-                          } else if (insertedPost) {
-                            // Используем ID из базы для корректного отображения и хранения
-                            newPost.id = typeof insertedPost.id === 'string' ? parseInt(insertedPost.id.slice(0, 8), 16) : insertedPost.id;
+                          // Проверяем существование поста по URL
+                          const { data: existingPost } = await supabase
+                            .from('posts')
+                            .select('id')
+                            .eq('url', newPost.url)
+                            .maybeSingle();
+
+                          if (existingPost) {
+                            console.log('Post already exists in DB with ID:', existingPost.id);
+                            // Обновляем id в объекте (для корректной работы Избранного)
+                            newPost.id = typeof existingPost.id === 'string' ? parseInt(existingPost.id.slice(0, 8), 16) : existingPost.id;
+                          } else {
+                            const { data: insertedPost, error } = await supabase.from('posts').insert([{
+                              title: newPost.title,
+                              summary: newPost.summary,
+                              source: newPost.source,
+                              channel: newPost.channel,
+                              date: new Date(latestPost.date || Date.now()).toISOString(),
+                              tags: newPost.tags,
+                              mentions: newPost.mentions,
+                              views: newPost.views || '0',
+                              image: newPost.image,
+                              url: newPost.url,
+                              detailed_usage: typeof newPost.detailedUsage === 'string' ? newPost.detailedUsage : JSON.stringify(newPost.detailedUsage),
+                              usage_tips: newPost.usageTips,
+                              is_analyzed: true
+                            }]).select().single();
+
+                            if (error) {
+                              console.error('Error inserting post to Supabase:', error);
+                            } else if (insertedPost) {
+                              console.log('Successfully saved post to DB:', insertedPost.id);
+                              newPost.id = typeof insertedPost.id === 'string' ? parseInt(insertedPost.id.slice(0, 8), 16) : insertedPost.id;
+                            }
                           }
                         } catch (dbError) {
-                          console.error('Exception saving to DB:', dbError);
+                          console.error('Exception saving post to DB:', dbError);
                         }
                       }
 
