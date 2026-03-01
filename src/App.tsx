@@ -466,11 +466,21 @@ export default function App() {
 
       try {
         // Параллельные запросы вместо последовательных для оптимизации загрузки
-        const [toolsResult, postsResult, channelsResult] = await Promise.all([
+        const [toolsResult, postsResult, channelsResult, detailsResult] = await Promise.all([
           supabase.from('tools').select('*').order('rating', { ascending: false }),
           supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20),
-          supabase.from('channels').select('*').order('created_at', { ascending: false })
+          supabase.from('channels').select('*').order('created_at', { ascending: false }),
+          supabase.from('tool_details').select('*')
         ]);
+
+        // Группируем детали по ID инструмента
+        const detailsByTool: Record<string, any[]> = {};
+        if (detailsResult.data) {
+          detailsResult.data.forEach(d => {
+            if (!detailsByTool[d.tool_id]) detailsByTool[d.tool_id] = [];
+            detailsByTool[d.tool_id].push(d);
+          });
+        }
 
         // Обрабатываем инструменты
         if (toolsResult.data && toolsResult.data.length > 0) {
@@ -480,13 +490,13 @@ export default function App() {
             category: t.category,
             description: t.description,
             icon: t.icon || '🔧',
-            rating: t.rating || 0,
+            rating: parseFloat(t.rating) || 0,
             dailyCredits: t.daily_credits,
             monthlyCredits: t.monthly_credits,
             minPrice: t.min_price,
             hasApi: t.has_api,
             hasMcp: t.has_mcp,
-            details: [],
+            details: detailsByTool[t.id] || [],
             pros: t.pros || [],
             docsUrl: t.docs_url
           }));
@@ -1477,11 +1487,14 @@ export default function App() {
                   {favoriteTools.map(tool => (
                     <div
                       key={tool.id}
-                      className="group bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-[2.5rem] p-7 hover:shadow-2xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+                      className="group bg-slate-800/30 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-7 hover:shadow-2xl transition-all duration-300 relative overflow-hidden cursor-pointer"
                       onClick={() => setSelectedTool(tool)}
                     >
-                      <div className="flex items-start justify-between mb-6">
-                        <div className="w-14 h-14 bg-slate-700/50 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                      {/* Фоновое свечение */}
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-cyan-500/20 transition-all"></div>
+
+                      <div className="flex items-start justify-between mb-6 relative">
+                        <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 rounded-3xl flex items-center justify-center text-4xl shadow-xl group-hover:scale-110 transition-transform duration-500">
                           {tool.icon}
                         </div>
                         <button
@@ -1492,24 +1505,91 @@ export default function App() {
                           <Heart className="w-5 h-5 fill-current" />
                         </button>
                       </div>
-                      <h3 className="font-black text-xl text-white mb-1 group-hover:text-cyan-400 transition-colors uppercase tracking-tight">{tool.name}</h3>
-                      <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg uppercase tracking-widest mb-4 inline-block border border-cyan-500/20">
-                        {tool.category}
-                      </span>
-                      <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed mb-6 font-medium">{tool.description}</p>
-                      <div className="grid grid-cols-2 gap-3 mb-6">
-                        <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> {tool.dailyCredits}</p>
+
+                      <div className="relative">
+                        <h3 className="font-black text-2xl text-white mb-1 group-hover:text-cyan-400 transition-colors uppercase tracking-tight">{tool.name}</h3>
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg uppercase tracking-widest border border-cyan-500/20">
+                            {tool.category}
+                          </span>
+                          <div className="flex items-center gap-1 text-amber-400 text-[10px] font-black">
+                            ★ {tool.rating}
+                          </div>
                         </div>
-                        <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Clock size={10} /> {tool.monthlyCredits}</p>
+
+                        <p className="text-sm text-slate-300 line-clamp-3 leading-relaxed mb-6 font-medium bg-white/5 p-4 rounded-2xl border border-white/5 group-hover:bg-white/10 transition-all">
+                          {tool.description}
+                        </p>
+
+                        {/* Кредиты и Тариф */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                          <div className="bg-slate-950/40 rounded-2xl p-4 border border-white/5 hover:border-cyan-500/30 transition-colors">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-2 text-cyan-400/80">
+                              <Zap size={12} /> Ежедневно
+                            </p>
+                            <p className="text-xs font-black text-white">{tool.dailyCredits || 'Limited'}</p>
+                          </div>
+                          <div className="bg-slate-950/40 rounded-2xl p-4 border border-white/5 hover:border-cyan-500/30 transition-colors">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-2 text-indigo-400/80">
+                              <Clock size={12} /> Ежемесячно
+                            </p>
+                            <p className="text-xs font-black text-white">{tool.monthlyCredits || 'Flexible'}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-6 border-t border-slate-700/50">
-                        <p className="text-lg font-black text-emerald-400">{tool.minPrice}</p>
-                        <div className="flex gap-1.5">
-                          {tool.hasApi && <span className="bg-blue-400/10 text-blue-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-blue-500/20">API</span>}
-                          {tool.hasMcp && <span className="bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded-md text-[9px] font-black uppercase border border-emerald-500/20">MCP</span>}
+
+                        {/* Features / Details */}
+                        {tool.details && tool.details.length > 0 && (
+                          <div className="space-y-2 mb-6">
+                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Key Features</p>
+                            {tool.details.slice(0, 2).map((detail: any, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2 text-slate-400 text-xs">
+                                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
+                                <span className="font-bold">{detail.title}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Особенности / Плюсы */}
+                        {tool.pros && tool.pros.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-6">
+                            {tool.pros.slice(0, 3).map((pro, idx) => (
+                              <span key={idx} className="bg-emerald-500/5 text-emerald-400 px-2 py-1 rounded-lg text-[9px] font-black uppercase border border-emerald-500/10">
+                                {pro}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                          <div className="flex flex-col">
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Min Tariff</p>
+                            <p className="text-xl font-black text-emerald-400 leading-none">{tool.minPrice}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            {tool.docsUrl && (
+                              <a
+                                href={tool.docsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-10 h-10 bg-slate-700/50 text-slate-300 rounded-xl flex items-center justify-center border border-white/5 hover:bg-slate-700 hover:text-white transition-all shadow-lg"
+                                title="Open Website"
+                              >
+                                <ExternalLink size={18} />
+                              </a>
+                            )}
+                            {tool.hasApi && (
+                              <div className="w-10 h-10 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/20 shadow-inner group-hover:bg-blue-500/20 transition-all" title="API Available">
+                                <Code size={18} />
+                              </div>
+                            )}
+                            {tool.hasMcp && (
+                              <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-inner group-hover:bg-emerald-500/20 transition-all" title="MCP Server Support">
+                                <Terminal size={18} />
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
