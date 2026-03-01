@@ -168,6 +168,8 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
 1. ПЕРЕВЕДИ заголовок контента на русский язык в поле "titleRu".
 2. Весь текст в полях "summary", "detailedUsage" и "usageTips" должен быть ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.
 3. В "detailedUsage" напиши МИНИМУМ 500 слов. Разбери всё до мелочей, все этапы и ключевые мысли. Это должен быть полноценный экспертный разбор.
+4. В "mentions" включай ТОЛЬКО профессиональные ИИ-приложения, языковые модели (LLM) и готовые сервисы. 
+   КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО включать названия частных демо-проектов, игр или скриптов, созданных в самом видео (например, '3D аквариум', 'игра выживание' и т.д.).
 
 ВЕРНИ ТОЛЬКО ЧИСТЫЙ JSON.`
                 },
@@ -214,7 +216,7 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
 - titleRu: Перевод заголовка на русский.
 - summary: Краткая суть (3 предложения).
 - detailedUsage: ГИГАНТСКИЙ развернутый текст на ПОЛ-СТРАНИЦЫ (минимум 10 абзацев). Расскажи подробно о каждом пункте.
-- mentions: Список ИИ-тулзов.
+- mentions: Список ИИ-тулзов (ТОЛЬКО проф. сервисы, модели и приложения. НЕ ДОБАВЛЯЙ названия демо-проектов из ролика вроде 'игра', 'аквариум' и т.д.).
 - usageTips: 5 советов по применению.
 
 ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ. ВЕРНИ ТОЛЬКО JSON.
@@ -255,7 +257,7 @@ async function callOpenRouter(content: string): Promise<SummarizeResponse> {
             model: 'google/gemini-2.0-flash-001',
             messages: [{
                 role: 'system',
-                content: 'Ты — элитный аналитик на русском языке. Верни JSON с полями: titleRu, summary, detailedUsage (минимум 10 абзацев), mentions, usageTips.'
+                content: 'Ты — элитный аналитик на русском языке. Верни JSON с полями: titleRu, summary, detailedUsage (минимум 10 абзацев), mentions, usageTips. В "mentions" пиши только названия реальных ИИ-сервисов и моделей, игнорируй названия игр/демок из видео.'
             }, {
                 role: 'user',
                 content: content
@@ -288,7 +290,7 @@ async function callKimi(content: string): Promise<SummarizeResponse> {
             model: 'moonshot-v1-8k',
             messages: [{
                 role: 'system',
-                content: 'Ты — эксперт по AI. Сделай глубокий разбор на русском в формате JSON (titleRu, summary, detailedUsage, mentions, usageTips). "detailedUsage" должен быть максимально длинным.'
+                content: 'Ты — эксперт по AI. Сделай глубокий разбор на русском в формате JSON (titleRu, summary, detailedUsage, mentions, usageTips). "detailedUsage" максимально длинный. В "mentions" только реальные ИИ-инструменты и модели (никаких частных демо-проектов из ролика).'
             }, {
                 role: 'user',
                 content: content
