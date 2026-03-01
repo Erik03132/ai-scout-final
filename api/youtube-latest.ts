@@ -16,6 +16,7 @@ interface YouTubeVideo {
   summary: string;
   channelTitle: string;
   publishedAt: string;
+  thumbnail: string;
 }
 
 interface YouTubeChannelIdResponse {
@@ -49,6 +50,13 @@ interface YouTubeVideoResponse {
       description: string;
       channelTitle: string;
       publishedAt: string;
+      thumbnails: {
+        default?: { url: string };
+        medium?: { url: string };
+        high?: { url: string };
+        standard?: { url: string };
+        maxres?: { url: string };
+      };
     };
   }>;
 }
@@ -188,6 +196,8 @@ async function getVideoDetails(videoId: string, apiKey: string): Promise<YouTube
   }
 
   const snippet = data.items[0].snippet;
+  const thumbnails = snippet.thumbnails || {};
+  const thumbnail = thumbnails.maxres?.url || thumbnails.high?.url || thumbnails.medium?.url || thumbnails.default?.url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
   // Генерируем саммари через Gemini
   const summary = await generateSummary(snippet.title, snippet.description);
@@ -199,6 +209,7 @@ async function getVideoDetails(videoId: string, apiKey: string): Promise<YouTube
     summary,
     channelTitle: snippet.channelTitle,
     publishedAt: snippet.publishedAt,
+    thumbnail
   };
 }
 

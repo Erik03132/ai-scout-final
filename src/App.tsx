@@ -653,12 +653,12 @@ export default function App() {
         return {
           title: video.title,
           url: `https://www.youtube.com/watch?v=${video.videoId}`,
-          image: `https://img.youtube.com/vi/${video.videoId}/maxresdefault.jpg`,
+          image: video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`,
           channel: video.channelTitle || channel.name,
           source: 'YouTube',
           date: video.publishedAt,
           content: video.description,
-          summary: video.summary // Используем саммари из API
+          summary: video.summary
         };
       } catch (error) {
         console.error('Error fetching YouTube video:', error);
@@ -776,9 +776,9 @@ export default function App() {
 
 
   // Функция для обогащения данных об инструменте через ИИ
-  const enrichToolData = async (toolName: string) => {
+  const enrichToolData = async (toolId: string, toolName: string) => {
     const cleanName = toolName.replace(/[#+@]/g, '').trim();
-    console.log(`Enriching data for: ${cleanName}...`);
+    console.log(`Enriching data for: ${cleanName} (ID: ${toolId})...`);
 
     setEnrichingToolNames(prev => [...prev, toolName]);
 
@@ -846,25 +846,34 @@ export default function App() {
         details: enriched.features || []
       };
 
-      // КРИТИЧЕСКИЙ ШАГ: Переносим "Избранное" со старого ID (dyn-...) на новый (UUID)
-      // Это предотвратит исчезновение карточек после обновления
+      // КРИТИЧЕСКИЙ ШАГ: Переносим "Избранное" со старого ID на новый (UUID)
       setFavorites(prev => {
-        const oldId = `tool-dyn-${toolName}`;
+        const baseId = toolId.startsWith('tool-') ? toolId : `tool-${toolId}`;
         const newId = `tool-${toolData.id}`;
-        if (prev.includes(oldId) && !prev.includes(newId)) {
-          return prev.map(id => id === oldId ? newId : id);
+
+        console.log(`Migrating favorites: ${baseId} -> ${newId}`);
+
+        // Обновляем в Supabase таблице favorites
+        if (baseId !== newId && supabase) {
+          supabase.from('favorites').update({ item_id: newId }).eq('item_id', baseId).then(({ error }) => {
+            if (error) console.error('Error migrating favorite in DB:', error);
+          });
+        }
+
+        if (prev.includes(baseId) && !prev.includes(newId)) {
+          return prev.map(id => id === baseId ? newId : id);
         }
         return prev;
       });
 
       setTools(prev => {
-        const exists = prev.find(t => t.name.toLowerCase() === toolName.toLowerCase());
-        if (exists) return prev.map(t => t.name.toLowerCase() === toolName.toLowerCase() ? finalTool : t);
+        const exists = prev.find(t => t.name.toLowerCase() === cleanName.toLowerCase());
+        if (exists) return prev.map(t => t.name.toLowerCase() === cleanName.toLowerCase() ? finalTool : t);
         return [...prev, finalTool as any];
       });
 
       setCachedDynamicTools(prev => {
-        return prev.map(t => t.name.toLowerCase() === toolName.toLowerCase() ? finalTool as any : t);
+        return prev.filter(t => t.name.toLowerCase() !== cleanName.toLowerCase());
       });
 
       setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
@@ -1006,7 +1015,7 @@ export default function App() {
     if (isPlaceholder && !isEnriching) {
       console.log('Triggering enrichment for placeholder tool:', selectedTool.name);
       setIsEnriching(true);
-      enrichToolData(selectedTool.name).then((enriched) => {
+      enrichToolData(selectedTool.id.toString(), selectedTool.name).then((enriched) => {
         if (enriched) setSelectedTool(enriched);
         setIsEnriching(false);
       });
@@ -1024,7 +1033,7 @@ export default function App() {
       const first = placeholders[0];
       console.log('Auto-enriching favorite:', first.name);
       setIsEnriching(true);
-      enrichToolData(first.name).finally(() => setIsEnriching(false));
+      enrichToolData(first.id.toString(), first.name).finally(() => setIsEnriching(false));
     }
   }, [favoriteTools, isEnriching]);
 
@@ -1744,7 +1753,7 @@ export default function App() {
                           </div>
                           <div className="flex gap-2">
                             <button
-                              onClick={(e) => { e.stopPropagation(); enrichToolData(tool.name); }}
+                              onClick={(e) => { e.stopPropagation(); enrichToolData(tool.id.toString(), tool.name); }}
                               className={cn(
                                 "h-10 px-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all shadow-lg",
                                 tool.description?.includes('собираются нашей системой')
