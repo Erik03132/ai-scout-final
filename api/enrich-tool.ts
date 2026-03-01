@@ -12,22 +12,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Name is required' });
     }
 
-    const prompt = `СОСТАВЬ ГИГАНТСКИЙ ПОДРОБНЫЙ ОТЧЕТ ОБ ИИ-ИНСТРУМЕНТЕ "${name}" СТРОГО В ФОРМАТЕ JSON.
-    ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ. ВЕРНИ ТОЛЬКО JSON.
+    const prompt = `ТЫ — ЭЛИТНЫЙ ТЕХНОЛОГИЧЕСКИЙ АНАЛИТИК. Твоя задача — составить максимально точный, актуальный и глубокий отчет об ИИ-инструменте "${name}".
     
+    КРИТИЧЕСКИЕ ТРЕБОВАНИЯ:
+    1. НИКАКИХ ГАЛЛЮЦИНАЦИЙ. Если ты не знаешь инструмент, напиши "Нуждается в уточнении" в описании.
+    2. ПРОВЕРЬ СВОИ ЗНАНИЯ: 
+       - Lyria (Google DeepMind) — это музыка и аудио (НЕ ИЗОБРАЖЕНИЯ).
+       - Lovable — это билдер веб-приложений (React/Supabase), конкурент Bolt.new.
+    3. ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ.
+    4. ВЕРНИ ТОЛЬКО ЧИСТЫЙ JSON.
+
     СТРУКТУРА JSON:
-    - description: Огромный развернутый текст (минимум 3-4 абзаца). Подробно опиши, что это, для кого, как работает. Обязательно упомяни возможности API и поддержку MCP (Model Context Protocol), если они есть.
-    - category: Категория (напр. "AI Development", "Content Creation").
+    - description: Минимум 3-4 абзаца. Подробно: что это, функционал, для кого, уникальные фишки.
+    - category: ОДНА ИЗ: "AI / LLM", "Web / Dev", "Voice / Audio", "Design / Video", "Utilities".
     - icon: 1 подходящий эмодзи.
-    - minPrice: Минимальная цена (напр. "$20/mo" или "Free tier").
-    - dailyCredits: Лимит в день (напр. "10 queries" или "Unlimited").
-    - monthlyCredits: Лимит в месяц.
+    - minPrice: Цена (напр. "$20/мес", "Бесплатно").
+    - dailyCredits: Сколько попыток/кредитов в день.
+    - monthlyCredits: Сколько в месяц.
     - hasApi: true/false.
-    - hasMcp: true/false.
-    - features: Список из 5-6 объектов [{"title": "Название", "description": "Подробное описание функции"}].
-    - useCases: Список из 3 объектов [{"title": "Кейс", "description": "Как применить в бизнесе", "complexity": "Simple/Medium/Hard"}].
-    
-    Пиши профессионально, как элитный аналитик. Текст должен быть насыщенным и полезным.`;
+    - hasMcp: true/false (Model Context Protocol).
+    - features: 5-6 объектов [{"title": "Название", "description": "Суть"}].
+    - useCases: 3 объекта [{"title": "Кейс", "description": "Бизнес-применение", "complexity": "Simple/Medium/Hard"}].
+    - docsUrl: Ссылка на документацию или оф. сайт.
+    - pros: Список из 3-4 коротких плюсов.
+
+    ПИШИ КАК ЧЕЛОВЕК-ЭКСПЕРТ, А НЕ КАК БОТ.`;
 
     try {
         console.log(`[Backend] Cascaded enrichment for: ${name}`);
@@ -35,53 +44,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(result);
     } catch (error: any) {
         console.error(`[Final Error] All providers failed for ${name}:`, error.message);
-
-        // Return a basic fallback instead of 500 so the UI doesn't show a red bar if possible, 
-        // OR return 500 if we want the red bar. The user UI shows red bar for 500.
-        return res.status(500).json({
-            error: 'All AI providers failed',
-            details: error.message
-        });
+        return res.status(500).json({ error: 'All AI providers failed', details: error.message });
     }
 }
 
 async function generateEnrichmentWithCascade(name: string, prompt: string) {
     let lastError: any = null;
 
-    // 1. Gemini Direct (Attempt v1 and v1beta)
-    if (process.env.GEMINI_API_KEY) {
+    // 1. OpenRouter (Attempting Perplexity first for REAL-TIME SEARCH)
+    if (process.env.OPENROUTER_API_KEY) {
         try {
-            console.log("[Enrichment] Attempting Gemini v1...");
-            const data = await callGemini(prompt, 'v1', 'gemini-1.5-flash-latest');
+            console.log("[Enrichment] Attempting OpenRouter (Perplexity/Sonar)...");
+            // Мы используем Sonar, так как он имеет доступ к поиску и минимизирует галлюцинации
+            const data = await callOpenRouter(prompt, 'perplexity/llama-3.1-sonar-large-128k-online');
             return { ...data, name };
         } catch (e) {
-            console.error("Gemini v1 failed:", e);
+            console.error("OpenRouter Perplexity failed, falling back to Gemini...");
             lastError = e;
 
             try {
-                console.log("[Enrichment] Attempting Gemini v1beta...");
-                const data = await callGemini(prompt, 'v1beta', 'gemini-1.5-flash-latest');
+                const data = await callOpenRouter(prompt, 'google/gemini-2.0-flash-001');
                 return { ...data, name };
             } catch (e2) {
-                console.error("Gemini v1beta failed:", e2);
+                console.error("OpenRouter Gemini failed...");
                 lastError = e2;
             }
         }
     }
 
-    // 2. OpenRouter (Using the model known to work in summarize.ts)
-    if (process.env.OPENROUTER_API_KEY) {
+    // 2. Gemini Direct
+    if (process.env.GEMINI_API_KEY) {
         try {
-            console.log("[Enrichment] Attempting OpenRouter...");
-            const data = await callOpenRouter(prompt);
+            console.log("[Enrichment] Attempting Gemini Direct...");
+            const data = await callGemini(prompt, 'v1beta', 'gemini-1.5-flash-latest');
             return { ...data, name };
         } catch (e) {
-            console.error("OpenRouter failed:", e);
+            console.error("Gemini Direct failed:", e);
             lastError = e;
         }
     }
 
-    // 3. OpenAI
+    // 3. OpenAI Fallback
     if (process.env.OPENAI_API_KEY) {
         try {
             console.log("[Enrichment] Attempting OpenAI...");
@@ -104,7 +107,7 @@ async function callGemini(prompt: string, apiVersion: string, model: string) {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
                 temperature: 0.1,
-                maxOutputTokens: 1000,
+                maxOutputTokens: 2000,
                 responseMimeType: "application/json"
             }
         })
@@ -128,9 +131,9 @@ async function callOpenAI(prompt: string) {
             'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: 'gpt-4o', // Используем полноценную 4o для повышения качества
             messages: [
-                { role: 'system', content: 'Ты — элитный аналитик. Отвечай только валидным JSON на русском языке.' },
+                { role: 'system', content: 'Ты — элитный аналитик. Исследуй данные перед ответом. Отвечай только валидным JSON на русском языке.' },
                 { role: 'user', content: prompt }
             ],
             temperature: 0.1,
@@ -147,7 +150,7 @@ async function callOpenAI(prompt: string) {
     return parseLLMResponse(text);
 }
 
-async function callOpenRouter(prompt: string) {
+async function callOpenRouter(prompt: string, model: string) {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -157,9 +160,9 @@ async function callOpenRouter(prompt: string) {
             'X-Title': 'AI Scout'
         },
         body: JSON.stringify({
-            model: 'google/gemini-2.0-flash-001',
+            model,
             messages: [
-                { role: 'system', content: 'Ты — элитный аналитик. Отвечай только валидным JSON на русском языке.' },
+                { role: 'system', content: 'Ты — элитный аналитик с доступом к поиску. Твоя задача — предоставить точные данные без галлюцинаций. Отвечай только валидным JSON на русском языке.' },
                 { role: 'user', content: prompt }
             ],
             temperature: 0.1,
@@ -184,6 +187,12 @@ function parseLLMResponse(text: string) {
         return JSON.parse(jsonStr.trim());
     } catch (e) {
         console.error('[Parse Error] Raw:', text);
-        throw new Error('Failed to parse AI JSON response');
+        try {
+            // Попытка очистить от markdown блоков если match не сработал
+            const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(cleaned);
+        } catch (e2) {
+            throw new Error('Failed to parse AI JSON response');
+        }
     }
 }
