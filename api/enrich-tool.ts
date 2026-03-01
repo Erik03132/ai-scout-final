@@ -35,37 +35,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function generateEnrichmentWithCascade(name: string, prompt: string) {
-    const providers = [
-        { name: 'Gemini', fn: callGemini },
-        { name: 'OpenRouter', fn: callOpenRouter },
-        { name: 'OpenAI', fn: callOpenAI },
-        { name: 'Moonshot', fn: callMoonshot }
-    ];
-
     let lastError: any = null;
 
-    for (const provider of providers) {
+    // 1. Gemini
+    if (process.env.GEMINI_API_KEY) {
         try {
-            console.log(`[Enrichment] Attempting ${provider.name}...`);
-            const result = await provider.fn(prompt);
-            if (result) {
-                result.name = name;
-                return result;
-            }
+            console.log("[Enrichment] Attempting Gemini...");
+            const data = await callGemini(prompt);
+            return { ...data, name };
         } catch (e) {
-            console.error(`[Enrichment] ${provider.name} failed:`, e);
+            console.error("Gemini failed:", e);
             lastError = e;
         }
     }
 
-    throw lastError || new Error('No providers available');
+    // 2. OpenRouter
+    if (process.env.OPENROUTER_API_KEY) {
+        try {
+            console.log("[Enrichment] Attempting OpenRouter...");
+            const data = await callOpenRouter(prompt);
+            return { ...data, name };
+        } catch (e) {
+            console.error("OpenRouter failed:", e);
+            lastError = e;
+        }
+    }
+
+    // 3. OpenAI
+    if (process.env.OPENAI_API_KEY) {
+        try {
+            console.log("[Enrichment] Attempting OpenAI...");
+            const data = await callOpenAI(prompt);
+            return { ...data, name };
+        } catch (e) {
+            console.error("OpenAI failed:", e);
+            lastError = e;
+        }
+    }
+
+    // 4. Kimi (Moonshot)
+    if (process.env.MOONSHOT_API_KEY) {
+        try {
+            console.log("[Enrichment] Attempting Moonshot...");
+            const data = await callKimi(prompt);
+            return { ...data, name };
+        } catch (e) {
+            console.error("Moonshot failed:", e);
+            lastError = e;
+        }
+    }
+
+    throw lastError || new Error('All LLM providers failed');
 }
 
 async function callGemini(prompt: string) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('GEMINI_API_KEY missing');
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,17 +99,15 @@ async function callGemini(prompt: string) {
     });
 
     if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || response.statusText);
+        const txt = await response.text();
+        throw new Error(`Gemini error ${response.status}: ${txt.substring(0, 100)}`);
     }
 
     const data = await response.json();
-    return parseText(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+    return parseLLMResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || '');
 }
 
 async function callOpenAI(prompt: string) {
-    if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
-
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -100,14 +122,12 @@ async function callOpenAI(prompt: string) {
         })
     });
 
-    if (!response.ok) throw new Error(`OpenAI error: ${response.statusText}`);
+    if (!response.ok) throw new Error(`OpenAI error ${response.status}`);
     const data = await response.json();
     return JSON.parse(data.choices[0]?.message?.content || '{}');
 }
 
 async function callOpenRouter(prompt: string) {
-    if (!process.env.OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY missing');
-
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -121,14 +141,12 @@ async function callOpenRouter(prompt: string) {
         })
     });
 
-    if (!response.ok) throw new Error(`OpenRouter error: ${response.statusText}`);
+    if (!response.ok) throw new Error(`OpenRouter error ${response.status}`);
     const data = await response.json();
-    return parseText(data.choices[0]?.message?.content || '{}');
+    return parseLLMResponse(data.choices[0]?.message?.content || '');
 }
 
-async function callMoonshot(prompt: string) {
-    if (!process.env.MOONSHOT_API_KEY) throw new Error('MOONSHOT_API_KEY missing');
-
+async function callKimi(prompt: string) {
     const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -142,12 +160,17 @@ async function callMoonshot(prompt: string) {
         })
     });
 
-    if (!response.ok) throw new Error(`Moonshot error: ${response.statusText}`);
+    if (!response.ok) throw new Error(`Kimi error ${response.status}`);
     const data = await response.json();
-    return parseText(data.choices[0]?.message?.content || '{}');
+    return parseLLMResponse(data.choices[0]?.message?.content || '');
 }
 
-function parseText(text: string) {
-    const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(clean);
+function parseLLMResponse(text: string) {
+    try {
+        const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(clean);
+    } catch (e) {
+        console.error('[Parse Error] Raw:', text);
+        throw new Error('Failed to parse AI JSON');
+    }
 }
