@@ -126,19 +126,25 @@ async function getChannelId(identifier: string, apiKey: string): Promise<string>
   // Пробуем найти по handle
   const handleUrl = `https://www.googleapis.com/youtube/v3/channels?key=${apiKey}&forHandle=${handle}&part=id`;
   const handleResponse = await fetch(handleUrl);
-  const handleData = await handleResponse.json() as YouTubeChannelIdResponse;
-
-  if (handleData.items && handleData.items.length > 0) {
-    return handleData.items[0].id;
+  if (!handleResponse.ok) {
+    const errorData = await handleResponse.json().catch(() => ({}));
+    if (handleResponse.status === 403) throw new Error('YouTube API Quota exceeded');
+    console.error('YouTube Handle API error:', handleResponse.status, errorData);
+  } else {
+    const handleData = await handleResponse.json() as YouTubeChannelIdResponse;
+    if (handleData.items && handleData.items.length > 0) {
+      return handleData.items[0].id;
+    }
   }
 
   // Если не нашли по handle, пробуем по username
   const usernameUrl = `https://www.googleapis.com/youtube/v3/channels?key=${apiKey}&forUsername=${handle}&part=id`;
   const usernameResponse = await fetch(usernameUrl);
-  const usernameData = await usernameResponse.json() as YouTubeChannelIdResponse;
-
-  if (usernameData.items && usernameData.items.length > 0) {
-    return usernameData.items[0].id;
+  if (usernameResponse.ok) {
+    const usernameData = await usernameResponse.json() as YouTubeChannelIdResponse;
+    if (usernameData.items && usernameData.items.length > 0) {
+      return usernameData.items[0].id;
+    }
   }
 
   // Если всё ещё не нашли, используем search
@@ -159,6 +165,10 @@ async function getChannelId(identifier: string, apiKey: string): Promise<string>
 async function getUploadsPlaylistId(channelId: string, apiKey: string): Promise<string> {
   const url = `https://www.googleapis.com/youtube/v3/channels?key=${apiKey}&id=${channelId}&part=contentDetails`;
   const response = await fetch(url);
+  if (!response.ok) {
+    if (response.status === 403) throw new Error('YouTube API Quota exceeded');
+    throw new Error(`YouTube API error: ${response.status}`);
+  }
   const data = await response.json() as YouTubeChannelResponse;
 
   if (!data.items || data.items.length === 0) {
@@ -174,6 +184,10 @@ async function getUploadsPlaylistId(channelId: string, apiKey: string): Promise<
 async function getLatestVideoFromPlaylist(playlistId: string, apiKey: string): Promise<string> {
   const url = `https://www.googleapis.com/youtube/v3/playlistItems?key=${apiKey}&playlistId=${playlistId}&part=contentDetails&maxResults=1`;
   const response = await fetch(url);
+  if (!response.ok) {
+    if (response.status === 403) throw new Error('YouTube API Quota exceeded');
+    throw new Error(`YouTube API error: ${response.status}`);
+  }
   const data = await response.json() as YouTubePlaylistResponse;
 
   if (!data.items || data.items.length === 0) {
@@ -189,6 +203,10 @@ async function getLatestVideoFromPlaylist(playlistId: string, apiKey: string): P
 async function getVideoDetails(videoId: string, apiKey: string): Promise<YouTubeVideo> {
   const url = `https://www.googleapis.com/youtube/v3/videos?key=${apiKey}&id=${videoId}&part=snippet`;
   const response = await fetch(url);
+  if (!response.ok) {
+    if (response.status === 403) throw new Error('YouTube API Quota exceeded');
+    throw new Error(`YouTube API error: ${response.status}`);
+  }
   const data = await response.json() as YouTubeVideoResponse;
 
   if (!data.items || data.items.length === 0) {
