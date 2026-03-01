@@ -98,100 +98,72 @@ export default async function handler(
 /**
  * Получить последний пост из канала
  */
-async function getLatestPost(channel: string, botToken: string): Promise<TelegramPost> {
+async function getLatestPost(channel: string, _botToken: string): Promise<TelegramPost> {
     // Нормализуем имя канала
-    const channelUsername = channel.replace('@', '').replace('https://t.me/', '');
+    const channelUsername = channel.replace('@', '').replace('https://t.me/s/', '').replace('https://t.me/', '').trim();
 
-    // Получаем информацию о канале
-    const chatId = await getChatId(channelUsername, botToken);
+    // Используем ПУБЛИЧНЫЙ веб-предпросмотр Telegram (t.me/s/username)
+    // Этот метод не требует API ключей и прав админа
+    const previewUrl = `https://t.me/s/${channelUsername}`;
 
-    // Получаем последние сообщения
-    const messages = await getChatMessages(chatId, botToken, 1);
+    try {
+        const response = await fetch(previewUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
 
-    if (messages.length === 0) {
-        throw new Error('No messages found in channel');
-    }
-
-    const latestMessage = messages[0];
-    const text = latestMessage.text || latestMessage.caption || '';
-
-    // Генерируем саммари
-    const summary = await generateSummary(text);
-
-    return {
-        title: extractTitle(text),
-        text,
-        summary,
-        link: `https://t.me/${channelUsername}/${latestMessage.message_id}`,
-        date: new Date(latestMessage.date * 1000).toISOString(),
-    };
-}
-
-/**
- * Получить ID чата по username
- */
-async function getChatId(channelUsername: string, botToken: string): Promise<string> {
-    // Пробуем получить информацию о канале
-    const url = `https://api.telegram.org/bot${botToken}/getChat?chat_id=@${channelUsername}`;
-
-    const response = await fetch(url);
-    const data = await response.json() as TelegramChatResponse;
-
-    if (!data.ok) {
-        // Если не удалось получить чат, возможно бот не админ
-        // Возвращаем username как ID
-        return `@${channelUsername}`;
-    }
-
-    return data.result.id.toString();
-}
-
-/**
- * Получить сообщения из чата
- * Примечание: Telegram Bot API не имеет метода для получения истории сообщений напрямую
- * Эта функция использует альтернативный подход через getUpdates или возвращает заглушку
- */
-async function getChatMessages(
-    chatId: string,
-    botToken: string,
-    limit: number
-): Promise<Array<{ message_id: number; date: number; text?: string; caption?: string }>> {
-    // Telegram Bot API не позволяет получать историю сообщений напрямую
-    // Для реальной реализации нужно использовать:
-    // 1. Telegram Client API (Telethon, MTProto)
-    // 2. Webhook для сбора новых сообщений
-    // 3. RSS-ленту канала (если доступна)
-
-    // Попробуем получить обновления (если бот админ в канале)
-    const updatesUrl = `https://api.telegram.org/bot${botToken}/getUpdates?limit=100&allowed_updates=["channel_post"]`;
-
-    const response = await fetch(updatesUrl);
-    const data = await response.json() as TelegramUpdatesResponse;
-
-    if (data.ok && data.result.length > 0) {
-        // Фильтруем по каналу
-        const channelPosts = data.result
-            .filter(update => update.channel_post)
-            .map(update => ({
-                message_id: update.channel_post!.message_id,
-                date: update.channel_post!.date,
-                text: update.channel_post!.text,
-                caption: update.channel_post!.caption,
-            }))
-            .slice(0, limit);
-
-        if (channelPosts.length > 0) {
-            return channelPosts;
+        if (!response.ok) {
+            throw new Error(`Failed to fetch channel page: ${response.status}`);
         }
-    }
 
-    // Fallback: возвращаем заглушку
-    // В реальном проекте здесь должна быть интеграция с Telethon или другим клиентом
-    return [{
-        message_id: 1,
-        date: Math.floor(Date.now() / 1000),
-        text: 'Telegram Bot API не позволяет получать историю сообщений. Для полноценной работы необходимо использовать Telegram Client API (Telethon) или настроить webhook для сбора новых сообщений.',
-    }];
+        const html = await response.text();
+
+        // Извлекаем сообщения через регулярные выражения
+        // Каждое сообщение находится в блоке с классом tgme_widget_message
+        const messageBlocks = html.split('tgme_widget_message_wrap').reverse(); // Берем с конца (последние)
+
+        let latestPost: TelegramPost | null = null;
+
+        for (const block of messageBlocks) {
+            // Ищем текст сообщения
+            const textMatch = block.match(/<div class="tgme_widget_message_text[^>]*>([\s\S]*?)<\/div>/);
+            if (!textMatch) continue;
+
+            const rawText = textMatch[1]
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<[^>]+>/g, '') // Очистка от HTML тегов
+                .trim();
+
+            if (!rawText || rawText.length < 5) continue;
+
+            // Ищем ссылку на сообщение
+            const linkMatch = block.match(/href="(https:\/\/t\.me\/[^"]+\/\d+)"/);
+            const link = linkMatch ? linkMatch[1] : `https://t.me/${channelUsername}`;
+
+            // Ищем дату
+            const dateMatch = block.match(/datetime="([^"]+)"/);
+            const date = dateMatch ? dateMatch[1] : new Date().toISOString();
+
+            latestPost = {
+                title: extractTitle(rawText),
+                text: rawText,
+                summary: await generateSummary(rawText),
+                link,
+                date
+            };
+            break; // Нашли самый свежий пост с текстом
+        }
+
+        if (!latestPost) {
+            throw new Error('No posts with text found in this channel');
+        }
+
+        return latestPost;
+    } catch (error) {
+        console.error('Web parsing failed, falling back to bot API or stub:', error);
+        throw error;
+    }
 }
 
 /**

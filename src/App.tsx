@@ -433,16 +433,26 @@ export default function App() {
       let hasChanges = false;
 
       allMentions.forEach(mention => {
-        const existsInTools = tools.some(t => t.name.toLowerCase() === mention.toLowerCase() || mention.toLowerCase().includes(t.name.toLowerCase()));
-        const existsInCached = newDynamicTools.some(t => t.name.toLowerCase() === mention.toLowerCase() || mention.toLowerCase().includes(t.name.toLowerCase()));
+        // Очищаем упоминание для сопоставления (#N8N -> N8N)
+        const cleanMention = mention.replace(/[#+@]/g, '').trim();
+        if (!cleanMention) return;
+
+        const existsInTools = tools.some(t =>
+          t.name.toLowerCase() === cleanMention.toLowerCase() ||
+          cleanMention.toLowerCase().includes(t.name.toLowerCase())
+        );
+        const existsInCached = newDynamicTools.some(t =>
+          t.name.toLowerCase() === cleanMention.toLowerCase() ||
+          cleanMention.toLowerCase().includes(t.name.toLowerCase())
+        );
 
         if (!existsInTools && !existsInCached) {
           newDynamicTools.push({
-            id: `dyn-${mention}` as any,
-            name: mention,
+            id: `dyn-${cleanMention}` as any,
+            name: cleanMention, // Используем ОЧИЩЕННОЕ имя
             category: "AI/Tech",
-            description: `Инструмент ${mention} был упомянут в этом посте. Детальная информация и обзоры для него пока собираются нашей системой.`,
-            icon: "⚙️",
+            description: `Инструмент ${cleanMention} был упомянут в этом посте. Детальная информация и обзоры для него пока собираются нашей системой.`,
+            icon: "✨",
             rating: 4.5,
             dailyCredits: "Н/Д",
             monthlyCredits: "Н/Д",
@@ -451,7 +461,7 @@ export default function App() {
             hasMcp: false,
             details: [],
             pros: ["Упоминается экспертами"],
-            docsUrl: `https://www.google.com/search?q=${encodeURIComponent(mention + ' AI tool')}`
+            docsUrl: `https://www.google.com/search?q=${encodeURIComponent(cleanMention + ' AI tool')}`
           });
           hasChanges = true;
         }
@@ -1354,16 +1364,17 @@ export default function App() {
                               {post.mentions
                                 .filter((m: string) => !['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express', 'fullstack', 'frontend', 'backend', 'developer', 'engineer', 'api', 'database', 'cloud', 'deployment'].some(word => m.trim().toLowerCase().includes(word)))
                                 .map((toolName: string) => {
+                                  const cleanMention = toolName.replace(/[#+@]/g, '').trim();
                                   const existingToolObj = allTools.find((t) =>
-                                    t.name.toLowerCase() === toolName.toLowerCase() ||
-                                    toolName.toLowerCase().includes(t.name.toLowerCase())
+                                    t.name.toLowerCase() === cleanMention.toLowerCase() ||
+                                    cleanMention.toLowerCase().includes(t.name.toLowerCase())
                                   );
 
                                   const toolObj = existingToolObj || {
-                                    id: `dyn-${toolName}`,
-                                    name: toolName,
+                                    id: `dyn-${cleanMention}`,
+                                    name: cleanMention,
                                     category: "AI Service",
-                                    description: `Интеллектуальный анализ применения ${toolName} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
+                                    description: `Интеллектуальный анализ применения ${cleanMention} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
                                     icon: "✨",
                                     rating: 4.8,
                                     dailyCredits: "Уточняется",
@@ -1373,10 +1384,10 @@ export default function App() {
                                     hasMcp: false,
                                     details: [],
                                     pros: ["Перспективно", "Упоминается экспертами", "Тренд"],
-                                    docsUrl: `https://www.google.com/search?q=${encodeURIComponent(toolName + ' AI')}`
+                                    docsUrl: `https://www.google.com/search?q=${encodeURIComponent(cleanMention + ' AI')}`
                                   };
 
-                                  const displayName = existingToolObj ? existingToolObj.name : toolName;
+                                  const displayName = toolObj.name;
 
                                   return (
                                     <button
