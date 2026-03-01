@@ -1555,7 +1555,7 @@ export default function App() {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-row sm:flex-col gap-2 mt-4 sm:mt-0">
                       <a
                         href={post.url}
                         target="_blank"
@@ -1571,6 +1571,18 @@ export default function App() {
                         title="Подробный саммари"
                       >
                         <FileText className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => toggleFavorite(`post-${post.id}`)}
+                        className={cn(
+                          "p-2 rounded-xl transition-all border border-transparent",
+                          favorites.includes(`post-${post.id}`) || post.isFavorite
+                            ? "text-red-500 bg-red-500/10 border-red-500/20"
+                            : "text-slate-500 hover:text-red-400 hover:bg-slate-700/50 hover:border-red-500/20"
+                        )}
+                        title="В избранное"
+                      >
+                        <Heart className={cn("w-5 h-5", (favorites.includes(`post-${post.id}`) || post.isFavorite) && "fill-current")} />
                       </button>
                     </div>
                   </div>
@@ -2063,12 +2075,12 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[1.5rem] p-6 flex items-center justify-between">
+                      <div className="bg-slate-800/40 border border-white/5 rounded-[1.5rem] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                         <div>
                           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Минимальный тариф</p>
-                          <p className="text-3xl font-black text-emerald-400 tracking-tighter">{selectedTool.minPrice}</p>
+                          <p className="text-3xl font-black text-cyan-400 tracking-tighter">{selectedTool.minPrice}</p>
                         </div>
-                        <button className="h-14 px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
+                        <button className="w-full sm:w-auto h-14 px-8 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-cyan-500/20 active:scale-95 flex items-center justify-center">
                           Подписаться
                         </button>
                       </div>
