@@ -420,7 +420,8 @@ export default function App() {
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const [addChannelError, setAddChannelError] = useState<string | null>(null);
-  const [enrichmentError, setEnrichmentError] = useState<{ name: string, message: string } | null>(null);
+  const [enrichmentError, setEnrichmentError] = useState<{ name: string, message: string, details?: string } | null>(null);
+  const [failedEnrichmentNames, setFailedEnrichmentNames] = useState<Set<string>>(new Set());
   const [dismissedPostIds, setDismissedPostIds] = useLocalStorage<number[]>('ai-scout-dismissed-posts', []);
   const [showFilters, setShowFilters] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
@@ -799,13 +800,15 @@ export default function App() {
 
       if (!response.ok) {
         let errorMessage = 'Enrichment API failed';
+        let errorDetails = '';
         try {
           const errorData = await response.json();
-          errorMessage = errorData.error || errorData.details || errorMessage;
+          errorMessage = errorData.error || errorMessage;
+          errorDetails = errorData.details || '';
         } catch (e) {
           errorMessage = `Server Error (${response.status})`;
         }
-        throw new Error(errorMessage);
+        throw { message: errorMessage, details: errorDetails };
       }
       const enriched = await response.json();
 
@@ -939,7 +942,8 @@ export default function App() {
         setEnrichmentError({ name: toolName, message: 'Превышено время ожидания ИИ (45с)' });
       } else {
         console.error('Failed to enrich tool:', e);
-        setEnrichmentError({ name: toolName, message: e.message || 'Ошибка сервера' });
+        setEnrichmentError({ name: toolName, message: e.message || 'Ошибка сервера', details: e.details });
+        setFailedEnrichmentNames(prev => new Set(prev).add(toolName));
       }
       return null;
     } finally {
@@ -1089,8 +1093,9 @@ export default function App() {
   // АВТО-ОБОГАЩЕНИЕ всех избранных инструментов
   useEffect(() => {
     const placeholders = favoriteTools.filter(t =>
-      t.description?.includes('был упомянут') ||
-      t.description?.includes('собираются нашей системой')
+      (t.description?.includes('был упомянут') ||
+        t.description?.includes('собираются нашей системой')) &&
+      !failedEnrichmentNames.has(t.name)
     );
 
     if (placeholders.length > 0 && !isEnriching) {
@@ -1109,6 +1114,7 @@ export default function App() {
         {enrichmentError && (
           <div className="absolute top-full left-0 right-0 bg-red-500/90 text-white text-center py-2 text-xs font-black uppercase tracking-widest animate-in slide-in-from-top duration-300">
             Ошибка обновления {enrichmentError.name}: {enrichmentError.message}
+            {enrichmentError.details && <span className="ml-2 opacity-50 lowercase">({enrichmentError.details})</span>}
           </div>
         )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
