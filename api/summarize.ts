@@ -103,7 +103,7 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
     // 1. Gemini Direct
     if (hasGemini) {
         try {
-            return await callGemini(content, 'gemini-1.5-flash');
+            return await callGemini(content, 'gemini-1.5-flash-latest');
         } catch (e) {
             console.error("Gemini Direct failed:", e);
             lastError = e;
