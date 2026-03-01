@@ -427,6 +427,17 @@ export default function App() {
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [filterMention, setFilterMention] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<'all' | 'YouTube' | 'Telegram'>('all');
+  const [favoriteCategory, setFavoriteCategory] = useState<'all' | 'model' | 'web' | 'voice' | 'design' | 'other'>('all');
+
+  // Группировка инструментов по типам (для фильтрации в избранном)
+  const getToolGroup = (category: string): string => {
+    const cat = (category || '').toLowerCase();
+    if (['ai', 'llm', 'language', 'языков', 'модел', 'gpt', 'claude', 'gemini', 'интеллект'].some(word => cat.includes(word))) return 'model';
+    if (['web', 'deploy', 'host', 'back', 'front', 'framework', 'database', 'dev', 'разработ', 'api', 'builder'].some(word => cat.includes(word))) return 'web';
+    if (['voice', 'audio', 'speech', 'голос', 'звук', 'транскрип', 'диктор'].some(word => cat.includes(word))) return 'voice';
+    if (['design', 'ui', 'ux', 'video', 'дизайн', 'видео', 'image', 'график', 'рисова', 'генерация'].some(word => cat.includes(word))) return 'design';
+    return 'other';
+  };
 
   useEffect(() => {
     setCachedDynamicTools(prev => {
@@ -996,8 +1007,11 @@ export default function App() {
   };
 
   const favoriteTools = useMemo(() =>
-    allTools.filter(tool => favorites.includes(`tool-${tool.id}`)),
-    [allTools, favorites]
+    allTools.filter(tool =>
+      favorites.includes(`tool-${tool.id}`) &&
+      (favoriteCategory === 'all' || getToolGroup(tool.category) === favoriteCategory)
+    ),
+    [allTools, favorites, favoriteCategory]
   );
   // Посты в избранном больше не используем — посты идут в Архив
 
@@ -1735,6 +1749,35 @@ export default function App() {
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-white">❤️ Мои инструменты</h2>
                 <p className="text-slate-400 text-sm mt-1">AI-приложения, которые вы отметили в развёрнутых карточках новостей</p>
+              </div>
+
+              {/* Фильтры категорий — Компактная премиальная панель */}
+              <div className="flex flex-wrap gap-2 mb-10 bg-slate-900/40 p-1.5 rounded-[2.5rem] border border-white/5 w-fit backdrop-blur-md">
+                {[
+                  { id: 'all', name: 'Все', icon: '📋' },
+                  { id: 'model', name: 'Языковые модели', icon: '🧠' },
+                  { id: 'web', name: 'Веб-разработка', icon: '🌐' },
+                  { id: 'voice', name: 'Голос и Аудио', icon: '🎙️' },
+                  { id: 'design', name: 'Дизайн и Видео', icon: '🎨' },
+                  { id: 'other', name: 'Разное', icon: '📦' }
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setFavoriteCategory(cat.id as any)}
+                    className={cn(
+                      "flex items-center gap-2.5 px-5 py-2.5 rounded-[1.8rem] text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300",
+                      favoriteCategory === cat.id
+                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-[0_8px_30px_rgb(6,182,212,0.3)] scale-105"
+                        : "text-slate-400 hover:bg-white/5 hover:text-white"
+                    )}
+                  >
+                    <span className="text-lg">{cat.icon}</span>
+                    <span className={cn(
+                      "transition-all duration-300",
+                      favoriteCategory === cat.id ? "opacity-100 max-w-[200px]" : "sm:opacity-100 opacity-0 max-w-0 sm:max-w-[200px] overflow-hidden"
+                    )}>{cat.name}</span>
+                  </button>
+                ))}
               </div>
 
               {favoriteTools.length === 0 ? (
