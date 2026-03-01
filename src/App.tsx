@@ -21,6 +21,9 @@ interface Post {
   detailedUsage: string;
   usageTips: string[];
   content?: string;
+  supabaseId?: string;
+  isFavorite?: boolean;
+  isArchived?: boolean;
 }
 
 // Mock data
@@ -752,20 +755,18 @@ export default function App() {
     setIsSearching(false);
   };
 
-  // Хелпер получения supabaseId поста по числовому id
-  const getSupabasePostId = (postId: number): string | undefined => {
-    const p = posts.find(item => item.id === postId);
-    return (p as any)?.supabaseId;
-  };
 
   // Функция для обогащения данных об инструменте через ИИ
   const enrichToolData = async (toolName: string) => {
+    // Очищаем имя от спецсимволов (#, +, @)
+    const cleanName = toolName.replace(/[#+@]/g, '').trim();
+    console.log(`Enriching data for: ${cleanName} (original: ${toolName})...`);
+
     try {
-      console.log(`Enriching data for: ${toolName}...`);
       const response = await fetch('/api/enrich-tool', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: toolName })
+        body: JSON.stringify({ name: cleanName })
       });
 
       if (!response.ok) throw new Error('Enrichment API failed');
@@ -774,11 +775,11 @@ export default function App() {
       const supabase = getClient();
       if (!supabase) return enriched;
 
-      // 1. Сохраняем/обновляем основной инструмент (Upsert по имени)
+      // 1. Сохраняем/обновляем основной инструмент (Upsert по имени — используем ОЧИЩЕННОЕ имя)
       const { data: toolData, error: toolError } = await supabase
         .from('tools')
         .upsert({
-          name: toolName,
+          name: cleanName,
           category: enriched.category,
           description: enriched.description,
           icon: enriched.icon,
@@ -899,14 +900,25 @@ export default function App() {
 
   // Архивирование и удаление
   const archivePost = async (postId: number) => {
-    // Обновляем локальный стейт немедленно (оптимистичный UI)
+    console.log('Attempting to archive post:', postId);
+    // Находим пост для получения его Supabase ID
+    const post = posts.find(p => p.id === postId);
+    const dbId = post?.supabaseId;
+
+    // Оптимистичное обновление UI
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: true } : p));
     setSelectedPost(null);
+
     // Синхронизируем с Supabase
-    const supabaseId = getSupabasePostId(postId);
-    if (supabaseId) {
+    if (dbId) {
       const supabase = getClient();
-      if (supabase) await supabase.from('posts').update({ is_archived: true }).eq('id', supabaseId);
+      if (supabase) {
+        const { error } = await supabase.from('posts').update({ is_archived: true }).eq('id', dbId);
+        if (error) console.error('Supabase Archive Error:', error);
+        else console.log('Successfully archived in DB');
+      }
+    } else {
+      console.warn('Cannot archive: No Supabase ID found for post', postId);
     }
   };
 
@@ -916,13 +928,17 @@ export default function App() {
   };
 
   const removeFromArchive = async (postId: number) => {
-    // Обновляем локальный стейт
+    const post = posts.find(p => p.id === postId);
+    const dbId = post?.supabaseId;
+
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: false } : p));
-    // Синхронизируем с Supabase
-    const supabaseId = getSupabasePostId(postId);
-    if (supabaseId) {
+
+    if (dbId) {
       const supabase = getClient();
-      if (supabase) await supabase.from('posts').update({ is_archived: false }).eq('id', supabaseId);
+      if (supabase) {
+        const { error } = await supabase.from('posts').update({ is_archived: false }).eq('id', dbId);
+        if (error) console.error('Supabase Unarchive Error:', error);
+      }
     }
   };
 
