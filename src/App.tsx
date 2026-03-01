@@ -965,6 +965,30 @@ export default function App() {
     }
   };
 
+  // Функция для ручного обновления категории инструмента
+  const updateToolCategory = async (toolId: string | number, newCategory: string) => {
+    // Оптимистичное обновление UI
+    const updateInList = (list: any[]) => list.map(t => t.id === toolId ? { ...t, category: newCategory } : t);
+    setTools(updateInList);
+    setCachedDynamicTools(updateInList);
+    if (selectedTool && selectedTool.id === toolId) {
+      setSelectedTool({ ...selectedTool, category: newCategory });
+    }
+
+    // Сохранение в Supabase
+    const supabase = getClient();
+    if (supabase) {
+      // Если ID цифровой (из mock) — мы не можем обновить БД, но для реальных UUID — обновляем
+      const idStr = toolId.toString();
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(idStr);
+
+      if (isUUID) {
+        const { error } = await supabase.from('tools').update({ category: newCategory }).eq('id', toolId);
+        if (error) console.error('Error updating category in Supabase:', error);
+      }
+    }
+  };
+
   // toggleFavorite — работает ТОЛЬКО для инструментов
   const toggleFavorite = async (id: string) => {
     const isCurrentlyFav = favorites.includes(id);
@@ -1963,20 +1987,31 @@ export default function App() {
                     <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight leading-none mb-4">
                       {selectedTool.name}
                     </h2>
-                    <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-2 items-center">
+                      {/* Селектор категории (Ручное назначение) */}
+                      <div className="relative group/select">
+                        <select
+                          value={selectedTool.category}
+                          onChange={(e) => updateToolCategory(selectedTool.id, e.target.value)}
+                          className="appearance-none bg-slate-800/80 hover:bg-slate-700 text-cyan-400 text-[10px] sm:text-xs font-black uppercase tracking-wider px-4 py-1.5 pr-8 rounded-lg border border-cyan-500/20 cursor-pointer transition-all outline-none focus:ring-1 focus:ring-cyan-500/50"
+                        >
+                          <option value={selectedTool.category}>{selectedTool.category} (Текущая)</option>
+                          <option value="AI / LLM">🧠 Языковая модель</option>
+                          <option value="Web / Dev">🌐 Веб-сервис / Билдер</option>
+                          <option value="Voice / Audio">🎙️ Голос / Аудио</option>
+                          <option value="Design / Video">🎨 Дизайн / Видео</option>
+                          <option value="Utilities">📦 Разное / Утилиты</option>
+                        </select>
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-cyan-500/50 group-hover/select:text-cyan-400 transition-colors">
+                          <Filter size={10} />
+                        </div>
+                      </div>
+
                       {selectedTool.hasApi && (
                         <div className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-black uppercase">API Access</div>
                       )}
                       {selectedTool.hasMcp && (
                         <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-black uppercase">MCP Ready</div>
-                      )}
-                      {(selectedTool as any).useCases && (
-                        <button
-                          onClick={() => document.getElementById('use-cases-section')?.scrollIntoView({ behavior: 'smooth' })}
-                          className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-black uppercase hover:bg-amber-500/20 transition-all flex items-center gap-1.5"
-                        >
-                          <Lightbulb size={12} /> Кейсы
-                        </button>
                       )}
                     </div>
                   </div>
