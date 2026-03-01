@@ -76,11 +76,11 @@ export default async function handler(
         // Пытаемся использовать LLM API
         const result = await generateSummaryWithLLM(content);
         return res.status(200).json(result);
-    } catch (error) {
+    } catch (error: any) {
         console.error('LLM summarization failed, using fallback:', error);
 
         // Fallback: простое извлечение информации
-        const fallbackResult = generateFallbackSummary(content);
+        const fallbackResult = generateFallbackSummary(content, error?.message || String(error));
         return res.status(200).json(fallbackResult);
     }
 }
@@ -91,28 +91,39 @@ export default async function handler(
 async function generateSummaryWithLLM(content: string): Promise<SummarizeResponse> {
     const hasGemini = !!process.env.GEMINI_API_KEY;
     const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
+    const hasKimi = !!process.env.KIMI_API_KEY;
 
-    if (!hasGemini && !hasOpenAI) {
-        throw new Error('No LLM API keys configured');
+    if (!hasGemini && !hasOpenAI && !hasOpenRouter && !hasKimi) {
+        throw new Error('No LLM API keys configured (Gemini, OpenAI, OpenRouter, or KIMI)');
     }
 
     let lastError: any = null;
 
-    // ПЕРВАЯ ПОПЫТКА: Gemini 1.5 Flash (самая быстрая и дешевая)
+    // 1. Gemini Direct
     if (hasGemini) {
         try {
-            console.log("Attempting Gemini 1.5 Flash...");
             return await callGemini(content, 'gemini-1.5-flash');
         } catch (e) {
-            console.error("Gemini Flash failed:", e);
+            console.error("Gemini Direct failed:", e);
             lastError = e;
         }
     }
 
-    // ВТОРАЯ ПОПЫТКА: OpenAI GPT-4o-mini (самая надежная)
+    // 2. OpenRouter (fallback for Gemini)
+    if (hasOpenRouter) {
+        try {
+            console.log("Attempting OpenRouter...");
+            return await callOpenRouter(content);
+        } catch (e) {
+            console.error("OpenRouter failed:", e);
+            lastError = e;
+        }
+    }
+
+    // 3. OpenAI
     if (hasOpenAI) {
         try {
-            console.log("Attempting OpenAI GPT-4o-mini...");
             return await callOpenAI(content);
         } catch (e) {
             console.error("OpenAI failed:", e);
@@ -120,18 +131,18 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
         }
     }
 
-    // ТРЕТЬЯ ПОПЫТКА: Gemini 1.5 Pro (если флеш упал по лимитам, про может сработать)
-    if (hasGemini) {
+    // 4. Kimi (Moonshot)
+    if (hasKimi) {
         try {
-            console.log("Attempting Gemini 1.5 Pro as last resort...");
-            return await callGemini(content, 'gemini-1.5-pro');
+            console.log("Attempting Kimi...");
+            return await callKimi(content);
         } catch (e) {
-            console.error("Gemini Pro failed:", e);
+            console.error("Kimi failed:", e);
             lastError = e;
         }
     }
 
-    throw lastError || new Error('All LLM providers failed');
+    throw lastError || new Error('All 4 LLM providers failed');
 }
 
 /**
@@ -186,8 +197,9 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
 async function callGemini(content: string, model: string): Promise<SummarizeResponse> {
     if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing');
 
+    // Переключаемся на v1beta, так как JSON mode там более стабилен
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: {
@@ -230,6 +242,62 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
 }
 
 /**
+ * Вызов OpenRouter API
+ */
+async function callOpenRouter(content: string): Promise<SummarizeResponse> {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://ai-scout.vercel.app',
+        },
+        body: JSON.stringify({
+            model: 'google/gemini-flash-1.5-exp',
+            messages: [{
+                role: 'system',
+                content: 'Ты — элитный аналитик на русском языке. Верни JSON с полями: titleRu, summary, detailedUsage (минимум 10 абзацев), mentions, usageTips.'
+            }, {
+                role: 'user',
+                content: content
+            }],
+            response_format: { type: 'json_object' }
+        })
+    });
+
+    if (!response.ok) throw new Error(`OpenRouter error ${response.status}`);
+    const data = await response.json();
+    return parseLLMResponse(data.choices[0]?.message?.content || '');
+}
+
+/**
+ * Вызов Kimi (Moonshot) API
+ */
+async function callKimi(content: string): Promise<SummarizeResponse> {
+    const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.KIMI_API_KEY}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: 'moonshot-v1-8k',
+            messages: [{
+                role: 'system',
+                content: 'Ты — эксперт по AI. Сделай глубокий разбор на русском в формате JSON (titleRu, summary, detailedUsage, mentions, usageTips). "detailedUsage" должен быть максимально длинным.'
+            }, {
+                role: 'user',
+                content: content
+            }]
+        })
+    });
+
+    if (!response.ok) throw new Error(`Kimi error ${response.status}`);
+    const data = await response.json();
+    return parseLLMResponse(data.choices[0]?.message?.content || '');
+}
+
+/**
  * Парсинг ответа LLM
  */
 function parseLLMResponse(text: string): SummarizeResponse {
@@ -262,7 +330,7 @@ function parseLLMResponse(text: string): SummarizeResponse {
 /**
  * Fallback генерация саммари без LLM
  */
-function generateFallbackSummary(content: string): SummarizeResponse {
+function generateFallbackSummary(content: string, errorMessage?: string): SummarizeResponse {
     const tags = KNOWN_TAGS.filter(tag => content.toLowerCase().includes(tag.toLowerCase())).slice(0, 3);
     const mentions = KNOWN_TOOLS.filter(tool => content.toLowerCase().includes(tool.toLowerCase())).slice(0, 5);
 
@@ -276,6 +344,9 @@ function generateFallbackSummary(content: string): SummarizeResponse {
         tags: tags.length > 0 ? tags : ['AI'],
         mentions,
         detailedUsage: `⚠️ ОШИБКА АНАЛИЗА: Мы не смогли подключиться к нейросети (Gemini/OpenAI).
+
+ТЕХНИЧЕСКАЯ ОШИБКА:
+${errorMessage || 'Неизвестная ошибка'}
         
 Это может произойти, если:
 1. Вы не добавили ключи GEMINI_API_KEY или OPENAI_API_KEY в переменные окружения Vercel.
@@ -284,10 +355,12 @@ function generateFallbackSummary(content: string): SummarizeResponse {
 
 СТАТУС КЛЮЧЕЙ (ДЛЯ ВАС):
 - Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
+- OpenRouter Key: ${process.env.OPENROUTER_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
 - OpenAI API Key: ${process.env.OPENAI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
+- Kimi API Key: ${process.env.KIMI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
 
 ИНСТРУКЦИЯ:
 Зайдите в панель управления Vercel -> Settings -> Environment Variables. Добавьте эти ключи. Затем сделайте "Redeploy" в разделе Deployments.`,
-        usageTips: ["Проверьте ключи API", "Попробуйте позже", "Используйте OpenAI ключ как альтернативу"]
+        usageTips: ["Добавьте OPENROUTER_API_KEY", "Проверьте заголовок", "Используйте GPT-4 как альтернативу"]
     };
 }
