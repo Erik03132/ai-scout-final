@@ -2276,29 +2276,31 @@ export default function App() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
-                  const url = formData.get('channelUrl') as string;
+                  let url = (formData.get('channelUrl') as string).trim();
                   const source = formData.get('source') as 'YouTube' | 'Telegram';
 
                   setAddChannelError(null);
 
-                  if (url.trim()) {
-                    // Проверка на дубликат в стейте
-                    const normalizedUrl = url.trim().toLowerCase();
+                  if (url) {
+                    // Нормализация Telegram @username -> https://t.me/username
+                    if (source === 'Telegram' && url.startsWith('@')) {
+                      url = `https://t.me/${url.substring(1)}`;
+                    }
+
+                    // Проверка на дубликат в стейте (после нормализации)
+                    const normalizedUrl = url.toLowerCase();
                     const exists = channels.some(c => c.url.toLowerCase() === normalizedUrl);
                     if (exists) {
                       setAddChannelError('Этот канал уже добавлен в ваш список!');
                       return;
                     }
-                    // Extract channel name from URL or @username
-                    let name = url.trim();
-                    if (url.startsWith('@')) {
-                      // Telegram @username format
-                      name = url.substring(1);
+
+                    // Extract channel name from URL
+                    let name = url;
+                    if (url.includes('t.me/')) {
+                      name = url.split('t.me/')[1];
                     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
                       const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
-                      if (match) name = match[1];
-                    } else if (url.includes('t.me')) {
-                      const match = url.match(/t\.me\/([^/?]+)/);
                       if (match) name = match[1];
                     }
 
