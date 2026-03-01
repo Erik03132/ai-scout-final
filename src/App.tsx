@@ -1120,18 +1120,17 @@ export default function App() {
         )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
-            <div className="flex items-center gap-3 group cursor-pointer" onClick={() => setActiveTab('feed')}>
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 rounded-[1.25rem] flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)] group-hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all duration-500 group-hover:rotate-6 will-change-transform relative">
-                <Sparkles className="w-6 h-6 md:w-7 md:h-7 text-white animate-pulse" />
-                {/* DB Status indicator */}
+            <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setActiveTab('feed')}>
+              <div className="w-9 h-9 md:w-12 md:h-12 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 rounded-xl md:rounded-[1.25rem] flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)] group-hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all duration-500 group-hover:rotate-6 will-change-transform relative">
+                <Sparkles className="w-5 h-5 md:w-7 md:h-7 text-white animate-pulse" />
                 <div className={cn(
-                  "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-slate-900 shadow-lg",
+                  "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 shadow-lg",
                   (window as any)._supabaseMissing ? "bg-red-500" : (getClient() ? "bg-emerald-500" : "bg-amber-500")
                 )} title={(window as any)._supabaseMissing ? "Supabase не настроен" : "Подключено к БД"} />
               </div>
               <div className="flex flex-col">
-                <span className="text-lg md:text-xl font-black bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent uppercase tracking-tighter leading-none">AI Scout</span>
-                <span className="text-[8px] md:text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] leading-none mt-1 opacity-70">Intelligence</span>
+                <span className="text-base md:text-xl font-black bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent uppercase tracking-tighter leading-none">AI Scout</span>
+                <span className="text-[7px] md:text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] leading-none mt-1 opacity-70">Intelligence</span>
               </div>
             </div>
 
@@ -1174,29 +1173,28 @@ export default function App() {
               <button
                 onClick={() => setActiveTab('favorites')}
                 className={cn(
-                  "p-2.5 rounded-xl border transition-all duration-300",
+                  "p-2 rounded-xl border transition-all duration-300",
                   activeTab === 'favorites' ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-slate-800/50 border-white/5 text-slate-400"
                 )}
               >
-                <Heart size={20} className={cn(favorites.length > 0 && activeTab !== 'favorites' && "animate-pulse")} />
+                <Heart size={18} className={cn(favorites.length > 0 && activeTab !== 'favorites' && "animate-pulse")} />
               </button>
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="p-2.5 bg-cyan-500 rounded-xl text-black shadow-lg shadow-cyan-500/20 active:scale-90 transition-all">
-                <Plus size={20} />
+                className="p-2 bg-cyan-500 rounded-xl text-black shadow-lg shadow-cyan-500/20 active:scale-90 transition-all">
+                <Plus size={18} />
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-6 left-4 right-4 z-50 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-2.5 flex items-center justify-around shadow-2xl shadow-black/50 premium-blur">
+      <nav className="md:hidden fixed bottom-6 left-4 right-4 z-50 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-1.5 flex items-center justify-around shadow-2xl shadow-black/50 premium-blur">
         {[
           { id: 'feed', label: 'Лента', icon: TrendingUp },
-          { id: 'insights', label: 'Analysis', icon: Brain },
+          { id: 'insights', label: 'Анализ', icon: Brain },
           { id: 'archive', label: 'Архив', icon: Wrench },
-          { id: 'favorites', label: 'Saved', icon: Heart },
+          { id: 'favorites', label: 'Списки', icon: Heart },
         ].map(tab => (
           <button
             key={tab.id}
@@ -1206,14 +1204,14 @@ export default function App() {
               if ('vibrate' in navigator) navigator.vibrate(5);
             }}
             className={cn(
-              "relative flex flex-col items-center gap-1 p-3 min-w-[4rem] transition-all duration-500 rounded-2xl",
+              "relative flex flex-col items-center gap-1 p-2.5 min-w-[3.5rem] transition-all duration-500 rounded-2xl",
               activeTab === tab.id ? "text-cyan-400 bg-cyan-500/10" : "text-slate-500 active:scale-90"
             )}
           >
-            <tab.icon size={22} className={cn("transition-all duration-500", activeTab === tab.id && "scale-110 -translate-y-0.5")} />
-            <span className="text-[10px] font-black uppercase tracking-widest leading-none">{tab.label}</span>
+            <tab.icon size={20} className={cn("transition-all duration-500", activeTab === tab.id && "scale-110 -translate-y-0.5")} />
+            <span className="text-[9px] font-black uppercase tracking-widest leading-none">{tab.label}</span>
             {activeTab === tab.id && (
-              <div className="absolute -top-1 w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+              <div className="absolute -top-1 w-1 w-1 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
             )}
           </button>
         ))}
@@ -1237,14 +1235,14 @@ export default function App() {
               <button
                 type="submit"
                 disabled={isSearching}
-                className="ml-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-5 py-2 rounded-xl text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="ml-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSearching ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <Search className="w-4 h-4" />
                 )}
-                Спросить
+                <span className="hidden sm:inline">Спросить</span>
               </button>
             </div>
           </form>
@@ -1427,23 +1425,25 @@ export default function App() {
                       className="w-full sm:w-40 h-48 sm:h-28 object-cover rounded-xl flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className={cn(
-                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium",
                           post.source === 'YouTube'
                             ? "bg-red-500/10 text-red-400"
                             : "bg-sky-500/10 text-sky-400"
                         )}>
-                          {post.source === 'YouTube' ? <Youtube className="w-3 h-3" /> : <MessageCircle className="w-3 h-3" />}
+                          {post.source === 'YouTube' ? <Youtube className="w-2.5 h-2.5 sm:w-3 h-3" /> : <MessageCircle className="w-2.5 h-2.5 sm:w-3 h-3" />}
                           {post.source}
                         </span>
-                        <span className="text-xs text-slate-500">{post.channel}</span>
-                        <span className="text-xs text-slate-600">•</span>
-                        <span className="text-xs text-slate-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {post.date}
-                        </span>
-                        <span className="text-xs text-slate-500 ml-auto">{post.views} просмотров</span>
+                        <span className="text-[10px] sm:text-xs text-slate-500">{post.channel}</span>
+                        <span className="text-slate-600 hidden sm:inline">•</span>
+                        <div className="flex items-center gap-3 ml-auto sm:ml-0">
+                          <span className="text-[10px] sm:text-xs text-slate-500 flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5 sm:w-3 h-3" />
+                            {post.date}
+                          </span>
+                          <span className="text-[10px] sm:text-xs text-slate-500 hidden md:inline">{post.views} просмотров</span>
+                        </div>
                       </div>
 
                       <h3
@@ -1656,7 +1656,7 @@ export default function App() {
                       key={post.id}
                       className="group bg-gradient-to-br from-slate-800/80 to-slate-800/40 backdrop-blur-sm border-2 border-emerald-900/30 rounded-2xl p-5 hover:border-emerald-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10"
                     >
-                      <div className="flex gap-4">
+                      <div className="flex flex-col sm:flex-row gap-4">
                         <img
                           src={post.image}
                           alt={post.title}
@@ -1665,19 +1665,19 @@ export default function App() {
                             const t = e.target as HTMLImageElement;
                             if (!t.src.includes('unsplash.com')) t.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
                           }}
-                          className="w-32 h-20 object-cover rounded-xl flex-shrink-0"
+                          className="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-xl flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span className={cn(
-                              "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                              "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
                               post.source === 'YouTube' ? "bg-red-500/10 text-red-400" : "bg-sky-500/10 text-sky-400"
                             )}>
                               {post.source === 'YouTube' ? <Youtube className="w-3 h-3" /> : <MessageCircle className="w-3 h-3" />}
                               {post.source}
                             </span>
-                            <span className="text-xs text-slate-500">{post.channel}</span>
-                            <span className="text-xs text-slate-500 ml-auto flex items-center gap-1">
+                            <span className="text-[10px] text-slate-500">{post.channel}</span>
+                            <span className="text-[10px] text-slate-500 ml-auto flex items-center gap-1">
                               <Clock className="w-3 h-3" />{post.date}
                             </span>
                           </div>
@@ -1686,7 +1686,7 @@ export default function App() {
                           </h3>
                           <p className="text-xs text-slate-400 line-clamp-2">{post.summary}</p>
                         </div>
-                        <div className="flex flex-col gap-2 flex-shrink-0">
+                        <div className="flex sm:flex-col items-center sm:items-stretch gap-2 flex-shrink-0">
                           <button
                             onClick={() => setSelectedPost(post)}
                             className="p-2 rounded-xl text-slate-500 hover:text-blue-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-blue-500/20"
@@ -1746,11 +1746,11 @@ export default function App() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {favoriteTools.map(tool => (
                     <div
                       key={tool.id}
-                      className="group bg-slate-800/30 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-7 hover:shadow-2xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+                      className="group bg-slate-800/30 backdrop-blur-xl border border-white/5 rounded-3xl sm:rounded-[2.5rem] p-5 sm:p-7 hover:shadow-2xl transition-all duration-300 relative overflow-hidden cursor-pointer"
                       onClick={() => setSelectedTool(tool)}
                     >
                       {/* Фоновое свечение */}
@@ -1904,23 +1904,23 @@ export default function App() {
               </div>
 
               <div className="p-8 sm:p-10">
-                <div className="flex items-start gap-6 mb-8">
-                  <div className="w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl rounded-[1.5rem] flex items-center justify-center text-5xl">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mb-8 text-center sm:text-left">
+                  <div className="w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl rounded-2xl sm:rounded-[1.5rem] flex items-center justify-center text-5xl">
                     {selectedTool.icon}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-lg border border-cyan-500/20">
+                  <div className="flex-1 w-full">
+                    <div className="flex items-center justify-center sm:justify-start gap-3 mb-2">
+                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-lg border border-cyan-500/20">
                         {selectedTool.category}
                       </span>
                       <div className="flex items-center gap-1 text-amber-400 text-sm font-bold">
                         ★ {selectedTool.rating}
                       </div>
                     </div>
-                    <h2 className="text-3xl font-black text-white uppercase tracking-tight leading-none mb-4">
+                    <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight leading-none mb-4">
                       {selectedTool.name}
                     </h2>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                       {selectedTool.hasApi && (
                         <div className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-black uppercase">API Access</div>
                       )}
@@ -1940,9 +1940,9 @@ export default function App() {
                 </div>
 
                 <div className="space-y-8">
-                  <section className="bg-slate-800/20 border border-white/5 rounded-3xl p-8 shadow-inner">
+                  <section className="bg-slate-800/20 border border-white/5 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-inner">
                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500/70 mb-4 ml-1">Подробный обзор инструмента</h4>
-                    <div className="text-slate-200 leading-relaxed font-medium text-lg whitespace-pre-wrap space-y-4">
+                    <div className="text-slate-200 leading-relaxed font-medium text-base sm:text-lg whitespace-pre-wrap space-y-4">
                       {selectedTool.description}
                     </div>
                   </section>
@@ -2052,24 +2052,24 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="mt-10 flex gap-4">
+                <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button
                     onClick={() => toggleFavorite(`tool-${selectedTool.id}`)}
                     className={cn(
-                      "flex-1 h-14 rounded-2xl font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2",
+                      "flex-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2",
                       favorites.includes(`tool-${selectedTool.id}`)
                         ? "bg-red-500/10 text-red-500 border-red-500/20"
                         : "bg-slate-800 text-slate-300 border-white/5 hover:bg-slate-700"
                     )}
                   >
-                    <Heart className={cn("w-5 h-5", favorites.includes(`tool-${selectedTool.id}`) && "fill-current")} />
+                    <Heart className={cn("w-4 h-4 sm:w-5 h-5", favorites.includes(`tool-${selectedTool.id}`) && "fill-current")} />
                     {favorites.includes(`tool-${selectedTool.id}`) ? "В избранном" : "В избранное"}
                   </button>
                   <button
                     onClick={() => window.open(selectedTool.docsUrl, '_blank')}
-                    className="flex-1 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="flex-1 h-12 sm:h-14 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-widest rounded-xl sm:rounded-2xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    Документация <ExternalLink size={18} />
+                    Документация <ExternalLink size={16} />
                   </button>
                 </div>
               </div>
@@ -2097,7 +2097,7 @@ export default function App() {
               </div>
 
               <div className="p-8 sm:p-12 overflow-y-auto max-h-[90vh]">
-                <div className="flex gap-6 mb-8 items-start">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-8 items-center sm:items-start text-center sm:text-left">
                   <img
                     src={selectedPost.image}
                     alt={selectedPost.title}
@@ -2111,20 +2111,20 @@ export default function App() {
                         target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
                       }
                     }}
-                    className="w-48 h-32 object-cover rounded-2xl shadow-xl border-2 border-slate-800"
+                    className="w-full sm:w-48 h-48 sm:h-32 object-cover rounded-2xl shadow-xl border-2 border-slate-800"
                   />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="flex-1 w-full">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
                       <span className={cn(
-                        "flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest",
+                        "flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest",
                         selectedPost.source === 'YouTube' ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"
                       )}>
-                        {selectedPost.source === 'YouTube' ? <Youtube size={14} /> : <MessageCircle size={14} />}
+                        {selectedPost.source === 'YouTube' ? <Youtube size={12} /> : <MessageCircle size={12} />}
                         {selectedPost.source}
                       </span>
-                      <span className="text-sm font-bold text-slate-500">@{selectedPost.channel}</span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-500">@{selectedPost.channel}</span>
                     </div>
-                    <h2 className="text-2xl font-black text-white leading-tight mb-4 uppercase tracking-tight">
+                    <h2 className="text-xl sm:text-2xl font-black text-white leading-tight mb-4 uppercase tracking-tight">
                       {selectedPost.title}
                     </h2>
                   </div>
@@ -2195,11 +2195,11 @@ export default function App() {
                       </div>
                       <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">AI Анализ контента</h3>
                     </div>
-                    <div className="bg-slate-850 p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                    <div className="bg-slate-850 p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-white/5 relative overflow-hidden group">
                       <div className="absolute top-0 right-0 p-8 opacity-5">
                         <Sparkles size={120} />
                       </div>
-                      <div className="text-slate-300 leading-relaxed text-lg font-medium relative z-10 space-y-4">
+                      <div className="text-slate-300 leading-relaxed text-base sm:text-lg font-medium relative z-10 space-y-4">
                         {(() => {
                           let content = selectedPost.detailedUsage || '';
                           let paragraphs: string[] = [];
@@ -2249,31 +2249,29 @@ export default function App() {
                     </div>
                   </section>
 
-                  <div className="flex items-center justify-between p-8 bg-gradient-to-r from-slate-800 to-slate-800/40 rounded-[2rem] border border-white/10">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between p-6 sm:p-8 bg-gradient-to-r from-slate-800 to-slate-800/40 rounded-2xl sm:rounded-[2rem] border border-white/10 gap-6 sm:gap-4">
+                    <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-start">
                       <div className="text-center">
-                        <p className="text-[10px] font-black text-slate-500 uppercase">Views</p>
-                        <p className="text-xl font-black text-white tracking-widest leading-none mt-1">{selectedPost.views}</p>
+                        <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase">Views</p>
+                        <p className="text-lg sm:text-xl font-black text-white tracking-widest leading-none mt-1">{selectedPost.views}</p>
                       </div>
                       <div className="w-px h-8 bg-white/10" />
                       <div className="text-center">
-                        <p className="text-[10px] font-black text-slate-500 uppercase">Released</p>
-                        <p className="text-lg font-black text-slate-300 leading-none mt-1">{selectedPost.date}</p>
+                        <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase">Released</p>
+                        <p className="text-base sm:text-lg font-black text-slate-300 leading-none mt-1">{selectedPost.date}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center justify-center gap-3 w-full sm:w-auto">
                       <button
                         onClick={() => dismissPost(selectedPost.id)}
-                        title="Удалить из ленты"
-                        className="h-14 px-5 bg-slate-800 hover:bg-red-500/10 border border-slate-700 hover:border-red-500/40 text-slate-400 hover:text-red-400 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all"
+                        className="h-12 sm:h-14 px-4 sm:px-5 bg-slate-800 hover:bg-red-500/10 border border-slate-700 hover:border-red-500/40 text-slate-400 hover:text-red-400 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition-all flex-1 sm:flex-none"
                       >
-                        <X size={16} /> Удалить
+                        <X size={14} /> Удалить
                       </button>
                       <button
                         onClick={() => archivePost(selectedPost.id)}
-                        title="Сохранить в архив"
                         className={cn(
-                          "h-14 px-5 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all border",
+                          "h-12 sm:h-14 px-4 sm:px-5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition-all border flex-1 sm:flex-none",
                           (selectedPost as any).isArchived
                             ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                             : "bg-slate-800 border-slate-700 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-slate-400 hover:text-emerald-400"
@@ -2285,9 +2283,9 @@ export default function App() {
                         href={selectedPost.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="h-14 px-8 bg-white text-black font-black uppercase tracking-widest rounded-2xl flex items-center gap-3 hover:bg-cyan-400 transition-all hover:shadow-xl hover:shadow-cyan-400/20"
+                        className="h-12 sm:h-14 px-6 sm:px-8 bg-white text-black font-black uppercase tracking-widest rounded-xl sm:rounded-2xl flex items-center justify-center gap-3 hover:bg-cyan-400 transition-all hover:shadow-xl hover:shadow-cyan-400/20 w-full sm:w-auto"
                       >
-                        Источник <ExternalLink size={18} />
+                        Источник <ExternalLink size={16} />
                       </a>
                     </div>
                   </div>
@@ -2308,19 +2306,19 @@ export default function App() {
             />
             <div className="relative w-full max-w-2xl bg-slate-900 border border-amber-500/20 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
               <div className="p-8 sm:p-10">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-black">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between mb-8 gap-4">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
+                    <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-black shadow-lg">
                       <Layers size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Реализация кейса</p>
-                      <h2 className="text-2xl font-black text-white uppercase tracking-tight">{selectedUseCase.case.title}</h2>
+                      <p className="text-[9px] sm:text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Реализация кейса</p>
+                      <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">{selectedUseCase.case.title}</h2>
                     </div>
                   </div>
                   <button
                     onClick={() => setSelectedUseCase(null)}
-                    className="p-2 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all"
+                    className="p-2 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all self-end sm:self-auto"
                   >
                     <X size={20} />
                   </button>
@@ -2652,7 +2650,7 @@ export default function App() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Платформа</label>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-red-500/50 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-500/10">
                       <input type="radio" name="source" value="YouTube" className="sr-only" defaultChecked />
                       <Youtube className="w-5 h-5 text-red-400" />
