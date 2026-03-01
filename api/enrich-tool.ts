@@ -8,9 +8,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Tool name is required' });
 
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY logic missing' });
+
     try {
         const prompt = `Найди актуальную, ФАКТИЧЕСКУЮ информацию о сервисе "${name}" (это AI инструмент).
-        ОБЯЗАТЕЛЬНО проверь через веб-поиск:
+        Используй поиск Google, чтобы узнать:
         1. Что это на самом деле (не путай названия!).
         2. Какие там тарифы и лимиты сейчас.
         
@@ -29,23 +32,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         ОТВЕЧАЙ ТОЛЬКО JSON БЕЗ ЛИШНЕГО ТЕКСТА.`;
 
-        // Используем модель с выходом в интернет для исключения галлюцинаций
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        // Прямой вызов Gemini с включенным поиском (Google Search Grounding)
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://ai-scout.vercel.app',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'perplexity/sonar-reasoning', // Эта модель ищет в интернете в реальном времени
-                messages: [{ role: 'user', content: prompt }]
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: [{ google_search: {} }], // ВКЛЮЧАЕМ ПОИСК
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
             })
         });
 
-        if (!response.ok) throw new Error(`AI fail: ${response.status}`);
+        if (!response.ok) throw new Error(`Gemini fail: ${response.status}`);
+
         const data = await response.json();
-        const result = JSON.parse(data.choices[0]?.message?.content || '{}');
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const result = JSON.parse(text);
 
         return res.status(200).json(result);
     } catch (error: any) {
