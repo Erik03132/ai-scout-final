@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
+import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
@@ -832,6 +832,12 @@ export default function App() {
               ))}
             </nav>
 
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="hidden md:flex items-center gap-2 bg-white text-black hover:bg-cyan-400 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.1em] transition-all duration-500 shadow-xl hover:shadow-cyan-500/20 active:scale-95 will-change-transform">
+              <Plus size={16} />
+              Добавить
+            </button>
 
             {/* Mobile Header Actions */}
             <div className="flex md:hidden items-center gap-2">
@@ -843,6 +849,11 @@ export default function App() {
                 )}
               >
                 <Heart size={20} className={cn(favorites.length > 0 && activeTab !== 'favorites' && "animate-pulse")} />
+              </button>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="p-2.5 bg-cyan-500 rounded-xl text-black shadow-lg shadow-cyan-500/20 active:scale-90 transition-all">
+                <Plus size={20} />
               </button>
             </div>
           </div>
