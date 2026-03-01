@@ -92,10 +92,10 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
     const hasGemini = !!process.env.GEMINI_API_KEY;
     const hasOpenAI = !!process.env.OPENAI_API_KEY;
     const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
-    const hasKimi = !!process.env.KIMI_API_KEY;
+    const hasMoonshot = !!process.env.MOONSHOT_API_KEY;
 
-    if (!hasGemini && !hasOpenAI && !hasOpenRouter && !hasKimi) {
-        throw new Error('No LLM API keys configured (Gemini, OpenAI, OpenRouter, or KIMI)');
+    if (!hasGemini && !hasOpenAI && !hasOpenRouter && !hasMoonshot) {
+        throw new Error('No LLM API keys configured (Gemini, OpenAI, OpenRouter, or MOONSHOT)');
     }
 
     let lastError: any = null;
@@ -132,12 +132,12 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
     }
 
     // 4. Kimi (Moonshot)
-    if (hasKimi) {
+    if (hasMoonshot) {
         try {
-            console.log("Attempting Kimi...");
+            console.log("Attempting Moonshot...");
             return await callKimi(content);
         } catch (e) {
-            console.error("Kimi failed:", e);
+            console.error("Moonshot failed:", e);
             lastError = e;
         }
     }
@@ -253,7 +253,7 @@ async function callOpenRouter(content: string): Promise<SummarizeResponse> {
             'HTTP-Referer': 'https://ai-scout.vercel.app',
         },
         body: JSON.stringify({
-            model: 'google/gemini-flash-1.5-exp',
+            model: 'google/gemini-2.0-flash-001',
             messages: [{
                 role: 'system',
                 content: 'Ты — элитный аналитик на русском языке. Верни JSON с полями: titleRu, summary, detailedUsage (минимум 10 абзацев), mentions, usageTips.'
@@ -265,7 +265,10 @@ async function callOpenRouter(content: string): Promise<SummarizeResponse> {
         })
     });
 
-    if (!response.ok) throw new Error(`OpenRouter error ${response.status}`);
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`OpenRouter error ${response.status}: ${errText.substring(0, 100)}`);
+    }
     const data = await response.json();
     return parseLLMResponse(data.choices[0]?.message?.content || '');
 }
@@ -274,10 +277,12 @@ async function callOpenRouter(content: string): Promise<SummarizeResponse> {
  * Вызов Kimi (Moonshot) API
  */
 async function callKimi(content: string): Promise<SummarizeResponse> {
+    if (!process.env.MOONSHOT_API_KEY) throw new Error('MOONSHOT_API_KEY is missing');
+
     const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${process.env.KIMI_API_KEY}`,
+            'Authorization': `Bearer ${process.env.MOONSHOT_API_KEY}`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -292,7 +297,7 @@ async function callKimi(content: string): Promise<SummarizeResponse> {
         })
     });
 
-    if (!response.ok) throw new Error(`Kimi error ${response.status}`);
+    if (!response.ok) throw new Error(`Moonshot error ${response.status}`);
     const data = await response.json();
     return parseLLMResponse(data.choices[0]?.message?.content || '');
 }
@@ -357,10 +362,10 @@ ${errorMessage || 'Неизвестная ошибка'}
 - Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
 - OpenRouter Key: ${process.env.OPENROUTER_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
 - OpenAI API Key: ${process.env.OPENAI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
-- Kimi API Key: ${process.env.KIMI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
+- Moonshot Key: ${process.env.MOONSHOT_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
 
 ИНСТРУКЦИЯ:
 Зайдите в панель управления Vercel -> Settings -> Environment Variables. Добавьте эти ключи. Затем сделайте "Redeploy" в разделе Deployments.`,
-        usageTips: ["Добавьте OPENROUTER_API_KEY", "Проверьте заголовок", "Используйте GPT-4 как альтернативу"]
+        usageTips: ["Добавьте MOONSHOT_API_KEY", "Проверьте заголовок", "Используйте GPT-4 как альтернативу"]
     };
 }
