@@ -901,7 +901,8 @@ export default function App() {
         hasMcp: toolData.has_mcp,
         pros: toolData.pros,
         docsUrl: toolData.docs_url,
-        details: enriched.features || []
+        details: enriched.features || [],
+        useCases: enriched.useCases || []
       };
 
       // КРИТИЧЕСКИЙ ШАГ: Переносим "Избранное" со старого ID на новый (UUID)
@@ -1939,11 +1940,11 @@ export default function App() {
                 </div>
 
                 <div className="space-y-8">
-                  <section>
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 ml-1">Описание</h4>
-                    <p className="text-slate-300 leading-relaxed font-medium text-lg">
+                  <section className="bg-slate-800/20 border border-white/5 rounded-3xl p-8 shadow-inner">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500/70 mb-4 ml-1">Подробный обзор инструмента</h4>
+                    <div className="text-slate-200 leading-relaxed font-medium text-lg whitespace-pre-wrap space-y-4">
                       {selectedTool.description}
-                    </p>
+                    </div>
                   </section>
 
                   {selectedTool.id.toString().startsWith('dyn-') ? (
