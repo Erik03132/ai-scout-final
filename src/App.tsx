@@ -418,6 +418,7 @@ export default function App() {
   const [tools, setTools] = useState<typeof mockTools>(mockTools);
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
+  const [addChannelError, setAddChannelError] = useState<string | null>(null);
   const [dismissedPostIds, setDismissedPostIds] = useLocalStorage<number[]>('ai-scout-dismissed-posts', []);
   const [showFilters, setShowFilters] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
@@ -2258,11 +2259,11 @@ export default function App() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setIsAddModalOpen(false)}
+              onClick={() => { setIsAddModalOpen(false); setAddChannelError(null); }}
             />
             <div className="relative bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
               <button
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => { setIsAddModalOpen(false); setAddChannelError(null); }}
                 className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white transition-colors"
               >
                 <X size={20} />
@@ -2278,7 +2279,16 @@ export default function App() {
                   const url = formData.get('channelUrl') as string;
                   const source = formData.get('source') as 'YouTube' | 'Telegram';
 
+                  setAddChannelError(null);
+
                   if (url.trim()) {
+                    // Проверка на дубликат в стейте
+                    const normalizedUrl = url.trim().toLowerCase();
+                    const exists = channels.some(c => c.url.toLowerCase() === normalizedUrl);
+                    if (exists) {
+                      setAddChannelError('Этот канал уже добавлен в ваш список!');
+                      return;
+                    }
                     // Extract channel name from URL or @username
                     let name = url.trim();
                     if (url.startsWith('@')) {
@@ -2420,6 +2430,14 @@ export default function App() {
                     required
                   />
                 </div>
+
+                {addChannelError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                    <p className="text-red-400 text-xs font-bold flex items-center gap-2">
+                      <X size={14} /> {addChannelError}
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Платформа</label>
