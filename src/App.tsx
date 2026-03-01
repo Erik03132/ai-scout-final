@@ -395,7 +395,6 @@ const mockTools = [
   }
 ];
 
-const categories = ["All", "AI", "Deployment", "Database", "Design", "ORM", "CSS", "State", "Framework", "Payments"];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'feed' | 'insights' | 'archive' | 'favorites'>('feed');
@@ -756,8 +755,8 @@ export default function App() {
 
   // Хелпер получения supabaseId поста по числовому id
   const getSupabasePostId = (postId: number): string | undefined => {
-    const post = posts.find(p => p.id === postId);
-    return (post as any)?.supabaseId;
+    const p = posts.find(item => item.id === postId);
+    return (p as any)?.supabaseId;
   };
 
   // Функция для обогащения данных об инструменте через ИИ
