@@ -420,6 +420,7 @@ export default function App() {
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const [addChannelError, setAddChannelError] = useState<string | null>(null);
+  const [enrichmentError, setEnrichmentError] = useState<{ name: string, message: string } | null>(null);
   const [dismissedPostIds, setDismissedPostIds] = useLocalStorage<number[]>('ai-scout-dismissed-posts', []);
   const [showFilters, setShowFilters] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
@@ -926,12 +927,16 @@ export default function App() {
     } catch (e: any) {
       if (e.name === 'AbortError') {
         console.warn(`[Enrichment] Request for ${cleanName} timed out (45s).`);
+        setEnrichmentError({ name: toolName, message: 'Превышено время ожидания ИИ (45с)' });
       } else {
         console.error('Failed to enrich tool:', e);
+        setEnrichmentError({ name: toolName, message: e.message || 'Ошибка сервера' });
       }
       return null;
     } finally {
       setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
+      // Очищаем ошибку через 5 секунд
+      setTimeout(() => setEnrichmentError(null), 5000);
     }
   };
 
@@ -1091,6 +1096,12 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white selection:bg-cyan-500/30">
       {/* Header */}
       <header className="border-b border-slate-800/50 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50 premium-blur">
+        {/* Enrichment Error Toast */}
+        {enrichmentError && (
+          <div className="absolute top-full left-0 right-0 bg-red-500/90 text-white text-center py-2 text-xs font-black uppercase tracking-widest animate-in slide-in-from-top duration-300">
+            Ошибка обновления {enrichmentError.name}: {enrichmentError.message}
+          </div>
+        )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             <div className="flex items-center gap-3 group cursor-pointer" onClick={() => setActiveTab('feed')}>
