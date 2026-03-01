@@ -495,7 +495,7 @@ export default function App() {
         // Параллельные запросы вместо последовательных для оптимизации загрузки
         const [toolsResult, postsResult, channelsResult, detailsResult] = await Promise.all([
           supabase.from('tools').select('*').order('rating', { ascending: false }),
-          supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20),
+          supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50),
           supabase.from('channels').select('*').order('created_at', { ascending: false }),
           supabase.from('tool_details').select('*')
         ]);
@@ -2458,15 +2458,25 @@ export default function App() {
                         <p className="text-white font-black uppercase text-sm">{selectedUseCase.tool}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        const url = selectedUseCase.case.url || `https://www.google.com/search?q=${encodeURIComponent(selectedUseCase.tool + ' ' + selectedUseCase.case.title + ' real world example case study')}`;
-                        window.open(url, '_blank');
-                      }}
-                      className="h-12 px-6 bg-white hover:bg-slate-200 text-black font-black uppercase text-[10px] tracking-widest rounded-xl transition-all shadow-lg flex items-center gap-2 group/btn"
-                    >
-                      Смотреть оригинал <ExternalLink size={14} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={allTools.find(t => t.name === selectedUseCase.tool)?.docsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-10 px-4 bg-slate-800 text-white font-black uppercase text-[9px] tracking-widest rounded-xl hover:bg-slate-700 transition-all border border-white/5 flex items-center gap-2"
+                      >
+                        Документация <ExternalLink size={12} />
+                      </a>
+                      <button
+                        onClick={() => {
+                          const url = selectedUseCase.case.url || `https://www.google.com/search?q=${encodeURIComponent(selectedUseCase.tool + ' ' + selectedUseCase.case.title + ' real world example case study')}`;
+                          window.open(url, '_blank');
+                        }}
+                        className="h-10 px-4 bg-white hover:bg-slate-200 text-black font-black uppercase text-[9px] tracking-widest rounded-xl transition-all shadow-lg flex items-center gap-2 group/btn"
+                      >
+                        Оригинал <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
