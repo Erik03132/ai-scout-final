@@ -3,103 +3,151 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 export const maxDuration = 60;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
 
     const { name } = req.body;
-    if (!name) return res.status(400).json({ error: 'Tool name is required' });
+    if (!name) {
+        return res.status(400).json({ error: 'Name is required' });
+    }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY logic missing' });
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000); // 9 секунд (Vercel Hobby limit ~10s)
+    const prompt = `Quick facts about AI tool "${name}": 
+    1. 1-sentence summary
+    2. category
+    3. emoji icon
+    4. pricing
+    5. 3 features. 
+    Output clean JSON in Russian. 
+    Format: {"summary": "...", "category": "...", "icon": "...", "pricing": "...", "features": ["...", "...", "..."]}`;
 
     try {
-        console.log(`[Backend] Enrichment for: ${name}`);
-        const prompt = `Quick facts about AI tool "${name}": 
-        1. 1-sentence summary
-        2. category
-        3. emoji icon
-        4. pricing
-        5. 3 features. 
-        Output clean JSON in Russian.`;
-
-        // Primary: Gemini
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    temperature: 0.1,
-                    maxOutputTokens: 1000
-                }
-            }),
-            signal: controller.signal
-        });
-
-        if (!response.ok) {
-            const geminiErr = await response.json().catch(() => ({}));
-            console.error(`[Gemini failed] status: ${response.status}`, geminiErr);
-
-            // Fallback to OpenAI if Gemini fails and we have the key
-            if (process.env.OPENAI_API_KEY) {
-                console.log(`[Backend] Attempting OpenAI fallback for ${name}...`);
-                const oaResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: 'gpt-4o-mini',
-                        messages: [{ role: 'user', content: prompt }],
-                        temperature: 0.1,
-                        response_format: { type: "json_object" }
-                    })
-                });
-
-                if (oaResponse.ok) {
-                    const oaData = await oaResponse.json();
-                    const oaResult = JSON.parse(oaData.choices[0]?.message?.content || '{}');
-                    oaResult.name = name;
-                    return res.status(200).json(oaResult);
-                }
-            }
-
-            return res.status(response.status).json({
-                error: 'AI Provider Error',
-                details: geminiErr.error?.message || response.statusText
-            });
-        }
-
-        const data = await response.json();
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        const cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-
-        try {
-            const result = JSON.parse(cleanText);
-            result.name = name;
-            clearTimeout(timeoutId);
-            return res.status(200).json(result);
-        } catch (parseError) {
-            console.error('[Parse Error] Raw text:', cleanText);
-            clearTimeout(timeoutId);
-            // If JSON fails, return a minimal valid structure with the raw text in description
-            return res.status(200).json({
-                name,
-                category: 'AI Tool',
-                description: cleanText.substring(0, 200),
-                icon: '✨'
-            });
-        }
+        console.log(`[Backend] Cascaded enrichment for: ${name}`);
+        const result = await generateEnrichmentWithCascade(name, prompt);
+        return res.status(200).json(result);
     } catch (error: any) {
-        clearTimeout(timeoutId);
-        const isTimeout = error.name === 'AbortError';
-        console.error(`[Internal Error] ${isTimeout ? 'Timeout' : error.message}`);
-        return res.status(isTimeout ? 504 : 500).json({
-            error: isTimeout ? 'Timeout' : 'Server error',
+        console.error(`[Final Error] All providers failed for ${name}:`, error.message);
+        return res.status(500).json({
+            error: 'All AI providers failed',
             details: error.message
         });
     }
+}
+
+async function generateEnrichmentWithCascade(name: string, prompt: string) {
+    const providers = [
+        { name: 'Gemini', fn: callGemini },
+        { name: 'OpenRouter', fn: callOpenRouter },
+        { name: 'OpenAI', fn: callOpenAI },
+        { name: 'Moonshot', fn: callMoonshot }
+    ];
+
+    let lastError: any = null;
+
+    for (const provider of providers) {
+        try {
+            console.log(`[Enrichment] Attempting ${provider.name}...`);
+            const result = await provider.fn(prompt);
+            if (result) {
+                result.name = name;
+                return result;
+            }
+        } catch (e) {
+            console.error(`[Enrichment] ${provider.name} failed:`, e);
+            lastError = e;
+        }
+    }
+
+    throw lastError || new Error('No providers available');
+}
+
+async function callGemini(prompt: string) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY missing');
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1000 }
+        })
+    });
+
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || response.statusText);
+    }
+
+    const data = await response.json();
+    return parseText(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+}
+
+async function callOpenAI(prompt: string) {
+    if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.1,
+            response_format: { type: "json_object" }
+        })
+    });
+
+    if (!response.ok) throw new Error(`OpenAI error: ${response.statusText}`);
+    const data = await response.json();
+    return JSON.parse(data.choices[0]?.message?.content || '{}');
+}
+
+async function callOpenRouter(prompt: string) {
+    if (!process.env.OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY missing');
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: 'google/gemini-flash-1.5',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.1
+        })
+    });
+
+    if (!response.ok) throw new Error(`OpenRouter error: ${response.statusText}`);
+    const data = await response.json();
+    return parseText(data.choices[0]?.message?.content || '{}');
+}
+
+async function callMoonshot(prompt: string) {
+    if (!process.env.MOONSHOT_API_KEY) throw new Error('MOONSHOT_API_KEY missing');
+
+    const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.MOONSHOT_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: 'moonshot-v1-8k',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.1
+        })
+    });
+
+    if (!response.ok) throw new Error(`Moonshot error: ${response.statusText}`);
+    const data = await response.json();
+    return parseText(data.choices[0]?.message?.content || '{}');
+}
+
+function parseText(text: string) {
+    const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(clean);
 }
