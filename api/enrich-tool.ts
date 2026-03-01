@@ -9,24 +9,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!name) return res.status(400).json({ error: 'Tool name is required' });
 
     try {
-        const prompt = `Ты — эксперт по AI инструментам. Найди актуальную информацию о сервисе/программе "${name}".
+        const prompt = `Найди актуальную, ФАКТИЧЕСКУЮ информацию о сервисе "${name}" (это AI инструмент).
+        ОБЯЗАТЕЛЬНО проверь через веб-поиск:
+        1. Что это на самом деле (не путай названия!).
+        2. Какие там тарифы и лимиты сейчас.
         
-        Верни СТРОГО JSON со следующими полями на русском языке:
-        - description: Краткое, но емкое описание (2-3 предложения).
-        - category: Категория (например, "LLM", "Design", "DevTools", "Video AI").
-        - icon: Один подходящий эмодзи.
-        - dailyCredits: Сколько бесплатных кредитов в день (если нет инфо - напишите "По запросу" или "Н/Д").
-        - monthlyCredits: Сколько в месяц.
-        - minPrice: Минимальная цена подписки (например, "$20/мес" или "Free").
-        - hasApi: boolean (есть ли API).
-        - hasMcp: boolean (есть ли поддержка MCP/Claude Desktop).
-        - docsUrl: Ссылка на официальный сайт или документацию.
-        - pros: Массив из 3 главных преимуществ.
-        - features: Массив объектов [{title: "название", description: "суть"}] из 3 ключевых фишек.
+        Верни СТРОГО JSON на русском языке:
+        - description: Реальное описание сути сервиса (2-3 предложения).
+        - category: Категория (напр. "Low-code", "LLM", "Design").
+        - icon: Подходящий эмодзи.
+        - dailyCredits: Реальные лимиты (напр. "5 кредитов" или "Н/Д").
+        - monthlyCredits: Лимиты в месяц.
+        - minPrice: Минимальная цена (напр. "$20/мес").
+        - hasApi: boolean (есть ли API у сервиса).
+        - hasMcp: boolean (есть ли поддержка MCP).
+        - docsUrl: Ссылка на сайт (напр. https://...).
+        - pros: Список из 3 преимуществ.
+        - features: Список [{title, description}] из 3 фишек.
 
-        ОТВЕЧАЙ ТОЛЬКО ЧИСТЫМ JSON НА РУССКОМ ЯЗЫКЕ.`;
+        ОТВЕЧАЙ ТОЛЬКО JSON БЕЗ ЛИШНЕГО ТЕКСТА.`;
 
-        // Используем OpenRouter (он сейчас самый стабильный у нас)
+        // Используем модель с выходом в интернет для исключения галлюцинаций
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -35,9 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 'HTTP-Referer': 'https://ai-scout.vercel.app',
             },
             body: JSON.stringify({
-                model: 'google/gemini-2.0-flash-001',
-                messages: [{ role: 'user', content: prompt }],
-                response_format: { type: 'json_object' }
+                model: 'perplexity/sonar-reasoning', // Эта модель ищет в интернете в реальном времени
+                messages: [{ role: 'user', content: prompt }]
             })
         });
 
