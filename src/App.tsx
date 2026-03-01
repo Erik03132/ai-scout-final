@@ -412,6 +412,7 @@ export default function App() {
   const [selectedUseCase, setSelectedUseCase] = useState<{ tool: string, case: any } | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<{ title: string, description: string } | null>(null);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichingToolNames, setEnrichingToolNames] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [channels, setChannels] = useState<Array<{ id: string, url: string, source: 'YouTube' | 'Telegram', name: string }>>([]);
   const [posts, setPosts] = useState<Post[]>(mockPosts);
@@ -759,9 +760,10 @@ export default function App() {
 
   // Функция для обогащения данных об инструменте через ИИ
   const enrichToolData = async (toolName: string) => {
-    // Очищаем имя от спецсимволов (#, +, @)
     const cleanName = toolName.replace(/[#+@]/g, '').trim();
-    console.log(`Enriching data for: ${cleanName} (original: ${toolName})...`);
+    console.log(`Enriching data for: ${cleanName}...`);
+
+    setEnrichingToolNames(prev => [...prev, toolName]);
 
     try {
       const response = await fetch('/api/enrich-tool', {
@@ -774,9 +776,11 @@ export default function App() {
       const enriched = await response.json();
 
       const supabase = getClient();
-      if (!supabase) return enriched;
+      if (!supabase) {
+        setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
+        return enriched;
+      }
 
-      // 1. Сохраняем/обновляем основной инструмент (Upsert по имени — используем ОЧИЩЕННОЕ имя)
       const { data: toolData, error: toolError } = await supabase
         .from('tools')
         .upsert({
@@ -797,7 +801,6 @@ export default function App() {
 
       if (toolError) throw toolError;
 
-      // 2. Сохраняем детали (фичи)
       if (enriched.features && enriched.features.length > 0) {
         const featuresToInsert = enriched.features.map((f: any) => ({
           tool_id: toolData.id,
@@ -805,11 +808,10 @@ export default function App() {
           description: f.description,
           type: 'detail'
         }));
-        await supabase.from('tool_details').delete().eq('tool_id', toolData.id); // очистка старых
+        await supabase.from('tool_details').delete().eq('tool_id', toolData.id);
         await supabase.from('tool_details').insert(featuresToInsert);
       }
 
-      // Обновляем локальный стейт инструментов
       const finalTool = {
         id: toolData.id,
         name: toolData.name,
@@ -827,22 +829,32 @@ export default function App() {
         details: enriched.features || []
       };
 
+      // КРИТИЧЕСКИЙ ШАГ: Переносим "Избранное" со старого ID (dyn-...) на новый (UUID)
+      // Это предотвратит исчезновение карточек после обновления
+      setFavorites(prev => {
+        const oldId = `tool-dyn-${toolName}`;
+        const newId = `tool-${toolData.id}`;
+        if (prev.includes(oldId) && !prev.includes(newId)) {
+          return prev.map(id => id === oldId ? newId : id);
+        }
+        return prev;
+      });
+
       setTools(prev => {
         const exists = prev.find(t => t.name.toLowerCase() === toolName.toLowerCase());
-        if (exists) {
-          return prev.map(t => t.name.toLowerCase() === toolName.toLowerCase() ? finalTool : t);
-        }
+        if (exists) return prev.map(t => t.name.toLowerCase() === toolName.toLowerCase() ? finalTool : t);
         return [...prev, finalTool as any];
       });
 
-      // Также обновляем динамический кэш, если он там был
       setCachedDynamicTools(prev => {
         return prev.map(t => t.name.toLowerCase() === toolName.toLowerCase() ? finalTool as any : t);
       });
 
+      setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
       return finalTool;
     } catch (e) {
       console.error('Failed to enrich tool:', e);
+      setEnrichingToolNames(prev => prev.filter(n => n !== toolName));
       return null;
     }
   };
@@ -1630,7 +1642,7 @@ export default function App() {
 
                       <div className="flex items-start justify-between mb-6 relative">
                         <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 rounded-3xl flex items-center justify-center text-4xl shadow-xl group-hover:scale-110 transition-transform duration-500 relative">
-                          {isEnriching && selectedTool?.id === tool.id ? (
+                          {enrichingToolNames.includes(tool.name) ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 rounded-3xl">
                               <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
                             </div>
@@ -1706,6 +1718,22 @@ export default function App() {
                             <p className="text-xl font-black text-emerald-400 leading-none">{tool.minPrice}</p>
                           </div>
                           <div className="flex gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); enrichToolData(tool.name); }}
+                              className={cn(
+                                "h-10 px-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all shadow-lg",
+                                tool.description?.includes('собираются нашей системой')
+                                  ? "bg-cyan-500 text-black hover:bg-cyan-400"
+                                  : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
+                              )}
+                              title={tool.description?.includes('собираются нашей системой') ? "Запустить исследование ИИ" : "Обновить данные через ИИ"}
+                            >
+                              {enrichingToolNames.includes(tool.name)
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Zap size={14} />
+                              }
+                              {tool.description?.includes('собираются нашей системой') ? 'Исследовать' : 'Обновить'}
+                            </button>
                             {tool.docsUrl && (
                               <a
                                 href={tool.docsUrl}
@@ -1713,7 +1741,7 @@ export default function App() {
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-10 h-10 bg-slate-700/50 text-slate-300 rounded-xl flex items-center justify-center border border-white/5 hover:bg-slate-700 hover:text-white transition-all shadow-lg"
-                                title="Open Website"
+                                title="Открыть сайт"
                               >
                                 <ExternalLink size={18} />
                               </a>
