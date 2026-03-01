@@ -515,12 +515,19 @@ export default function App() {
             docsUrl: t.docs_url
           }));
           setTools(formattedTools);
-          // Восстанавливаем избранные ИНСТРУМЕНТЫ из Supabase
-          const dbFavToolIds = toolsResult.data
-            .filter(t => t.is_favorite)
-            .map(t => `tool-${t.id}`);
-          if (dbFavToolIds.length > 0) {
-            setFavorites(prev => Array.from(new Set([...prev, ...dbFavToolIds])));
+        }
+
+        // Восстанавливаем favorites из отдельной таблицы (ЕСЛИ ОНИ ТАМ ЕСТЬ)
+        const { data: favoritesResult } = await supabase.from('favorites').select('item_id');
+        if (favoritesResult && favoritesResult.length > 0) {
+          const dbFavIds = favoritesResult.map(f => f.item_id);
+          setFavorites(prev => Array.from(new Set([...prev, ...dbFavIds])));
+        } else {
+          // Fallback на колонки is_favorite (для совместимости)
+          const dbFavToolIds = toolsResult.data?.filter(t => t.is_favorite).map(t => `tool-${t.id}`) || [];
+          const dbFavPostIds = postsResult.data?.filter(p => p.is_favorite).map(p => `post-${p.id}`) || [];
+          if (dbFavToolIds.length > 0 || dbFavPostIds.length > 0) {
+            setFavorites(prev => Array.from(new Set([...prev, ...dbFavToolIds, ...dbFavPostIds])));
           }
         }
 
@@ -877,27 +884,34 @@ export default function App() {
       : [...favorites, id];
     setFavorites(newFav);
 
-    // Синхронизируем инструмент с Supabase
-    if (id.startsWith('tool-')) {
-      const toolId = id.replace('tool-', '');
-      const tool = (allTools as any[]).find(t => t.id.toString() === toolId.toString());
+    const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(str);
+    const supabase = getClient();
 
-      const supabase = getClient();
-      if (supabase && tool) {
-        const isFav = !isCurrentlyFav;
+    if (supabase) {
+      if (isCurrentlyFav) {
+        // Удаляем из таблицы favorites
+        await supabase.from('favorites').delete().eq('item_id', id);
 
-        // Если это "пустой" инструмент (заглушка), сначала обогащаем его
-        if (tool.description?.includes('был упомянут')) {
-          await enrichToolData(tool.name);
+        // Обновляем колонку для обратной совместимости
+        if (id.startsWith('tool-')) {
+          const toolId = id.replace('tool-', '');
+          if (isUUID(toolId)) await supabase.from('tools').update({ is_favorite: false }).eq('id', toolId);
+        } else if (id.startsWith('post-')) {
+          // Для постов тоже обновляем флаг, если это UUID
+          // Примечание: post-id может быть цифровым из-за Date.now()
         }
+      } else {
+        // Добавляем в таблицу favorites
+        await supabase.from('favorites').upsert({
+          user_id: 'public_user',
+          item_id: id,
+          item_type: id.startsWith('tool-') ? 'tool' : 'post'
+        });
 
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(toolId);
-        if (isUUID) {
-          await supabase.from('tools').update({ is_favorite: isFav }).eq('id', toolId);
-        } else {
-          // Если динамический — он уже должен был создаться в enrichToolData
-          // Но на всякий случай просто сохраняем в список в localStorage (через hook)
-          console.log('Syncing favorite for tool:', tool.name);
+        // Обновляем колонку для обратной совместимости
+        if (id.startsWith('tool-')) {
+          const toolId = id.replace('tool-', '');
+          if (isUUID(toolId)) await supabase.from('tools').update({ is_favorite: true }).eq('id', toolId);
         }
       }
     }
@@ -2356,14 +2370,26 @@ export default function App() {
                       // Сохраняем канал в БД
                       const supabase = getClient();
                       if (supabase) {
-                        const { data: insertedChannel, error: channelError } = await supabase.from('channels').upsert([{
-                          name: newChannel.name,
-                          source: newChannel.source,
-                          url: newChannel.url
-                        }], { onConflict: 'url' }).select().single();
+                        try {
+                          const { data: insertedChannel, error: channelError } = await supabase.from('channels').upsert([{
+                            name: newChannel.name,
+                            source: newChannel.source,
+                            url: newChannel.url
+                          }], { onConflict: 'url' }).select().single();
 
-                        if (!channelError && insertedChannel) {
-                          newChannel.id = insertedChannel.id;
+                          if (channelError) {
+                            console.error('Error saving channel to Supabase:', channelError);
+                            // Если произошла ошибка "No index/unique constraint found", значит нужно выполнить SQL fix
+                            if (channelError.message.includes('unique constraint')) {
+                              setAddChannelError('Ошибка базы данных: отсутствуют уникальные правила для UPSERT. Пожалуйста, выполните скрипт supabase_fix.sql в консоли Supabase.');
+                              setIsLoadingChannel(false);
+                              return;
+                            }
+                          } else if (insertedChannel) {
+                            newChannel.id = insertedChannel.id;
+                          }
+                        } catch (e) {
+                          console.error('Exception during channel upsert:', e);
                         }
                       }
 
