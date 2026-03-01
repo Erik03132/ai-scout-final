@@ -400,6 +400,8 @@ const categories = ["All", "AI", "Deployment", "Database", "Design", "ORM", "CSS
 export default function App() {
   const [activeTab, setActiveTab] = useState<'feed' | 'insights' | 'archive' | 'favorites'>('feed');
   const [searchQuery, setSearchQuery] = useState('');
+  // favorites: список ID постов/инструментов в избранном (string[]) — будем хранить в localStorage для инструментов
+  // но для постов — будем писать в Supabase через поле is_favorite
   const [favorites, setFavorites] = useLocalStorage<string[]>('ai-scout-favorites', []);
   const [isSearching, setIsSearching] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
@@ -413,7 +415,6 @@ export default function App() {
   const [tools, setTools] = useState<typeof mockTools>(mockTools);
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
-  const [archivedPostIds, setArchivedPostIds] = useLocalStorage<number[]>('ai-scout-archived-posts', []);
   const [dismissedPostIds, setDismissedPostIds] = useLocalStorage<number[]>('ai-scout-dismissed-posts', []);
   const [showFilters, setShowFilters] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
@@ -496,6 +497,7 @@ export default function App() {
         if (postsResult.data && postsResult.data.length > 0) {
           const formattedPosts = postsResult.data.map(p => ({
             id: typeof p.id === 'string' ? parseInt(p.id.slice(0, 8), 16) : p.id,
+            supabaseId: p.id, // сохраняем оригинальный UUID для операций с БД
             title: p.title,
             summary: p.summary || '',
             source: p.source,
@@ -507,8 +509,15 @@ export default function App() {
             image: p.image || '',
             url: p.url,
             detailedUsage: p.detailed_usage || '',
-            usageTips: p.usage_tips || []
+            usageTips: p.usage_tips || [],
+            isFavorite: p.is_favorite || false,
+            isArchived: p.is_archived || false,
           }));
+          // Восстанавливаем favorites из постов Supabase
+          const dbFavoriteIds = formattedPosts.filter(p => p.isFavorite).map(p => `post-${p.id}`);
+          if (dbFavoriteIds.length > 0) {
+            setFavorites(prev => Array.from(new Set([...prev, ...dbFavoriteIds])));
+          }
           setPosts(formattedPosts);
         }
 
@@ -727,10 +736,29 @@ export default function App() {
     setIsSearching(false);
   };
 
-  const toggleFavorite = (id: string) => {
+  // Хелпер получения supabaseId поста по числовому id
+  const getSupabasePostId = (postId: number): string | undefined => {
+    const post = posts.find(p => p.id === postId);
+    return (post as any)?.supabaseId;
+  };
+
+  const toggleFavorite = async (id: string) => {
+    // Обновляем localStorage (для инструментов и быстрого UI)
     setFavorites(prev =>
       prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
     );
+    // Если это пост — синхронизируем с Supabase
+    if (id.startsWith('post-')) {
+      const numericId = parseInt(id.replace('post-', ''));
+      const supabaseId = getSupabasePostId(numericId);
+      if (supabaseId) {
+        const supabase = getClient();
+        const isFav = !favorites.includes(id); // новое значение (после toggle)
+        if (supabase) {
+          await supabase.from('posts').update({ is_favorite: isFav }).eq('id', supabaseId);
+        }
+      }
+    }
   };
 
 
@@ -753,9 +781,16 @@ export default function App() {
   }, [posts]);
 
   // Архивирование и удаление
-  const archivePost = (postId: number) => {
-    setArchivedPostIds(prev => prev.includes(postId) ? prev : [...prev, postId]);
+  const archivePost = async (postId: number) => {
+    // Обновляем локальный стейт немедленно (оптимистичный UI)
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: true } : p));
     setSelectedPost(null);
+    // Синхронизируем с Supabase
+    const supabaseId = getSupabasePostId(postId);
+    if (supabaseId) {
+      const supabase = getClient();
+      if (supabase) await supabase.from('posts').update({ is_archived: true }).eq('id', supabaseId);
+    }
   };
 
   const dismissPost = (postId: number) => {
@@ -763,24 +798,31 @@ export default function App() {
     setSelectedPost(null);
   };
 
-  const removeFromArchive = (postId: number) => {
-    setArchivedPostIds(prev => prev.filter(id => id !== postId));
+  const removeFromArchive = async (postId: number) => {
+    // Обновляем локальный стейт
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: false } : p));
+    // Синхронизируем с Supabase
+    const supabaseId = getSupabasePostId(postId);
+    if (supabaseId) {
+      const supabase = getClient();
+      if (supabase) await supabase.from('posts').update({ is_archived: false }).eq('id', supabaseId);
+    }
   };
 
-  // Посты для архива и ленты
-  const archivedPosts = useMemo(() => posts.filter(p => archivedPostIds.includes(p.id)), [posts, archivedPostIds]);
+  // Посты для архива — читаем поле isArchived из Supabase
+  const archivedPosts = useMemo(() => posts.filter(p => (p as any).isArchived), [posts]);
 
   // Отфильтрованные посты (без удалённых и архивированных)
   const filteredPosts = useMemo(() => {
     return posts.filter(p => {
       if (dismissedPostIds.includes(p.id)) return false;
-      if (archivedPostIds.includes(p.id)) return false;
+      if ((p as any).isArchived) return false;
       if (filterSource !== 'all' && p.source !== filterSource) return false;
       if (filterTag && !(p.tags || []).includes(filterTag)) return false;
       if (filterMention && !(p.mentions || []).map(m => m.toLowerCase()).includes(filterMention.toLowerCase())) return false;
       return true;
     });
-  }, [posts, filterSource, filterTag, filterMention, dismissedPostIds, archivedPostIds]);
+  }, [posts, filterSource, filterTag, filterMention, dismissedPostIds]);
 
   const activeFiltersCount = [filterSource !== 'all', filterTag, filterMention].filter(Boolean).length;
 
@@ -1913,12 +1955,12 @@ export default function App() {
                         title="Сохранить в архив"
                         className={cn(
                           "h-14 px-5 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all border",
-                          archivedPostIds.includes(selectedPost.id)
+                          (selectedPost as any).isArchived
                             ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                             : "bg-slate-800 border-slate-700 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-slate-400 hover:text-emerald-400"
                         )}
                       >
-                        {archivedPostIds.includes(selectedPost.id) ? '✓ В архиве' : '📁 В архив'}
+                        {(selectedPost as any).isArchived ? '✓ В архиве' : '📁 В архив'}
                       </button>
                       <a
                         href={selectedPost.url}
