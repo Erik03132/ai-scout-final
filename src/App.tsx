@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers } from 'lucide-react';
+import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers, Loader2 } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
@@ -420,7 +420,6 @@ export default function App() {
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [filterMention, setFilterMention] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<'all' | 'YouTube' | 'Telegram'>('all');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   useEffect(() => {
     setCachedDynamicTools(prev => {
@@ -831,7 +830,12 @@ export default function App() {
         if (exists) {
           return prev.map(t => t.name.toLowerCase() === toolName.toLowerCase() ? finalTool : t);
         }
-        return [...prev, finalTool];
+        return [...prev, finalTool as any];
+      });
+
+      // Также обновляем динамический кэш, если он там был
+      setCachedDynamicTools(prev => {
+        return prev.map(t => t.name.toLowerCase() === toolName.toLowerCase() ? finalTool as any : t);
       });
 
       return finalTool;
@@ -939,21 +943,37 @@ export default function App() {
 
   const activeFiltersCount = [filterSource !== 'all', filterTag, filterMention].filter(Boolean).length;
 
-  // Фильтрация инструментов для Archive tab
-  const filteredTools = useMemo(() =>
-    allTools.filter(tool => selectedCategory === 'All' || tool.category === selectedCategory),
-    [allTools, selectedCategory]
-  );
   // При выборе инструмента — если он пустой, запускаем обогащение
   useEffect(() => {
-    if (selectedTool && selectedTool.description?.includes('был упомянут') && !isEnriching) {
+    const isPlaceholder = selectedTool && (
+      selectedTool.description?.includes('был упомянут') ||
+      selectedTool.description?.includes('собираются нашей системой')
+    );
+
+    if (isPlaceholder && !isEnriching) {
+      console.log('Triggering enrichment for placeholder tool:', selectedTool.name);
       setIsEnriching(true);
       enrichToolData(selectedTool.name).then((enriched) => {
         if (enriched) setSelectedTool(enriched);
         setIsEnriching(false);
       });
     }
-  }, [selectedTool, isEnriching]);
+  }, [selectedTool?.name, isEnriching]);
+
+  // АВТО-ОБОГАЩЕНИЕ всех избранных инструментов
+  useEffect(() => {
+    const placeholders = favoriteTools.filter(t =>
+      t.description?.includes('был упомянут') ||
+      t.description?.includes('собираются нашей системой')
+    );
+
+    if (placeholders.length > 0 && !isEnriching) {
+      const first = placeholders[0];
+      console.log('Auto-enriching favorite:', first.name);
+      setIsEnriching(true);
+      enrichToolData(first.name).finally(() => setIsEnriching(false));
+    }
+  }, [favoriteTools, isEnriching]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white selection:bg-cyan-500/30">
@@ -1592,8 +1612,12 @@ export default function App() {
                       <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-cyan-500/20 transition-all"></div>
 
                       <div className="flex items-start justify-between mb-6 relative">
-                        <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 rounded-3xl flex items-center justify-center text-4xl shadow-xl group-hover:scale-110 transition-transform duration-500">
-                          {tool.icon}
+                        <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 rounded-3xl flex items-center justify-center text-4xl shadow-xl group-hover:scale-110 transition-transform duration-500 relative">
+                          {isEnriching && selectedTool?.id === tool.id ? (
+                            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 rounded-3xl">
+                              <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+                            </div>
+                          ) : tool.icon}
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleFavorite(`tool-${tool.id}`); }}
