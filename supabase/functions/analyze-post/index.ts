@@ -51,32 +51,30 @@ serve(async (req) => {
 
             // Если есть Gemini API - используем AI
             if (geminiApiKey) {
-                const prompt = `
-Ты — профессиональный ИИ-аналитик и технологический редактор. Ознакомься с предоставленным контентом (описание видео YouTube, статья или пост).
-Твоя задача — составить МАКСИМАЛЬНО ИНФОРМАТИВНЫЙ анализ на РУССКОМ языке.
-Правила:
-1. ИГНОРИРУЙ ссылки, промокоды и призывы подписаться.
-2. Поле "titleRu" — ПЕРЕВЕДИ заголовок на русский. Если он уже на русском — оставь как есть.
-5. В поле "mentions" — извлеки АБСОЛЮТНО ВСЕ названия софта, проектов, конкретных ИИ-моделей или нейросетей (Figma, Spline, Midjourney, Canva, Notion, ChatGPT, Vercel и т.д.). 
-СТРОГО ИГНОРИРУЙ: 
-- языки программирования и фреймворки (Python, React, Go и т.д.)
-- общие термины, технологии и концепции (AUTOENCODER, NEURAL NETWORK, VAE, LLM, RAG, API, Database и т.д.).
-6. Верни ТОЛЬКО JSON и ничего больше (без маркдаун-оберток вроде \`\`\`json).
+                const prompt = `Ты — элитный ИИ-аналитик. Твоя цель: трансформировать сырой контент в идеальный структурированный отчет СТРОГО НА РУССКОМ ЯЗЫКЕ.
+
+ИНСТРУКЦИИ ПО ЯЗЫКУ (КРИТИЧЕСКИ ВАЖНО):
+1. ПЕРЕВЕДИ заголовок контента на русский язык в поле "titleRu". Это ОБЯЗАТЕЛЬНО.
+2. Весь текст в полях "summary", "detailedUsage" и "usageTips" должен быть ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.
+3. Используй профессиональный, но доступный стиль.
+
+СТРУКТУРА ОТВЕТА (JSON):
 {
-  "titleRu": "Перевод заголовка",
-  "summary": "Краткое саммари (2-3 пред) для превью.",
+  "titleRu": "ПЕРЕВЕДЕННЫЙ ЗАГОЛОВОК",
+  "summary": "КРАТКАЯ СУТЬ НА РУССКОМ",
   "tags": ["тег1", "тег2"],
-  "mentions": ["Spline", "Figma"],
-  "detailedUsage": "ИСЧЕРПЫВАЮЩЕЕ саммари всего ролика/поста. Детальный разбор всех пунктов содержания, главных идей и выводов. Не ограничивай себя в объеме.",
+  "mentions": ["Сервис1", "Сервис2"],
+  "detailedUsage": "ПОДРОБНЫЙ РУССКИЙ ТЕКСТ. Минимум 500 слов. Разбери всё до мелочей.",
   "usageTips": ["совет 1", "совет 2"]
 }
 
+Контент для анализа:
 Заголовок: ${post.title}
 Описание: ${post.summary}
-Контент: ${post.content || post.summary}
+Полный текст: ${post.content || post.summary}
 `;
 
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
 
                 const response = await fetch(geminiUrl, {
                     method: "POST",
@@ -84,8 +82,9 @@ serve(async (req) => {
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: prompt }] }],
                         generationConfig: {
-                            temperature: 0.4,
-                            maxOutputTokens: 2000,
+                            temperature: 0.3,
+                            maxOutputTokens: 3000,
+                            responseMimeType: "application/json"
                         }
                     })
                 });

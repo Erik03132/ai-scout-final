@@ -138,6 +138,8 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
  * Вызов OpenAI API
  */
 async function callOpenAI(content: string): Promise<SummarizeResponse> {
+    if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is missing');
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -151,21 +153,10 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
                     role: 'system',
                     content: `Ты — элитный ИИ-аналитик. Твоя цель: трансформировать сырой контент в идеальный структурированный отчет СТРОГО НА РУССКОМ ЯЗЫКЕ.
 
-ИНСТРУКЦИИ ПО ЯЗЫКУ (КРИТИЧЕСКИ ВАЖНО):
-1. ПЕРЕВЕДИ заголовок контента на русский язык в поле "titleRu". Это ОБЯЗАТЕЛЬНО.
+ИНСТРУКЦИИ (КРИТИЧЕСКИ ВАЖНО):
+1. ПЕРЕВЕДИ заголовок контента на русский язык в поле "titleRu".
 2. Весь текст в полях "summary", "detailedUsage" и "usageTips" должен быть ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.
-3. Используй профессиональный, но доступный стиль.
-
-СТРУКТУРА ОТВЕТА (JSON):
-- "titleRu": Переведенный заголовок.
-- "summary": Краткая суть (2-3 предложения).
-- "tags": Массив тематических тегов (на русском).
-- "mentions": Массив названий ИИ-сервисов (латиницей, как в оригинале).
-- "detailedUsage": Глубокий анализ. Минимум 5-7 содержательных абзацев. Расскажи обо ВСЕМ важном.
-- "usageTips": 3-5 конкретных совета по применению.
-
-ПРАВИЛА ОТБОРА МЕНШЕНОВ:
-Извлекай ТОЛЬКО названия ИИ-приложений (например, Midjourney, Jasper). Игнорируй языки программирования (Python, React), общие термины (API, LLM) и должности (Backend Developer).
+3. В "detailedUsage" напиши МИНИМУМ 500 слов. Разбери всё до мелочей, все этапы и ключевые мысли. Это должен быть полноценный экспертный разбор.
 
 ВЕРНИ ТОЛЬКО ЧИСТЫЙ JSON.`
                 },
@@ -181,7 +172,7 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
 
     if (!response.ok) {
         const err = await response.text();
-        throw new Error(`OpenAI error ${response.status}: ${err}`);
+        throw new Error(`OpenAI error ${response.status}: ${err.substring(0, 200)}`);
     }
 
     const data = await response.json();
@@ -193,8 +184,10 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
  * Вызов Gemini API
  */
 async function callGemini(content: string, model: string): Promise<SummarizeResponse> {
+    if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing');
+
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: {
@@ -203,24 +196,18 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `Ты — элитный ИИ-аналитик. Твоя цель: трансформировать сырой контент в идеальный структурированный отчет СТРОГО НА РУССКОМ ЯЗЫКЕ.
+                        text: `Ты — элитный ИИ-аналитик. Составь МАКСИМАЛЬНО подробный и глубокий анализ контента СТРОГО НА РУССКОМ ЯЗЫКЕ.
 
-ИНСТРУКЦИИ ПО ЯЗЫКУ (КРИТИЧЕСКИ ВАЖНО):
-1. ПЕРЕВЕДИ заголовок контента на русский язык в поле "titleRu". Это ОБЯЗАТЕЛЬНО.
-2. Весь текст в полях "summary", "detailedUsage" и "usageTips" должен быть ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.
-3. Используй профессиональный, но доступный стиль.
+ОБЯЗАТЕЛЬНЫЕ ПОЛЯ (JSON):
+- titleRu: Перевод заголовка на русский.
+- summary: Краткая суть (3 предложения).
+- detailedUsage: ГИГАНТСКИЙ развернутый текст на ПОЛ-СТРАНИЦЫ (минимум 10 абзацев). Расскажи подробно о каждом пункте.
+- mentions: Список ИИ-тулзов.
+- usageTips: 5 советов по применению.
 
-СТРУКТУРА ОТВЕТА (JSON):
-{
-  "titleRu": "ПЕРЕВЕДЕННЫЙ ЗАГОЛОВОК",
-  "summary": "КРАТКАЯ СУТЬ НА РУССКОМ",
-  "tags": ["тег1", "тег2"],
-  "mentions": ["Сервис1", "Сервис2"],
-  "detailedUsage": "ПОДРОБНЫЙ РУССКИЙ ТЕКСТ. Минимум 500 слов. Разбери всё до мелочей.",
-  "usageTips": ["совет 1", "совет 2"]
-}
+ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ. ВЕРНИ ТОЛЬКО JSON.
 
-Контент для анализа: ${content.substring(0, 10000)}`
+Контент: ${content.substring(0, 10000)}`
                     }]
                 }],
                 generationConfig: {
@@ -234,7 +221,7 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Gemini API error ${response.status}: ${errorText}`);
+        throw new Error(`Gemini API error ${response.status}: ${errorText.substring(0, 200)}`);
     }
 
     const data = await response.json();
@@ -248,13 +235,15 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
 function parseLLMResponse(text: string): SummarizeResponse {
     try {
         let jsonStr = text;
-        // Извлекаем JSON из текста с помощью регулярного выражения
         const match = text.match(/\{[\s\S]*\}/);
-        if (match) {
-            jsonStr = match[0];
-        }
+        if (match) jsonStr = match[0];
 
         const parsed = JSON.parse(jsonStr.trim());
+
+        // Базовая валидация полей
+        if (!parsed.titleRu || !parsed.detailedUsage) {
+            console.warn("LLM response missing vital fields, retrying fallback values");
+        }
 
         return {
             titleRu: parsed.titleRu || '',
@@ -264,7 +253,8 @@ function parseLLMResponse(text: string): SummarizeResponse {
             detailedUsage: parsed.detailedUsage || '',
             usageTips: Array.isArray(parsed.usageTips) ? parsed.usageTips : []
         };
-    } catch {
+    } catch (e) {
+        console.error("JSON parse error:", e, "Raw text:", text.substring(0, 200));
         throw new Error('Failed to parse LLM response');
     }
 }
@@ -273,49 +263,31 @@ function parseLLMResponse(text: string): SummarizeResponse {
  * Fallback генерация саммари без LLM
  */
 function generateFallbackSummary(content: string): SummarizeResponse {
-    // Извлекаем упоминания известных инструментов
-    const mentions = KNOWN_TOOLS.filter(tool =>
-        content.toLowerCase().includes(tool.toLowerCase())
-    ).slice(0, 5);
+    const tags = KNOWN_TAGS.filter(tag => content.toLowerCase().includes(tag.toLowerCase())).slice(0, 3);
+    const mentions = KNOWN_TOOLS.filter(tool => content.toLowerCase().includes(tool.toLowerCase())).slice(0, 5);
 
-    // Извлекаем теги
-    const tags = KNOWN_TAGS.filter(tag =>
-        content.toLowerCase().includes(tag.toLowerCase())
-    ).slice(0, 3);
-
-    // Создаём саммари: фильтруем строки с ссылками и слишком короткие
-    const sentences = content
-        .split(/[.!?]+/)
-        .map(s => s.trim())
-        .filter(s => {
-            // Пропускаем строки с ссылками
-            if (/https?:\/\/|bit\.ly|t\.me/i.test(s)) return false;
-            // Пропускаем слишком короткие строки
-            if (s.length < 30) return false;
-            return true;
-        });
-
-    // Пытаемся вытащить заголовок из формата "Заголовок: ...\n\nОписание: "
-    let title = '';
+    let rawTitle = 'Новый ИИ-проект';
     const titleMatch = content.match(/Заголовок:\s*(.*?)\n/);
-    if (titleMatch) title = titleMatch[1].trim();
-
-    // Берём первое нормальное предложение и обрезаем до 150 символов
-    let summary = title || sentences[0] || '';
-    if (summary.length > 200) {
-        summary = summary.substring(0, 200).trim() + '...';
-    }
+    if (titleMatch) rawTitle = titleMatch[1].trim();
 
     return {
-        titleRu: title || '',
-        summary: summary || 'Контент недоступен для саммари',
-        tags: tags.length > 0 ? tags : ['Tech'],
+        titleRu: rawTitle,
+        summary: 'Краткое описание временно недоступно из-за ошибки лимитов ИИ.',
+        tags: tags.length > 0 ? tags : ['AI'],
         mentions,
-        detailedUsage: '⚠️ ИИ-анализ временно недоступен (вероятно, не настроен API-ключ Gemini на Vercel или превышен лимит).\n\nПока вы можете посмотреть оригинальный ролик. В нем, скорее всего, упоминаются следующие инструменты: ' + (mentions.length > 0 ? mentions.join(', ') : 'различные технологии.'),
-        usageTips: [
-            'Убедитесь, что GEMINI_API_KEY добавлен в панель Vercel',
-            'Проверьте лимиты вашего ИИ-провайдера',
-            'Следите за обновлениями системы'
-        ]
+        detailedUsage: `⚠️ ОШИБКА АНАЛИЗА: Мы не смогли подключиться к нейросети (Gemini/OpenAI).
+        
+Это может произойти, если:
+1. Вы не добавили ключи GEMINI_API_KEY или OPENAI_API_KEY в переменные окружения Vercel.
+2. У вашего аккаунта закончились бесплатные лимиты (Google или OpenAI).
+3. Произошел сбой в работе API.
+
+СТАТУС КЛЮЧЕЙ (ДЛЯ ВАС):
+- Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
+- OpenAI API Key: ${process.env.OPENAI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
+
+ИНСТРУКЦИЯ:
+Зайдите в панель управления Vercel -> Settings -> Environment Variables. Добавьте эти ключи. Затем сделайте "Redeploy" в разделе Deployments.`,
+        usageTips: ["Проверьте ключи API", "Попробуйте позже", "Используйте OpenAI ключ как альтернативу"]
     };
 }

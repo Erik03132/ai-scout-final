@@ -661,17 +661,16 @@ export default function App() {
 
     // Fallback функция при ошибке API
     const getFallbackSummary = (_post: Partial<Post>) => {
-      const summary = content.substring(0, 250) || title || 'Описание отсутствует';
       return {
         titleRu: title,
-        summary: summary.length > 250 ? summary.substring(0, 247) + '...' : summary,
-        tags: ['Tech', 'AI'],
+        summary: content.substring(0, 200) || title || 'Контент недоступен',
+        tags: ['Tech'],
         mentions: [],
-        detailedUsage: '⚠️ ИИ-анализ на стороне сервера не удался. Пожалуйста, проверьте консоль или статус API ключей на Vercel.',
+        detailedUsage: '',
         usageTips: [
-          'Проверьте наличие GEMINI_API_KEY на Vercel',
-          'Убедитесь, что лимиты API не превышены',
-          'Попробуйте еще раз позже'
+          'Изучите официальную документацию',
+          'Попробуйте на практике',
+          'Следите за обновлениями'
         ]
       };
     };
@@ -1117,10 +1116,7 @@ export default function App() {
                         <span className="text-xs text-slate-500 ml-auto">{post.views} просмотров</span>
                       </div>
 
-                      <h3
-                        onClick={() => setSelectedPost(post)}
-                        className="font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors cursor-pointer"
-                      >
+                      <h3 className="font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors cursor-pointer">
                         {post.title}
                       </h3>
                       <p className="text-sm text-slate-400 line-clamp-2 mb-3">{post.summary}</p>
@@ -1504,12 +1500,7 @@ export default function App() {
                                 }
                               }} className="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-xl flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <h3
-                                  onClick={() => setSelectedPost(post)}
-                                  className="font-semibold text-white mb-1 cursor-pointer hover:text-cyan-400 transition-colors"
-                                >
-                                  {post.title}
-                                </h3>
+                                <h3 className="font-semibold text-white mb-1">{post.title}</h3>
                                 <p className="text-sm text-slate-400 line-clamp-1">{post.summary}</p>
                                 <div className="flex items-center gap-3 mt-2">
                                   <span className="text-xs text-slate-500">{post.channel}</span>
@@ -1544,6 +1535,10 @@ export default function App() {
         }
       </main >
 
+      {/* Floating Action Button */}
+      < button className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105 group" >
+        <Plus className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
+      </button >
 
       {/* Tool Detail Modal */}
       {
