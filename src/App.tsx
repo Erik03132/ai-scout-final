@@ -1886,10 +1886,10 @@ export default function App() {
                         {/* Features / Details */}
                         {tool.details && tool.details.length > 0 && (
                           <div className="space-y-2 mb-6">
-                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Key Features</p>
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Ключевые функции</p>
                             {tool.details.slice(0, 2).map((detail: any, idx: number) => (
-                              <div key={idx} className="flex items-center gap-2 text-slate-400 text-xs">
-                                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
+                              <div key={idx} className="flex items-center gap-2 text-slate-300 text-xs">
+                                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/50"></div>
                                 <span className="font-bold">{detail.title}</span>
                               </div>
                             ))}
@@ -1898,34 +1898,39 @@ export default function App() {
 
                         {/* Особенности / Плюсы */}
                         {tool.pros && tool.pros.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mb-6">
+                          <div className="flex flex-wrap gap-1.5 mb-6">
                             {tool.pros.slice(0, 3).map((pro, idx) => (
-                              <span key={idx} className="bg-emerald-500/5 text-emerald-400 px-2 py-1 rounded-lg text-[9px] font-black uppercase border border-emerald-500/10">
+                              <span key={idx} className="bg-sky-500/5 text-sky-400 px-2 py-1 rounded-lg text-[8px] font-black uppercase border border-sky-500/10">
                                 {pro}
                               </span>
                             ))}
                           </div>
                         )}
 
-                        <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                        <div className="flex items-center justify-between pt-6 border-t border-white/10 mt-auto">
                           <div className="flex flex-col">
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Min Tariff</p>
-                            <p className="text-xl font-black text-emerald-400 leading-none">{tool.minPrice}</p>
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Тариф</p>
+                            <p className={cn(
+                              "text-sm font-black tracking-tight",
+                              tool.minPrice?.includes('Нуждается') ? "text-slate-500 italic" : "text-cyan-400"
+                            )}>
+                              {tool.minPrice}
+                            </p>
                           </div>
                           <div className="flex gap-2">
                             <button
                               onClick={(e) => { e.stopPropagation(); enrichToolData(tool.id.toString(), tool.name); }}
                               className={cn(
-                                "h-10 px-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all shadow-lg",
+                                "h-9 px-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all",
                                 tool.description?.includes('собираются нашей системой')
-                                  ? "bg-cyan-500 text-black hover:bg-cyan-400"
-                                  : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white"
+                                  ? "bg-cyan-500 text-black hover:bg-cyan-400 shadow-lg shadow-cyan-500/20"
+                                  : "bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white border border-white/5"
                               )}
                               title={tool.description?.includes('собираются нашей системой') ? "Запустить исследование ИИ" : "Обновить данные через ИИ"}
                             >
                               {enrichingToolNames.includes(tool.name)
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <Zap size={14} />
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Zap size={12} />
                               }
                               {tool.description?.includes('собираются нашей системой') ? 'Исследовать' : 'Обновить'}
                             </button>
@@ -1935,20 +1940,15 @@ export default function App() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-10 h-10 bg-slate-700/50 text-slate-300 rounded-xl flex items-center justify-center border border-white/5 hover:bg-slate-700 hover:text-white transition-all shadow-lg"
+                                className="w-9 h-9 bg-slate-700/50 text-slate-300 rounded-xl flex items-center justify-center border border-white/5 hover:bg-slate-700 hover:text-white transition-all"
                                 title="Открыть сайт"
                               >
-                                <ExternalLink size={18} />
+                                <ExternalLink size={16} />
                               </a>
                             )}
-                            {tool.hasApi && (
-                              <div className="w-10 h-10 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/20 shadow-inner group-hover:bg-blue-500/20 transition-all" title="API Available">
-                                <Code size={18} />
-                              </div>
-                            )}
                             {tool.hasMcp && (
-                              <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-inner group-hover:bg-emerald-500/20 transition-all" title="MCP Server Support">
-                                <Terminal size={18} />
+                              <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-inner" title="Поддержка MCP">
+                                <Terminal size={16} />
                               </div>
                             )}
                           </div>
@@ -2076,11 +2076,16 @@ export default function App() {
                       </div>
 
                       <div className="bg-slate-800/40 border border-white/5 rounded-[1.5rem] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Минимальный тариф</p>
-                          <p className="text-3xl font-black text-cyan-400 tracking-tighter">{selectedTool.minPrice}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Минимальный тариф</p>
+                          <p className={cn(
+                            "text-2xl sm:text-3xl font-black tracking-tighter truncate",
+                            selectedTool.minPrice?.includes('Нуждается') ? "text-slate-500 italic text-xl" : "text-cyan-400"
+                          )}>
+                            {selectedTool.minPrice}
+                          </p>
                         </div>
-                        <button className="w-full sm:w-auto h-14 px-8 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-cyan-500/20 active:scale-95 flex items-center justify-center">
+                        <button className="w-full sm:w-auto h-14 px-8 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-cyan-500/20 active:scale-95 flex items-center justify-center flex-shrink-0">
                           Подписаться
                         </button>
                       </div>
