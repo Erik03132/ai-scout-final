@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     - hasApi: true/false.
     - hasMcp: true/false (Model Context Protocol).
     - features: 5-6 объектов [{"title": "Название", "description": "Суть"}].
-    - useCases: 3 объекта [{"title": "Кейс", "description": "Бизнес-применение", "complexity": "Simple/Medium/Hard"}].
+    - useCases: 3 объекта [{"title": "Кейс", "description": "Бизнес-применение", "complexity": "Simple/Medium/Hard", "url": "Прямая ссылка на реальную статью, видео или пост с этим кейсом"}].
     - docsUrl: Ссылка на документацию или оф. сайт.
     - pros: Список из 3-4 коротких плюсов.
 

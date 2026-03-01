@@ -2116,8 +2116,11 @@ export default function App() {
                           <div
                             key={i}
                             onClick={() => setSelectedUseCase({ tool: selectedTool.name, case: useCase })}
-                            className="group flex flex-col p-5 bg-gradient-to-r from-slate-800/50 to-slate-800/20 rounded-2xl border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer"
+                            className="group flex flex-col p-5 bg-gradient-to-r from-slate-800/50 to-slate-800/20 rounded-2xl border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer relative overflow-hidden"
                           >
+                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ExternalLink size={14} className="text-amber-500" />
+                            </div>
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-4">
                                 <div className="w-2 h-2 rounded-full bg-amber-500/50 group-hover:bg-amber-400 transition-colors" />
@@ -2450,14 +2453,15 @@ export default function App() {
                         <p className="text-white font-black uppercase text-sm">{selectedUseCase.tool}</p>
                       </div>
                     </div>
-                    <a
-                      href={allTools.find(t => t.name === selectedUseCase.tool)?.docsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-12 px-6 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center"
+                    <button
+                      onClick={() => {
+                        const url = selectedUseCase.case.url || `https://www.google.com/search?q=${encodeURIComponent(selectedUseCase.tool + ' ' + selectedUseCase.case.title + ' real world example case study')}`;
+                        window.open(url, '_blank');
+                      }}
+                      className="h-12 px-6 bg-white hover:bg-slate-200 text-black font-black uppercase text-[10px] tracking-widest rounded-xl transition-all shadow-lg flex items-center gap-2 group/btn"
                     >
-                      Открыть документацию
-                    </a>
+                      Смотреть оригинал <ExternalLink size={14} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                    </button>
                   </div>
                 </div>
               </div>
