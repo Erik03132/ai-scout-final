@@ -24,8 +24,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         5. 3 features. 
         Output clean JSON in Russian.`;
 
-        // Use standard v1 for stability, or v1beta if v1 fails.
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        // Using standard v1 for stability with gemini-1.5-flash
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

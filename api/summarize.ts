@@ -197,9 +197,9 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
 async function callGemini(content: string, model: string): Promise<SummarizeResponse> {
     if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing');
 
-    // Переключаемся на v1beta, так как JSON mode там более стабилен
+    // Switching to v1 for stability
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: {
@@ -224,8 +224,7 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
                 }],
                 generationConfig: {
                     temperature: 0.3,
-                    maxOutputTokens: 3000,
-                    responseMimeType: "application/json"
+                    maxOutputTokens: 3000
                 }
             })
         }
