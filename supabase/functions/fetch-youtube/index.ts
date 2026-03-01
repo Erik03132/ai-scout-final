@@ -45,61 +45,87 @@ serve(async (req) => {
 
         // Для каждого канала получаем последние видео
         for (const channel of channels || []) {
-            // Получаем channel ID из URL (упрощенно)
-            const channelId = extractChannelId(channel.url);
+            try {
+                // Извлекаем идентификатор канала
+                let channelId = "";
+                const url = channel.url;
 
-            if (!channelId) continue;
-
-            const youtubeUrl = `https://www.googleapis.com/youtube/v3/search?key=${youtubeApiKey}&channelId=${channelId}&part=snippet,id&order=date&maxResults=5`;
-
-            const response = await fetch(youtubeUrl);
-            const data = await response.json() as { items: YouTubeVideo[] };
-
-            for (const video of data.items || []) {
-                if (!video.id?.videoId) continue;
-
-                const videoUrl = `https://www.youtube.com/watch?v=${video.id.videoId}`;
-
-                // Проверяем, есть ли уже этот пост
-                const { data: existing } = await supabase
-                    .from("posts")
-                    .select("id")
-                    .eq("url", videoUrl)
-                    .single();
-
-                if (existing) continue;
-
-                // Создаем новый пост. Сохраняем ПОЛНОЕ описание в поле content для анализа нейросетью.
-                // В поле summary кладем обрезку только для совместимости, но анализ будет по content.
-                const post = {
-                    title: video.snippet.title,
-                    summary: video.snippet.description?.substring(0, 500) || "",
-                    content: video.snippet.description || "",
-                    source: "YouTube",
-                    channel: video.snippet.channelTitle,
-                    date: video.snippet.publishedAt,
-                    tags: extractTags(video.snippet.title + " " + video.snippet.description),
-                    mentions: [], // Будет заполнено AI
-                    views: "0",
-                    image: video.snippet.thumbnails?.high?.url || "",
-                    url: videoUrl,
-                    is_analyzed: false,
-                };
-
-                const { error: insertError } = await supabase
-                    .from("posts")
-                    .insert(post);
-
-                if (!insertError) {
-                    newPosts.push(post);
+                if (url.includes("/channel/")) {
+                    channelId = url.split("/channel/")[1]?.split("/")[0] || url.split("/channel/")[1];
+                } else {
+                    // Если это handle (@username) или просто имя - получаем channelId через API
+                    const handle = url.includes("@") ? url.split("@")[1]?.split("/")[0] : url.split("/").pop();
+                    if (handle) {
+                        const idUrl = `https://www.googleapis.com/youtube/v3/channels?key=${youtubeApiKey}&forHandle=${handle}&part=id,contentDetails`;
+                        const idRes = await fetch(idUrl);
+                        const idData = await idRes.json();
+                        if (idData.items?.[0]) {
+                            channelId = idData.items[0].id;
+                        }
+                    }
                 }
-            }
 
-            // Обновляем время последнего fetch
-            await supabase
-                .from("channels")
-                .update({ last_fetched_at: new Date().toISOString() })
-                .eq("id", channel.id);
+                if (!channelId) {
+                    console.error(`Could not resolve channel ID for: ${channel.url}`);
+                    continue;
+                }
+
+                // 1. Получаем uploads playlist ID (если его еще нет в БД, но пока берем через квоту - 1 unit)
+                const channelInfoUrl = `https://www.googleapis.com/youtube/v3/channels?key=${youtubeApiKey}&id=${channelId}&part=contentDetails`;
+                const channelRes = await fetch(channelInfoUrl);
+                const channelData = await channelRes.json();
+                const uploadsPlaylistId = channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+                if (!uploadsPlaylistId) continue;
+
+                // 2. Получаем последние видео из плейлиста (1 unit)
+                // Это В 100 РАЗ ДЕШЕВЛЕ чем search (100 units)
+                const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?key=${youtubeApiKey}&playlistId=${uploadsPlaylistId}&part=snippet,contentDetails&maxResults=3`;
+                const playlistRes = await fetch(playlistUrl);
+                const playlistData = await playlistRes.json();
+
+                for (const item of playlistData.items || []) {
+                    const videoId = item.contentDetails.videoId;
+                    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+                    // Проверяем существование
+                    const { data: existing } = await supabase
+                        .from("posts")
+                        .select("id")
+                        .eq("url", videoUrl)
+                        .maybeSingle();
+
+                    if (existing) continue;
+
+                    // Создаем пост
+                    const post = {
+                        title: item.snippet.title,
+                        summary: item.snippet.description?.substring(0, 500) || "",
+                        content: item.snippet.description || "",
+                        source: "YouTube",
+                        channel: item.snippet.channelTitle,
+                        date: item.snippet.publishedAt,
+                        tags: extractTags(item.snippet.title + " " + item.snippet.description),
+                        mentions: [],
+                        views: "0",
+                        image: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || "",
+                        url: videoUrl,
+                        is_analyzed: false,
+                    };
+
+                    const { error: insertError } = await supabase.from("posts").insert(post);
+                    if (!insertError) newPosts.push(post);
+                }
+
+                // Обновляем время (1 unit квоты на весь цикл канала)
+                await supabase.from("channels").update({ last_fetched_at: new Date().toISOString() }).eq("id", channel.id);
+
+                // Небольшая задержка чтобы не спамить
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+            } catch (err) {
+                console.error(`Error processing channel ${channel.name}:`, err);
+            }
         }
 
         return new Response(

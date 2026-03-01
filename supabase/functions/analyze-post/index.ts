@@ -24,7 +24,7 @@ serve(async (req) => {
             .from("posts")
             .select("*")
             .eq("is_analyzed", false)
-            .limit(5);
+            .limit(20);
 
         if (postsError) throw postsError;
 
