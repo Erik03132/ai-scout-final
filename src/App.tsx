@@ -492,26 +492,57 @@ export default function App() {
       if (!supabase) return;
 
       try {
-        // Параллельные запросы вместо последовательных для оптимизации загрузки
-        const [toolsResult, postsResult, channelsResult, detailsResult] = await Promise.all([
-          supabase.from('tools').select('*').order('rating', { ascending: false }),
-          supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50),
-          supabase.from('channels').select('*').order('created_at', { ascending: false }),
-          supabase.from('tool_details').select('*')
+        // Выполняем запросы независимо, чтобы ошибка в одном не блокировала остальные
+        const fetchTools = async () => {
+          try {
+            const { data } = await supabase.from('tools').select('*').order('rating', { ascending: false });
+            if (data && data.length > 0) return data;
+          } catch (e) { console.error('Error fetching tools:', e); }
+          return null;
+        };
+
+        const fetchPosts = async () => {
+          try {
+            const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
+            if (data && data.length > 0) return data;
+          } catch (e) { console.error('Error fetching posts:', e); }
+          return null;
+        };
+
+        const fetchChannels = async () => {
+          try {
+            const { data } = await supabase.from('channels').select('*').order('created_at', { ascending: false });
+            if (data && data.length > 0) return data;
+          } catch (e) { console.error('Error fetching channels:', e); }
+          return null;
+        };
+
+        const fetchDetails = async () => {
+          try {
+            const { data } = await supabase.from('tool_details').select('*');
+            return data || [];
+          } catch (e) { console.error('Error fetching details:', e); return []; }
+        };
+
+        const [toolsData, postsData, channelsData, detailsData] = await Promise.all([
+          fetchTools(),
+          fetchPosts(),
+          fetchChannels(),
+          fetchDetails()
         ]);
 
-        // Группируем детали по ID инструмента
+        // Группируем детали
         const detailsByTool: Record<string, any[]> = {};
-        if (detailsResult.data) {
-          detailsResult.data.forEach(d => {
+        if (detailsData) {
+          detailsData.forEach(d => {
             if (!detailsByTool[d.tool_id]) detailsByTool[d.tool_id] = [];
             detailsByTool[d.tool_id].push(d);
           });
         }
 
-        // Обрабатываем инструменты
-        if (toolsResult.data && toolsResult.data.length > 0) {
-          const formattedTools = toolsResult.data.map(t => ({
+        // Инструменты
+        if (toolsData) {
+          const formattedTools = toolsData.map(t => ({
             id: t.id,
             name: t.name,
             category: t.category,
@@ -520,7 +551,7 @@ export default function App() {
             rating: parseFloat(t.rating) || 0,
             dailyCredits: t.daily_credits,
             monthlyCredits: t.monthly_credits,
-            minPrice: t.min_price,
+            minPrice: String(t.min_price || ''), // Превращаем в строку для безопасности
             hasApi: t.has_api,
             hasMcp: t.has_mcp,
             details: detailsByTool[t.id] || [],
@@ -530,25 +561,11 @@ export default function App() {
           setTools(formattedTools);
         }
 
-        // Восстанавливаем favorites из отдельной таблицы (ЕСЛИ ОНИ ТАМ ЕСТЬ)
-        const { data: favoritesResult } = await supabase.from('favorites').select('item_id');
-        if (favoritesResult && favoritesResult.length > 0) {
-          const dbFavIds = favoritesResult.map(f => f.item_id);
-          setFavorites(prev => Array.from(new Set([...prev, ...dbFavIds])));
-        } else {
-          // Fallback на колонки is_favorite (для совместимости)
-          const dbFavToolIds = toolsResult.data?.filter(t => t.is_favorite).map(t => `tool-${t.id}`) || [];
-          const dbFavPostIds = postsResult.data?.filter(p => p.is_favorite).map(p => `post-${p.id}`) || [];
-          if (dbFavToolIds.length > 0 || dbFavPostIds.length > 0) {
-            setFavorites(prev => Array.from(new Set([...prev, ...dbFavToolIds, ...dbFavPostIds])));
-          }
-        }
-
-        // Обрабатываем посты
-        if (postsResult.data && postsResult.data.length > 0) {
-          const formattedPosts = postsResult.data.map(p => ({
+        // Посты
+        if (postsData) {
+          const formattedPosts = postsData.map(p => ({
             id: typeof p.id === 'string' ? parseInt(p.id.slice(0, 8), 16) : p.id,
-            supabaseId: p.id, // сохраняем оригинальный UUID для операций с БД
+            supabaseId: p.id,
             title: p.title,
             summary: p.summary || '',
             source: p.source,
@@ -564,17 +581,12 @@ export default function App() {
             isFavorite: p.is_favorite || false,
             isArchived: p.is_archived || false,
           }));
-          // Восстанавливаем favorites из постов Supabase
-          const dbFavoriteIds = formattedPosts.filter(p => p.isFavorite).map(p => `post-${p.id}`);
-          if (dbFavoriteIds.length > 0) {
-            setFavorites(prev => Array.from(new Set([...prev, ...dbFavoriteIds])));
-          }
           setPosts(formattedPosts);
         }
 
-        // Обрабатываем каналы
-        if (channelsResult.data && channelsResult.data.length > 0) {
-          const formattedChannels = channelsResult.data.map(c => ({
+        // Каналы
+        if (channelsData) {
+          const formattedChannels = channelsData.map(c => ({
             id: c.id,
             url: c.url,
             source: c.source as 'YouTube' | 'Telegram',
@@ -582,8 +594,24 @@ export default function App() {
           }));
           setChannels(formattedChannels);
         }
+
+        // Favorites
+        try {
+          const { data: favoritesResult } = await supabase.from('favorites').select('item_id');
+          if (favoritesResult && favoritesResult.length > 0) {
+            const dbFavIds = favoritesResult.map(f => f.item_id);
+            setFavorites(prev => Array.from(new Set([...prev, ...dbFavIds])));
+          } else if (toolsData || postsData) {
+            const dbFavToolIds = (toolsData as any[])?.filter(t => t.is_favorite).map(t => `tool-${t.id}`) || [];
+            const dbFavPostIds = (postsData as any[])?.filter(p => p.is_favorite).map(p => `post-${p.id}`) || [];
+            if (dbFavToolIds.length > 0 || dbFavPostIds.length > 0) {
+              setFavorites(prev => Array.from(new Set([...prev, ...dbFavToolIds, ...dbFavPostIds])));
+            }
+          }
+        } catch (e) { console.error('Error fetching favorites:', e); }
+
       } catch (err) {
-        console.error('Error loading from Supabase:', err);
+        console.error('Fatal error in loadFromSupabase:', err);
       }
     };
 
