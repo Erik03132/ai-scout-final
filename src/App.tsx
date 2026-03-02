@@ -406,6 +406,7 @@ export default function App() {
   // но для постов — будем писать в Supabase через поле is_favorite
   const [favorites, setFavorites] = useLocalStorage<string[]>('ai-scout-favorites', []);
   const [isSearching, setIsSearching] = useState(false);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
   const [selectedTool, setSelectedTool] = useState<typeof mockTools[0] | null>(null);
   const [selectedPost, setSelectedPost] = useState<typeof mockPosts[0] | null>(null);
@@ -428,6 +429,14 @@ export default function App() {
   const [filterMention, setFilterMention] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<'all' | 'YouTube' | 'Telegram'>('all');
   const [favoriteCategory, setFavoriteCategory] = useState<'all' | 'model' | 'web' | 'voice' | 'design' | 'other'>('all');
+  const [selectedModel, setSelectedModel] = useLocalStorage<string>('ai-scout-selected-model', 'perplexity/llama-3.1-sonar-large-128k-online');
+
+  const availableModels = [
+    { id: 'perplexity/llama-3.1-sonar-large-128k-online', name: 'Sonar (Поиск)', provider: 'Perplexity', icon: '🌐' },
+    { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0', provider: 'Google', icon: '✨' },
+    { id: 'qwen/qwen3.5-flash', name: 'Qwen 3.5 Flash', provider: 'Alibaba', icon: '🏮' },
+    { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI', icon: '🧠' },
+  ];
 
   // Группировка инструментов по типам (для фильтрации в избранном)
   const getToolGroup = (category: string): string => {
@@ -807,12 +816,28 @@ export default function App() {
     setIsSearching(true);
     setAiResponse('');
 
-    // Simulate AI response
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: searchQuery,
+          model: selectedModel
+        })
+      });
 
-    setAiResponse(`🔍 Анализ по запросу: "${searchQuery}"\n\nНа основе последних данных и трендов я могу сообщить:\n\n• Этот инструмент показывает рост популярности на +35% за последний месяц\n• Основные преимущества: скорость разработки, отличная документация, активная поддержка сообщества\n• Рекомендуется для проектов любого масштаба от стартапов до корпоративных решений\n• Отлично интегрируется с современным стеком технологий\n\n💡 Совет: Попробуйте комбинировать с TypeScript для максимальной эффективности.`);
+      if (!response.ok) {
+        throw new Error('AI search failed');
+      }
 
-    setIsSearching(false);
+      const data = await response.json();
+      setAiResponse(data.text);
+    } catch (err) {
+      console.error('AI search error:', err);
+      setAiResponse('❌ К сожалению, произошла ошибка при поиске. Пожалуйста, попробуйте другую модель или повторите запрос позже.');
+    } finally {
+      setIsSearching(false);
+    }
   };
 
 
@@ -1298,6 +1323,47 @@ export default function App() {
                 placeholder="Спросите AI о инструментах, трендах или технологиях..."
                 className="flex-1 bg-transparent outline-none text-white placeholder-slate-500 text-sm"
               />
+
+              {/* Model Selector */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-xs text-slate-300 rounded-lg transition-all border border-white/5 active:scale-95"
+                  title="Сменить модель ИИ"
+                >
+                  <span>{availableModels.find(m => m.id === selectedModel)?.icon}</span>
+                  <span className="hidden lg:inline">{availableModels.find(m => m.id === selectedModel)?.name}</span>
+                </button>
+
+                {isModelMenuOpen && (
+                  <div className="absolute bottom-full right-0 mb-2 w-56 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-2 z-[60] animate-in fade-in slide-in-from-bottom-2">
+                    <p className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5 mb-1">Выберите модель</p>
+                    {availableModels.map(model => (
+                      <button
+                        key={model.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedModel(model.id);
+                          setIsModelMenuOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all mb-1 last:mb-0",
+                          selectedModel === model.id ? "bg-cyan-500/10 text-cyan-400 font-bold" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                        )}
+                      >
+                        <span className="text-base">{model.icon}</span>
+                        <div className="text-left">
+                          <div className="leading-tight">{model.name}</div>
+                          <div className="text-[9px] opacity-50 uppercase tracking-tighter">{model.provider}</div>
+                        </div>
+                        {selectedModel === model.id && <div className="ml-auto w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={isSearching}

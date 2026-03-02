@@ -52,23 +52,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function generateEnrichmentWithCascade(name: string, prompt: string) {
     let lastError: any = null;
 
-    // 1. OpenRouter (Attempting Perplexity first for REAL-TIME SEARCH)
+    // 1. OpenRouter (Multi-model cascade)
     if (process.env.OPENROUTER_API_KEY) {
         try {
-            console.log("[Enrichment] Attempting OpenRouter (Perplexity/Sonar)...");
-            // Мы используем Sonar, так как он имеет доступ к поиску и минимизирует галлюцинации
-            const data = await callOpenRouter(prompt, 'perplexity/llama-3.1-sonar-large-128k-online');
-            return { ...data, name };
+            console.log("[Enrichment] Trying Perplexity (Sonar)...");
+            return { ...(await callOpenRouter(prompt, 'perplexity/llama-3.1-sonar-large-128k-online')), name };
         } catch (e) {
-            console.error("OpenRouter Perplexity failed, falling back to Gemini...");
+            console.error("Perplexity failed, trying Gemini 2.0...");
             lastError = e;
-
             try {
-                const data = await callOpenRouter(prompt, 'google/gemini-2.0-flash-001');
-                return { ...data, name };
+                return { ...(await callOpenRouter(prompt, 'google/gemini-2.0-flash-001')), name };
             } catch (e2) {
-                console.error("OpenRouter Gemini failed...");
-                lastError = e2;
+                console.error("Gemini 2.0 failed, trying Qwen 3.5 Flash...");
+                try {
+                    return { ...(await callOpenRouter(prompt, 'qwen/qwen-2.5-72b-instruct')), name };
+                    // Примечание: Используем 2.5 72B или 3.5 Flash если доступно
+                } catch (e3) {
+                    console.error("Qwen failed...");
+                }
             }
         }
     }
@@ -77,8 +78,7 @@ async function generateEnrichmentWithCascade(name: string, prompt: string) {
     if (process.env.GEMINI_API_KEY) {
         try {
             console.log("[Enrichment] Attempting Gemini Direct...");
-            const data = await callGemini(prompt, 'v1beta', 'gemini-1.5-flash-latest');
-            return { ...data, name };
+            return { ...(await callGemini(prompt, 'v1beta', 'gemini-1.5-flash-latest')), name };
         } catch (e) {
             console.error("Gemini Direct failed:", e);
             lastError = e;
@@ -89,8 +89,7 @@ async function generateEnrichmentWithCascade(name: string, prompt: string) {
     if (process.env.OPENAI_API_KEY) {
         try {
             console.log("[Enrichment] Attempting OpenAI...");
-            const data = await callOpenAI(prompt);
-            return { ...data, name };
+            return { ...(await callOpenAI(prompt)), name };
         } catch (e) {
             console.error("OpenAI failed:", e);
             lastError = e;

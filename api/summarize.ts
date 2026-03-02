@@ -110,14 +110,19 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
         }
     }
 
-    // 2. OpenRouter (fallback for Gemini)
+    // 2. OpenRouter (Multi-model cascade)
     if (hasOpenRouter) {
         try {
-            console.log("Attempting OpenRouter...");
-            return await callOpenRouter(content);
+            console.log("Attempting OpenRouter Gemini...");
+            return await callOpenRouter(content, 'google/gemini-2.0-flash-001');
         } catch (e) {
-            console.error("OpenRouter failed:", e);
-            lastError = e;
+            console.error("OpenRouter Gemini failed, trying Qwen...");
+            try {
+                return await callOpenRouter(content, 'qwen/qwen3.5-flash');
+            } catch (e2) {
+                console.error("OpenRouter Qwen failed:", e2);
+                lastError = e2;
+            }
         }
     }
 
@@ -245,7 +250,7 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
 /**
  * Вызов OpenRouter API
  */
-async function callOpenRouter(content: string): Promise<SummarizeResponse> {
+async function callOpenRouter(content: string, model: string = 'google/gemini-2.0-flash-001'): Promise<SummarizeResponse> {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -254,7 +259,7 @@ async function callOpenRouter(content: string): Promise<SummarizeResponse> {
             'HTTP-Referer': 'https://ai-scout.vercel.app',
         },
         body: JSON.stringify({
-            model: 'google/gemini-2.0-flash-001',
+            model,
             messages: [{
                 role: 'system',
                 content: 'Ты — элитный аналитик на русском языке. Верни JSON с полями: titleRu, summary, detailedUsage (минимум 10 абзацев), mentions, usageTips. В "mentions" пиши только названия реальных ИИ-сервисов и моделей, игнорируй названия игр/демок из видео.'
