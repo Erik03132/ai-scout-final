@@ -415,7 +415,7 @@ export default function App() {
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichingToolNames, setEnrichingToolNames] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [channels, setChannels] = useState<Array<{ id: string, url: string, source: 'YouTube' | 'Telegram', name: string }>>([]);
+  const [channels, setChannels] = useState<Array<{ id: string, url: string, source: 'YouTube' | 'Telegram', name: string, last_fetched_at?: string }>>([]);
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [tools, setTools] = useState<typeof mockTools>(mockTools);
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
@@ -599,7 +599,8 @@ export default function App() {
             id: c.id,
             url: c.url,
             source: c.source as 'YouTube' | 'Telegram',
-            name: c.name
+            name: c.name,
+            last_fetched_at: c.last_fetched_at
           }));
           setChannels(formattedChannels);
         }
@@ -1229,7 +1230,7 @@ export default function App() {
             <nav className="hidden md:flex items-center gap-1 bg-slate-800/30 p-1.5 rounded-2xl border border-white/5">
               {[
                 { id: 'feed', label: 'Лента', icon: TrendingUp },
-                { id: 'insights', label: 'AI Insight', icon: Brain },
+                { id: 'insights', label: 'История', icon: Clock },
                 { id: 'archive', label: 'Архив', icon: Wrench },
                 { id: 'favorites', label: 'Избранное', icon: Heart },
               ].map(tab => (
@@ -1283,7 +1284,7 @@ export default function App() {
       <nav className="md:hidden fixed bottom-6 left-4 right-4 z-50 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-1.5 flex items-center justify-around shadow-2xl shadow-black/50 premium-blur">
         {[
           { id: 'feed', label: 'Лента', icon: TrendingUp },
-          { id: 'insights', label: 'Анализ', icon: Brain },
+          { id: 'insights', label: 'История', icon: Clock },
           { id: 'archive', label: 'Архив', icon: Wrench },
           { id: 'favorites', label: 'Списки', icon: Heart },
         ].map(tab => (
@@ -1716,80 +1717,57 @@ export default function App() {
           activeTab === 'insights' && (
             <div className="space-y-6">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-white">AI Аналитика</h2>
-                <p className="text-slate-400 text-sm mt-1">Интеллектуальный анализ трендов и инструментов</p>
+                <h2 className="text-2xl font-bold text-white">История обновлений</h2>
+                <p className="text-slate-400 text-sm mt-1">Список каналов и время последней синхронизации контента</p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {[
-                  { label: "Рост AI-инструментов", value: "+234%", change: "+12% за месяц", color: "from-cyan-500 to-blue-600" },
-                  { label: "Анализировано контента", value: "1.2K", change: "за последние 7 дней", color: "from-emerald-500 to-teal-600" },
-                  { label: "Найдено инструментов", value: "847", change: "32 новых за неделю", color: "from-amber-500 to-orange-600" },
-                ].map((stat, index) => (
-                  <div key={index} className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-slate-400 text-sm">{stat.label}</span>
-                      <div className={cn("w-10 h-10 bg-gradient-to-br", stat.color, "rounded-xl flex items-center justify-center")}>
-                        <TrendingUp className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                    <div className="text-xs text-slate-500">{stat.change}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                  <h3 className="font-semibold text-white mb-4">🔥 Тренды недели</h3>
-                  <div className="space-y-3">
-                    {[
-                      { rank: 1, name: "AI Agents", growth: "+45%" },
-                      { rank: 2, name: "Rust in Web", growth: "+38%" },
-                      { rank: 3, name: "Edge Computing", growth: "+32%" },
-                      { rank: 4, name: "WebGPU", growth: "+28%" },
-                      { rank: 5, name: "Microfrontends", growth: "+24%" },
-                    ].map(trend => (
-                      <div key={trend.rank} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-700/30 transition-colors cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <span className={cn(
-                            "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold",
-                            trend.rank === 1 ? "bg-amber-500/20 text-amber-400" :
-                              trend.rank === 2 ? "bg-slate-400/20 text-slate-300" :
-                                trend.rank === 3 ? "bg-orange-500/20 text-orange-400" :
-                                  "bg-slate-700 text-slate-500"
-                          )}>
-                            {trend.rank}
-                          </span>
-                          <span className="text-sm text-white">{trend.name}</span>
-                        </div>
-                        <span className="text-xs text-emerald-400 font-medium">{trend.growth}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                  <h3 className="font-semibold text-white mb-4">💡 AI Рекомендации</h3>
-                  <div className="space-y-3">
-                    {[
-                      { title: "Обратите внимание на Bun", desc: "Замена Node.js с 5x ускорением" },
-                      { title: "Попробуйте htmx", desc: "Без JS фреймворков для простых проектов" },
-                      { title: "Изучите SQL", desc: "Основа для работы с любыми БД" },
-                    ].map((rec, index) => (
-                      <div key={index} className="p-3 bg-slate-700/30 rounded-xl border border-slate-600/30 cursor-pointer hover:border-cyan-500/30 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <ArrowRight className="w-4 h-4 text-cyan-400" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-white text-sm">{rec.title}</h4>
-                            <p className="text-xs text-slate-400 mt-0.5">{rec.desc}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-700/50 bg-slate-800/50">
+                        <th className="p-4 text-sm font-semibold text-slate-300">Канал</th>
+                        <th className="p-4 text-sm font-semibold text-slate-300 w-32">Источник</th>
+                        <th className="p-4 text-sm font-semibold text-slate-300">Последнее обновление</th>
+                        <th className="p-4 text-sm font-semibold text-slate-300 w-24 text-right">Ссылка</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {channels.map((channel, i) => (
+                        <tr key={i} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                          <td className="p-4 text-sm text-white font-medium">{channel.name}</td>
+                          <td className="p-4 text-sm">
+                            <span className={cn(
+                              "px-2 py-1 flex w-fit justify-center items-center rounded-lg text-xs font-bold border",
+                              channel.source === 'YouTube' ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                            )}>
+                              {channel.source}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-slate-400 font-mono">
+                            {channel.last_fetched_at 
+                               ? new Date(channel.last_fetched_at).toLocaleString('ru-RU')
+                               : 'Ожидает...'}
+                          </td>
+                          <td className="p-4 text-sm text-right">
+                            <a href={channel.url} target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:text-cyan-400 transition-colors inline-block bg-slate-800 p-2 rounded-lg hover:bg-slate-700">
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                      {channels.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="p-12 text-center text-slate-400">
+                            <div className="flex flex-col flex-center items-center justify-center space-y-3">
+                              <Clock className="w-8 h-8 opacity-20" />
+                              <p>Нет добавленных каналов для мониторинга</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

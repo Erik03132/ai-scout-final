@@ -11,14 +11,6 @@
     {
       "path": "/api/cron/analyze-post",
       "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/cron/cleanup",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/fetch-news",
-      "schedule": "0 */4 * * *"
     }
   ],
   "rewrites": [
