@@ -85,7 +85,7 @@ serve(async (req) => {
                         tags: ["Telegram"],
                         mentions: [],
                         views: "0",
-                        image: "https://images.unsplash.com/photo-1620312554261-237466828551?auto=format&fit=crop&q=80&w=400&h=200", // Заглушка для TG
+                        image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200", // Заглушка для TG
                         url: link,
                         is_analyzed: false,
                     };

@@ -1573,12 +1573,17 @@ export default function App() {
                       loading="lazy"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
+                        // Avoid infinite loop if the fallback itself fails
+                        const fallbackUrl = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                        if (target.src === fallbackUrl) return;
+
                         if (target.src.includes('maxresdefault.jpg')) {
                           target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
                         } else if (target.src.includes('hqdefault.jpg')) {
                           target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
-                        } else if (!target.src.includes('unsplash.com')) {
-                          target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                        } else {
+                          // For any other broken image (including broken unsplash placeholder from supabase)
+                          target.src = fallbackUrl;
                         }
                       }}
                       className="w-full sm:w-40 h-48 sm:h-28 object-cover rounded-xl flex-shrink-0"
