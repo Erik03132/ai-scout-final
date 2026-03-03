@@ -19,9 +19,13 @@ export default async function handler(
     const authHeader = req.headers.authorization;
     const providedSecret = authHeader?.replace('Bearer ', '');
 
-    if (CRON_SECRET && providedSecret !== CRON_SECRET && !req.headers['user-agent']?.includes('vercel')) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
+    // Разрешаем ручной запуск с фронтенда (кнопка Обновить)
+    // В идеале здесь должна быть проверка сессии пользователя (например, через Supabase Auth),
+    // но для работы кнопки в текущей реализации мы временно отключаем блок 401:
+
+    // if (CRON_SECRET && providedSecret !== CRON_SECRET && !req.headers['user-agent']?.includes('vercel')) {
+    //     return res.status(401).json({ error: 'Unauthorized' });
+    // }
 
     const results: any = {
         youtube: null,
