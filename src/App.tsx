@@ -24,6 +24,7 @@ interface Post {
   supabaseId?: string;
   isFavorite?: boolean;
   isArchived?: boolean;
+  isAnalyzed?: boolean;
 }
 
 // Mock data
@@ -589,6 +590,7 @@ export default function App() {
             usageTips: p.usage_tips || [],
             isFavorite: p.is_favorite || false,
             isArchived: p.is_archived || false,
+            isAnalyzed: p.is_analyzed ?? true, // если нет поля, считаем что проанализировано, чтоб не ломать моки
           }));
           setPosts(formattedPosts);
         }
@@ -1566,7 +1568,7 @@ export default function App() {
                 >
                   <div className="flex flex-col sm:flex-row gap-4">
                     <img
-                      src={post.image}
+                      src={post.image || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200'}
                       alt={post.title}
                       loading="lazy"
                       onError={(e) => {
@@ -1619,7 +1621,13 @@ export default function App() {
                             </span>
                           ))}
                         </div>
-                        {post.mentions.length > 0 && (
+
+                        {post.isAnalyzed === false ? (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full text-[10px] font-medium ml-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            AI-Анализ в очереди...
+                          </div>
+                        ) : post.mentions && post.mentions.length > 0 ? (
                           <>
                             <span className="text-slate-600">|</span>
                             <div className="flex flex-wrap gap-1">
@@ -1671,7 +1679,7 @@ export default function App() {
                                 })}
                             </div>
                           </>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex flex-row sm:flex-col gap-2 mt-4 sm:mt-0">
@@ -1745,9 +1753,9 @@ export default function App() {
                             </span>
                           </td>
                           <td className="p-4 text-sm text-slate-400 font-mono">
-                            {channel.last_fetched_at 
-                               ? new Date(channel.last_fetched_at).toLocaleString('ru-RU')
-                               : 'Ожидает...'}
+                            {channel.last_fetched_at
+                              ? new Date(channel.last_fetched_at).toLocaleString('ru-RU')
+                              : 'Ожидает...'}
                           </td>
                           <td className="p-4 text-sm text-right">
                             <a href={channel.url} target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:text-cyan-400 transition-colors inline-block bg-slate-800 p-2 rounded-lg hover:bg-slate-700">
