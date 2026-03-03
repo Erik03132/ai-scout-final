@@ -4,7 +4,7 @@ const OR_MODELS = [
     'google/gemini-2.0-flash-001',       // Very cheap/free
     'google/gemini-2.0-flash-lite-preview-02-05:free', // Try specific free ID if it exists, but fallback to others
     'deepseek/deepseek-chat',            // Cheap
-    'qwen/qwen-2.5-72b-instruct',        // High quality
+    'qwen/qwen-3.5-plus',                // High quality
     'mistralai/mistral-7b-instruct',     // Standard
     'meta-llama/llama-3-8b-instruct:free' // Llama 3 free
 ]

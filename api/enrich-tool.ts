@@ -65,8 +65,8 @@ async function generateEnrichmentWithCascade(name: string, prompt: string) {
             } catch (e2) {
                 console.error("Gemini 2.0 failed, trying Qwen 3.5 Flash...");
                 try {
-                    return { ...(await callOpenRouter(prompt, 'qwen/qwen-2.5-72b-instruct')), name };
-                    // Примечание: Используем 2.5 72B или 3.5 Flash если доступно
+                    return { ...(await callOpenRouter(prompt, 'qwen/qwen-3.5-flash')), name };
+                    // Примечание: Используем 3.5 Flash для скорости и качества
                 } catch (e3) {
                     console.error("Qwen failed...");
                 }

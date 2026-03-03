@@ -118,7 +118,7 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
         } catch (e) {
             console.error("OpenRouter Gemini failed, trying Qwen...");
             try {
-                return await callOpenRouter(content, 'qwen/qwen3.5-flash');
+                return await callOpenRouter(content, 'qwen/qwen-3.5-flash');
             } catch (e2) {
                 console.error("OpenRouter Qwen failed:", e2);
                 lastError = e2;

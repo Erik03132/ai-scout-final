@@ -224,18 +224,29 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 -- Telegram API: нет жёстких ограничений для webhook
 -- ============================================
 
--- Сбор YouTube видео: каждые 6 часов (4 раза в день)
--- Это безопасно для квоты YouTube API
+-- Сбор YouTube видео: каждые 6 часов
 SELECT cron.schedule(
     'fetch-youtube-videos',
-    '0 */6 * * *', -- каждые 6 часов: 00:00, 06:00, 12:00, 18:00 UTC
+    '0 */6 * * *',
     $$
-    SELECT
-        net.http_post(
-            url := 'https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/fetch-youtube',
-            headers := '{"Content-Type": "application/json"}'::jsonb,
-            body := '{}'::jsonb
-        );
+    SELECT net.http_post(
+        url := 'https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/fetch-youtube',
+        headers := '{"Content-Type": "application/json"}'::jsonb,
+        body := '{}'::jsonb
+    );
+    $$
+);
+
+-- Сбор Telegram постов: каждые 4 часа
+SELECT cron.schedule(
+    'fetch-telegram-posts',
+    '0 */4 * * *',
+    $$
+    SELECT net.http_post(
+        url := 'https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/fetch-telegram',
+        headers := '{"Content-Type": "application/json"}'::jsonb,
+        body := '{}'::jsonb
+    );
     $$
 );
 

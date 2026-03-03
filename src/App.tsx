@@ -1402,23 +1402,47 @@ export default function App() {
                 <h2 className="text-2xl font-bold text-white">Последние новости</h2>
                 <p className="text-slate-400 text-sm mt-1">AI-анализ контента из ваших источников</p>
               </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={cn(
-                  "flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-all",
-                  showFilters || activeFiltersCount > 0
-                    ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
-                    : "text-slate-400 border-slate-700 hover:text-white hover:border-slate-600"
-                )}
-              >
-                <Filter className="w-4 h-4" />
-                Фильтры
-                {activeFiltersCount > 0 && (
-                  <span className="ml-1 w-5 h-5 bg-cyan-500 text-black text-xs font-bold rounded-full flex items-center justify-center">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const btn = document.getElementById('refresh-news-btn');
+                    if (btn) btn.classList.add('animate-spin');
+                    try {
+                      const res = await fetch('/api/cron/fetch-news');
+                      if (res.ok) {
+                        // Перезагружаем страницу или стейт (для простоты — страницу)
+                        window.location.reload();
+                      }
+                    } catch (e) {
+                      console.error('Refresh failed:', e);
+                    } finally {
+                      if (btn) btn.classList.remove('animate-spin');
+                    }
+                  }}
+                  className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-all"
+                  title="Запустить принудительное обновление всех каналов"
+                >
+                  <Zap id="refresh-news-btn" className="w-4 h-4 text-amber-500" />
+                  Обновить
+                </button>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={cn(
+                    "flex items-center gap-2 text-sm px-4 py-2 rounded-xl border transition-all",
+                    showFilters || activeFiltersCount > 0
+                      ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
+                      : "text-slate-400 border-slate-700 hover:text-white hover:border-slate-600"
+                  )}
+                >
+                  <Filter className="w-4 h-4" />
+                  Фильтры
+                  {activeFiltersCount > 0 && (
+                    <span className="ml-1 w-5 h-5 bg-cyan-500 text-black text-xs font-bold rounded-full flex items-center justify-center">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Панель фильтров */}
