@@ -113,11 +113,23 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                             Daily Limit
                                         </h3>
                                     </div>
-                                    <p className="text-2xl font-black text-white">
-                                        {tool.dailyCredits}
+                                    <p className="text-2xl font-extrabold text-white">
+                                        {tool.dailyCredits || '∞'}
                                     </p>
                                 </div>
-                            ) : <div />}
+                            ) : (
+                                <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60 opacity-50">
+                                    <div className="flex items-center gap-2 text-slate-500 mb-2">
+                                        <Zap size={14} />
+                                        <h3 className="text-[10px] font-bold uppercase tracking-widest">
+                                            Daily Limit
+                                        </h3>
+                                    </div>
+                                    <p className="text-2xl font-extrabold text-slate-500">
+                                        Н/Д
+                                    </p>
+                                </div>
+                            )}
 
                             {tool.monthlyCredits !== undefined ? (
                                 <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60">
@@ -127,11 +139,23 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                             Monthly Credits
                                         </h3>
                                     </div>
-                                    <p className="text-2xl font-black text-white">
-                                        {tool.monthlyCredits}
+                                    <p className="text-2xl font-extrabold text-white">
+                                        {tool.monthlyCredits || '∞'}
                                     </p>
                                 </div>
-                            ) : <div />}
+                            ) : (
+                                <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60 opacity-50">
+                                    <div className="flex items-center gap-2 text-slate-500 mb-2">
+                                        <Clock size={14} />
+                                        <h3 className="text-[10px] font-bold uppercase tracking-widest">
+                                            Monthly Credits
+                                        </h3>
+                                    </div>
+                                    <p className="text-2xl font-extrabold text-slate-500">
+                                        Н/Д
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -143,11 +167,11 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                     Минимальный тариф
                                 </h3>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl font-black text-[#00E599]">
+                                    <span className="text-2xl font-extrabold text-[#00E599] tracking-tight">
                                         {tool.minPrice === "$0" || tool.minPrice === 0 ? 'Бесплатно' : (typeof tool.minPrice === 'number' ? `$${tool.minPrice}` : tool.minPrice)}
                                     </span>
-                                    {tool.minPrice !== "$0" && tool.minPrice !== 0 && tool.minPrice !== "Бесплатно" && tool.minPrice !== "Н/Д" && (
-                                        <span className="text-slate-400 text-sm font-medium">/мес</span>
+                                    {tool.minPrice !== "$0" && tool.minPrice !== 0 && tool.minPrice !== "Бесплатно" && !String(tool.minPrice).includes('Бесплатно') && (
+                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-widest ml-1">/ мес</span>
                                     )}
                                 </div>
                             </div>
