@@ -71,7 +71,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                 </div>
                             </div>
 
-                            <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2">
+                            <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
                                 {tool.name}
                             </h2>
 
@@ -113,7 +113,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                             Daily Limit
                                         </h3>
                                     </div>
-                                    <p className="text-2xl font-extrabold text-white">
+                                    <p className="text-2xl font-bold text-white">
                                         {tool.dailyCredits || '∞'}
                                     </p>
                                 </div>
@@ -125,7 +125,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                             Daily Limit
                                         </h3>
                                     </div>
-                                    <p className="text-2xl font-extrabold text-slate-500">
+                                    <p className="text-2xl font-bold text-slate-500">
                                         Н/Д
                                     </p>
                                 </div>
@@ -139,7 +139,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                             Monthly Credits
                                         </h3>
                                     </div>
-                                    <p className="text-2xl font-extrabold text-white">
+                                    <p className="text-2xl font-bold text-white">
                                         {tool.monthlyCredits || '∞'}
                                     </p>
                                 </div>
@@ -151,7 +151,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                             Monthly Credits
                                         </h3>
                                     </div>
-                                    <p className="text-2xl font-extrabold text-slate-500">
+                                    <p className="text-2xl font-bold text-slate-500">
                                         Н/Д
                                     </p>
                                 </div>
@@ -167,11 +167,11 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                     Минимальный тариф
                                 </h3>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl font-extrabold text-[#00E599] tracking-tight">
-                                        {tool.minPrice === "$0" || tool.minPrice === 0 ? 'Бесплатно' : (typeof tool.minPrice === 'number' ? `$${tool.minPrice}` : tool.minPrice)}
+                                    <span className="text-2xl font-bold text-white tracking-tight">
+                                        {(tool.minPrice === 0 || !tool.minPrice) ? 'Бесплатно' : `$${tool.minPrice}`}
                                     </span>
-                                    {tool.minPrice !== "$0" && tool.minPrice !== 0 && tool.minPrice !== "Бесплатно" && !String(tool.minPrice).includes('Бесплатно') && (
-                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-widest ml-1">/ мес</span>
+                                    {tool.minPrice !== 0 && tool.minPrice !== undefined && (
+                                        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-1">/ мес</span>
                                     )}
                                 </div>
                             </div>
@@ -180,7 +180,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                 href={tool.docsUrl || '#'}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-6 py-3 bg-gradient-to-r from-[#00E599] to-[#00C885] hover:from-[#00faad] hover:to-[#00db95] text-slate-900 font-bold uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(0,229,153,0.3)] hover:shadow-[0_0_25px_rgba(0,229,153,0.5)] active:scale-95"
+                                className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase tracking-wider rounded-xl transition-all border border-slate-700 active:scale-95"
                             >
                                 Подписаться
                             </a>
@@ -224,7 +224,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                 href={tool.docsUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex flex-1 shadow-lg shadow-blue-500/20 items-center justify-center gap-2 px-5 py-4 bg-[#0070F3] hover:bg-[#0061d5] text-white rounded-xl font-bold transition-colors"
+                                className="flex flex-1 items-center justify-center gap-2 px-5 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20"
                             >
                                 ДОКУМЕНТАЦИЯ
                                 <ExternalLink size={18} />
