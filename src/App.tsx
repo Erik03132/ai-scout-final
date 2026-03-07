@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Search, Sparkles, TrendingUp, Youtube, MessageCircle, Wrench, Plus, Heart, Clock, Filter, ArrowRight, Zap, Brain, ExternalLink, X, FileText, Lightbulb, Code, Terminal, Layers, Loader2 } from 'lucide-react';
-import { cn } from './utils/cn';
+import { ArrowRight, Brain, Clock, Code, ExternalLink, FileText, Filter, Heart, Layers, Lightbulb, Loader2, MessageCircle, Plus, Search, Sparkles, Terminal, TrendingUp, Wrench, X, Youtube, Zap } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
+import { cn } from './utils/cn';
 // Unused component imports removed — feed/archive/insights rendered inline in App
 
 // Types
@@ -1568,13 +1568,12 @@ export default function App() {
                 >
                   <div className="flex flex-col sm:flex-row gap-4">
                     <img
-                      src={post.image || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200'}
+                      src={post.image || 'https://placehold.co/400x200/1e293b/38bdf8?text=NO+IMAGE'}
                       alt={post.title}
                       loading="lazy"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        // Avoid infinite loop if the fallback itself fails
-                        const fallbackUrl = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                        const fallbackUrl = 'https://placehold.co/400x200/1e293b/38bdf8?text=NO+IMAGE';
                         if (target.src === fallbackUrl) return;
 
                         if (target.src.includes('maxresdefault.jpg')) {
@@ -1645,12 +1644,27 @@ export default function App() {
                                     cleanMention.toLowerCase().includes(t.name.toLowerCase())
                                   );
 
+                                  const getToolIcon = (name: string): string => {
+                                    const n = name.toLowerCase();
+                                    if (n.includes('gemini')) return '♊';
+                                    if (n.includes('gpt') || n.includes('chatgpt') || n.includes('openai')) return '🤖';
+                                    if (n.includes('claude') || n.includes('anthropic')) return '🎭';
+                                    if (n.includes('midjourney')) return '🎨';
+                                    if (n.includes('flux') || n.includes('stable diffusion')) return '🖼️';
+                                    if (n.includes('cursor')) return '🖥️';
+                                    if (n.includes('bolt') || n.includes('lovable')) return '⚡';
+                                    if (n.includes('v0')) return '🚀';
+                                    if (n.includes('perplexity')) return '🔍';
+                                    if (n.includes('notebooklm')) return '📓';
+                                    return '✨';
+                                  };
+
                                   const toolObj = existingToolObj || {
                                     id: `dyn-${cleanMention}`,
                                     name: cleanMention,
                                     category: "AI Service",
                                     description: `Интеллектуальный анализ применения ${cleanMention} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
-                                    icon: "✨",
+                                    icon: getToolIcon(cleanMention),
                                     rating: 4.8,
                                     dailyCredits: "Уточняется",
                                     monthlyCredits: "Уточняется",

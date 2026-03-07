@@ -1,0 +1,182 @@
+{
+  "kind": "youtube#searchListResponse",
+  "etag": "MPJ6zq6NOqr__KIVVKbSP-mSgGw",
+  "nextPageToken": "CAUQAA",
+  "regionCode": "NL",
+  "pageInfo": {
+    "totalResults": 190,
+    "resultsPerPage": 5
+  },
+  "items": [
+    {
+      "kind": "youtube#searchResult",
+      "etag": "57MsUVvH4bJl9UEtg_G7ait5Pfs",
+      "id": {
+        "kind": "youtube#video",
+        "videoId": "2yRMQHSmcJo"
+      },
+      "snippet": {
+        "publishedAt": "2026-03-06T02:09:07Z",
+        "channelId": "UCntGhimQ0cQCMIYQizseVFg",
+        "title": "Claude Code Just Destroyed OpenClaw (It’s BETTER)",
+        "description": "Join my Skool Community & Learn How to Build Your Own AI SaaS: https://www.skool.com/ai-saas-builders My AI Startup - AI ...",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/2yRMQHSmcJo/default.jpg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i.ytimg.com/vi/2yRMQHSmcJo/mqdefault.jpg",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i.ytimg.com/vi/2yRMQHSmcJo/hqdefault.jpg",
+            "width": 480,
+            "height": 360
+          }
+        },
+        "channelTitle": "SoftwareGent",
+        "liveBroadcastContent": "none",
+        "publishTime": "2026-03-06T02:09:07Z"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "etag": "4HxZQj6xdv95aIigJ9EoSZVts4A",
+      "id": {
+        "kind": "youtube#video",
+        "videoId": "Uuke9w4lAeA"
+      },
+      "snippet": {
+        "publishedAt": "2026-03-03T11:41:36Z",
+        "channelId": "UCntGhimQ0cQCMIYQizseVFg",
+        "title": "I Build a FREE OpenClaw with Antigravity + Opencode (It’s INSANE)",
+        "description": "Join my Skool Community & Learn How to Build Your Own AI SaaS: https://www.skool.com/ai-saas-builders My AI Startup - AI ...",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/Uuke9w4lAeA/default.jpg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i.ytimg.com/vi/Uuke9w4lAeA/mqdefault.jpg",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i.ytimg.com/vi/Uuke9w4lAeA/hqdefault.jpg",
+            "width": 480,
+            "height": 360
+          }
+        },
+        "channelTitle": "SoftwareGent",
+        "liveBroadcastContent": "none",
+        "publishTime": "2026-03-03T11:41:36Z"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "etag": "me-WkWmlnDN6Ffi3Hltnts-K1F0",
+      "id": {
+        "kind": "youtube#video",
+        "videoId": "owWWpLWBowY"
+      },
+      "snippet": {
+        "publishedAt": "2026-03-02T00:29:56Z",
+        "channelId": "UCntGhimQ0cQCMIYQizseVFg",
+        "title": "Antigravity + Supabase + Vercel | Build &amp; Deploy Real Web Apps (Full Guide)",
+        "description": "Join my Skool Community & Learn How to Build Your Own AI SaaS: https://www.skool.com/ai-saas-builders My AI Startup - AI ...",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/owWWpLWBowY/default.jpg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i.ytimg.com/vi/owWWpLWBowY/mqdefault.jpg",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i.ytimg.com/vi/owWWpLWBowY/hqdefault.jpg",
+            "width": 480,
+            "height": 360
+          }
+        },
+        "channelTitle": "SoftwareGent",
+        "liveBroadcastContent": "none",
+        "publishTime": "2026-03-02T00:29:56Z"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "etag": "1s3gKYohdRBlXsenvT1HUCTJYV4",
+      "id": {
+        "kind": "youtube#video",
+        "videoId": "NszZ2Ynbsxk"
+      },
+      "snippet": {
+        "publishedAt": "2026-03-01T02:26:57Z",
+        "channelId": "UCntGhimQ0cQCMIYQizseVFg",
+        "title": "How to SetUp OpenClaw in 5 Minutes (Beginners Guide 2026)",
+        "description": "Run your 24/7 OpenClaw Agent (no setup needed): https://myclaw.ai/?utm_source=yt-softwaregent Join my Skool Community ...",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/NszZ2Ynbsxk/default.jpg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i.ytimg.com/vi/NszZ2Ynbsxk/mqdefault.jpg",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i.ytimg.com/vi/NszZ2Ynbsxk/hqdefault.jpg",
+            "width": 480,
+            "height": 360
+          }
+        },
+        "channelTitle": "SoftwareGent",
+        "liveBroadcastContent": "none",
+        "publishTime": "2026-03-01T02:26:57Z"
+      }
+    },
+    {
+      "kind": "youtube#searchResult",
+      "etag": "vXhnDMWBGU9hQYxVhZwg1mZZoS0",
+      "id": {
+        "kind": "youtube#video",
+        "videoId": "wRmhLlK94-c"
+      },
+      "snippet": {
+        "publishedAt": "2026-02-26T15:41:32Z",
+        "channelId": "UCntGhimQ0cQCMIYQizseVFg",
+        "title": "Build &amp; Deploy Full Stack Apps for FREE | Antigravity + Gemini 3.1 Pro + Firebase",
+        "description": "Join my Skool Community & Learn How to Build Your Own AI SaaS: https://www.skool.com/ai-saas-builders My AI Startup - AI ...",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/wRmhLlK94-c/default.jpg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i.ytimg.com/vi/wRmhLlK94-c/mqdefault.jpg",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i.ytimg.com/vi/wRmhLlK94-c/hqdefault.jpg",
+            "width": 480,
+            "height": 360
+          }
+        },
+        "channelTitle": "SoftwareGent",
+        "liveBroadcastContent": "none",
+        "publishTime": "2026-02-26T15:41:32Z"
+      }
+    }
+  ]
+}

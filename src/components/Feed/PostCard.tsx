@@ -33,7 +33,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             return post.image;
         }
         // Fallback изображение
-        return 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+        return 'https://placehold.co/400x200/1e293b/38bdf8?text=NO+IMAGE';
     };
 
     return (
@@ -52,8 +52,8 @@ export const PostCard: React.FC<PostCardProps> = ({
                             target.src = target.src.replace('maxresdefault.jpg', 'hqdefault.jpg');
                         } else if (target.src.includes('hqdefault.jpg')) {
                             target.src = target.src.replace('hqdefault.jpg', 'mqdefault.jpg');
-                        } else if (!target.src.includes('unsplash.com')) {
-                            target.src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400&h=200';
+                        } else if (!target.src.includes('placehold.co')) {
+                            target.src = 'https://placehold.co/400x200/1e293b/38bdf8?text=NO+IMAGE';
                         }
                     }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -100,24 +100,60 @@ export const PostCard: React.FC<PostCardProps> = ({
                     </p>
                 )}
 
-                {/* Теги */}
-                {post.tags && post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                        {post.tags.slice(0, 3).map((tag, index) => (
-                            <span
-                                key={index}
-                                className="px-2 py-0.5 text-xs bg-slate-700/50 text-slate-300 rounded"
-                            >
-                                {tag}
-                            </span>
-                        ))}
-                        {post.tags.length > 3 && (
-                            <span className="px-2 py-0.5 text-xs text-slate-500">
-                                +{post.tags.length - 3}
-                            </span>
-                        )}
-                    </div>
-                )}
+                {/* Теги и Упоминания */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                    {post.tags && post.tags.slice(0, 3).map((tag, index) => (
+                        <span
+                            key={`tag-${index}`}
+                            className="px-2 py-0.5 text-xs bg-slate-700/50 text-slate-300 rounded"
+                        >
+                            {tag}
+                        </span>
+                    ))}
+                    {post.tags && post.tags.length > 3 && (
+                        <span className="px-2 py-0.5 text-xs text-slate-500">
+                            +{post.tags.length - 3}
+                        </span>
+                    )}
+
+                    {post.is_analyzed === false ? (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full text-[10px] font-medium ml-1">
+                            <span className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                            AI-Анализ в очереди...
+                        </div>
+                    ) : post.mentions && post.mentions.length > 0 ? (
+                        <>
+                            <span className="text-slate-600">|</span>
+                            {post.mentions.slice(0, 3).map((mention, index) => {
+                                const getIcon = (name: string) => {
+                                    const n = name.toLowerCase();
+                                    if (n.includes('gemini')) return '♊';
+                                    if (n.includes('gpt') || n.includes('chatgpt') || n.includes('openai')) return '🤖';
+                                    if (n.includes('claude') || n.includes('anthropic')) return '🎭';
+                                    if (n.includes('midjourney')) return '🎨';
+                                    if (n.includes('cursor')) return '🖥️';
+                                    if (n.includes('bolt') || n.includes('lovable')) return '⚡';
+                                    if (n.includes('v0')) return '🚀';
+                                    if (n.includes('perplexity')) return '🔍';
+                                    return '✨';
+                                };
+                                return (
+                                    <span
+                                        key={`mention-${index}`}
+                                        className="px-2 py-0.5 text-[10px] bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full font-medium flex items-center gap-1"
+                                    >
+                                        {getIcon(mention)} {mention}
+                                    </span>
+                                );
+                            })}
+                            {post.mentions.length > 3 && (
+                                <span className="px-2 py-0.5 text-[10px] text-slate-500">
+                                    +{post.mentions.length - 3}
+                                </span>
+                            )}
+                        </>
+                    ) : null}
+                </div>
 
                 {/* Просмотры */}
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-700/50">

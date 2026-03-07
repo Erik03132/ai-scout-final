@@ -1,0 +1,175 @@
+0 verbose cli /usr/local/bin/node /usr/local/lib/node_modules/npm/bin/npm-cli.js
+1 info using npm@11.6.2
+2 info using node@v24.11.1
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/igorvasin/ai-scout-final/.npmrc
+5 silly config load:file:/Users/igorvasin/.npmrc
+6 silly config load:file:/Users/igorvasin/.npm-global/etc/npmrc
+7 verbose title npm exec supabase secrets list --project-ref iwtlekdynhfcqgwhocik
+8 verbose argv "exec" "--" "supabase" "secrets" "list" "--project-ref" "iwtlekdynhfcqgwhocik"
+9 verbose logfile logs-max:10 dir:/Users/igorvasin/ai-scout-final/.npm/_logs/2026-03-07T07_54_43_409Z-
+10 verbose logfile /Users/igorvasin/ai-scout-final/.npm/_logs/2026-03-07T07_54_43_409Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+14 verbose shrinkwrap failed to load /Users/igorvasin/ai-scout-final EPERM: operation not permitted, open '/Users/igorvasin/ai-scout-final/node_modules/.package-lock.json'
+15 http fetch GET 200 https://registry.npmjs.org/supabase 1374ms (cache updated)
+16 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+17 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+18 silly idealTree buildDeps
+19 silly fetch manifest supabase@2.77.0
+20 silly packumentCache full:https://registry.npmjs.org/supabase cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/supabase 574ms (cache updated)
+22 silly packumentCache full:https://registry.npmjs.org/supabase set size:undefined disposed:false
+23 silly placeDep ROOT supabase@2.77.0 OK for:  want: 2.77.0
+24 silly fetch manifest bin-links@^6.0.0
+25 silly packumentCache full:https://registry.npmjs.org/bin-links cache-miss
+26 silly fetch manifest https-proxy-agent@^7.0.2
+27 silly packumentCache full:https://registry.npmjs.org/https-proxy-agent cache-miss
+28 silly fetch manifest node-fetch@^3.3.2
+29 silly packumentCache full:https://registry.npmjs.org/node-fetch cache-miss
+30 silly fetch manifest tar@7.5.10
+31 silly packumentCache full:https://registry.npmjs.org/tar cache-miss
+32 http fetch GET 200 https://registry.npmjs.org/https-proxy-agent 110ms (cache revalidated)
+33 silly packumentCache full:https://registry.npmjs.org/https-proxy-agent set size:76241 disposed:false
+34 http fetch GET 200 https://registry.npmjs.org/bin-links 545ms (cache revalidated)
+35 silly packumentCache full:https://registry.npmjs.org/bin-links set size:90236 disposed:false
+36 http fetch GET 200 https://registry.npmjs.org/node-fetch 742ms (cache revalidated)
+37 silly packumentCache full:https://registry.npmjs.org/node-fetch set size:896010 disposed:false
+38 http fetch GET 200 https://registry.npmjs.org/tar 754ms (cache updated)
+39 silly packumentCache full:https://registry.npmjs.org/tar set size:undefined disposed:false
+40 silly placeDep ROOT bin-links@6.0.0 OK for: supabase@2.77.0 want: ^6.0.0
+41 silly placeDep ROOT https-proxy-agent@7.0.6 OK for: supabase@2.77.0 want: ^7.0.2
+42 silly placeDep ROOT node-fetch@3.3.2 OK for: supabase@2.77.0 want: ^3.3.2
+43 silly placeDep ROOT tar@7.5.10 OK for: supabase@2.77.0 want: 7.5.10
+44 silly fetch manifest cmd-shim@^8.0.0
+45 silly packumentCache full:https://registry.npmjs.org/cmd-shim cache-miss
+46 silly fetch manifest npm-normalize-package-bin@^5.0.0
+47 silly packumentCache full:https://registry.npmjs.org/npm-normalize-package-bin cache-miss
+48 silly fetch manifest proc-log@^6.0.0
+49 silly packumentCache full:https://registry.npmjs.org/proc-log cache-miss
+50 silly fetch manifest read-cmd-shim@^6.0.0
+51 silly packumentCache full:https://registry.npmjs.org/read-cmd-shim cache-miss
+52 silly fetch manifest write-file-atomic@^7.0.0
+53 silly packumentCache full:https://registry.npmjs.org/write-file-atomic cache-miss
+54 silly fetch manifest debug@4
+55 silly packumentCache full:https://registry.npmjs.org/debug cache-miss
+56 silly fetch manifest agent-base@^7.1.2
+57 silly packumentCache full:https://registry.npmjs.org/agent-base cache-miss
+58 http fetch GET 200 https://registry.npmjs.org/debug 103ms (cache revalidated)
+59 silly packumentCache full:https://registry.npmjs.org/debug set size:195840 disposed:false
+60 silly fetch manifest data-uri-to-buffer@^4.0.0
+61 silly packumentCache full:https://registry.npmjs.org/data-uri-to-buffer cache-miss
+62 http fetch GET 200 https://registry.npmjs.org/proc-log 128ms (cache revalidated)
+63 silly packumentCache full:https://registry.npmjs.org/proc-log set size:33588 disposed:false
+64 silly fetch manifest fetch-blob@^3.1.4
+65 silly packumentCache full:https://registry.npmjs.org/fetch-blob cache-miss
+66 http fetch GET 200 https://registry.npmjs.org/cmd-shim 138ms (cache revalidated)
+67 silly packumentCache full:https://registry.npmjs.org/cmd-shim set size:54104 disposed:false
+68 silly fetch manifest formdata-polyfill@^4.0.10
+69 silly packumentCache full:https://registry.npmjs.org/formdata-polyfill cache-miss
+70 http fetch GET 200 https://registry.npmjs.org/data-uri-to-buffer 100ms (cache revalidated)
+71 silly packumentCache full:https://registry.npmjs.org/data-uri-to-buffer set size:43253 disposed:false
+72 silly fetch manifest @isaacs/fs-minipass@^4.0.0
+73 silly packumentCache full:https://registry.npmjs.org/@isaacs%2ffs-minipass cache-miss
+74 http fetch GET 200 https://registry.npmjs.org/formdata-polyfill 95ms (cache revalidated)
+75 silly packumentCache full:https://registry.npmjs.org/formdata-polyfill set size:94446 disposed:false
+76 silly fetch manifest chownr@^3.0.0
+77 silly packumentCache full:https://registry.npmjs.org/chownr cache-miss
+78 http fetch GET 200 https://registry.npmjs.org/fetch-blob 116ms (cache revalidated)
+79 silly packumentCache full:https://registry.npmjs.org/fetch-blob set size:73704 disposed:false
+80 silly fetch manifest minipass@^7.1.2
+81 silly packumentCache full:https://registry.npmjs.org/minipass cache-miss
+82 http fetch GET 200 https://registry.npmjs.org/@isaacs%2ffs-minipass 104ms (cache revalidated)
+83 silly packumentCache full:https://registry.npmjs.org/@isaacs%2ffs-minipass set size:7912 disposed:false
+84 silly fetch manifest minizlib@^3.1.0
+85 silly packumentCache full:https://registry.npmjs.org/minizlib cache-miss
+86 http fetch GET 200 https://registry.npmjs.org/chownr 105ms (cache revalidated)
+87 silly packumentCache full:https://registry.npmjs.org/chownr set size:22157 disposed:false
+88 silly fetch manifest yallist@^5.0.0
+89 silly packumentCache full:https://registry.npmjs.org/yallist cache-miss
+90 http fetch GET 200 https://registry.npmjs.org/minipass 102ms (cache revalidated)
+91 silly packumentCache full:https://registry.npmjs.org/minipass set size:276925 disposed:false
+92 http fetch GET 200 https://registry.npmjs.org/npm-normalize-package-bin 422ms (cache revalidated)
+93 silly packumentCache full:https://registry.npmjs.org/npm-normalize-package-bin set size:21797 disposed:false
+94 http fetch GET 200 https://registry.npmjs.org/minizlib 99ms (cache revalidated)
+95 silly packumentCache full:https://registry.npmjs.org/minizlib set size:62862 disposed:false
+96 http fetch GET 200 https://registry.npmjs.org/yallist 108ms (cache revalidated)
+97 silly packumentCache full:https://registry.npmjs.org/yallist set size:34610 disposed:false
+98 http fetch GET 200 https://registry.npmjs.org/agent-base 853ms (cache revalidated)
+99 silly packumentCache full:https://registry.npmjs.org/agent-base set size:67460 disposed:false
+100 http fetch GET 200 https://registry.npmjs.org/read-cmd-shim 884ms (cache revalidated)
+101 silly packumentCache full:https://registry.npmjs.org/read-cmd-shim set size:32929 disposed:false
+102 http fetch GET 200 https://registry.npmjs.org/write-file-atomic 1018ms (cache revalidated)
+103 silly packumentCache full:https://registry.npmjs.org/write-file-atomic set size:80375 disposed:false
+104 silly placeDep ROOT cmd-shim@8.0.0 OK for: bin-links@6.0.0 want: ^8.0.0
+105 silly placeDep ROOT npm-normalize-package-bin@5.0.0 OK for: bin-links@6.0.0 want: ^5.0.0
+106 silly placeDep ROOT proc-log@6.1.0 OK for: bin-links@6.0.0 want: ^6.0.0
+107 silly placeDep ROOT read-cmd-shim@6.0.0 OK for: bin-links@6.0.0 want: ^6.0.0
+108 silly placeDep ROOT write-file-atomic@7.0.1 OK for: bin-links@6.0.0 want: ^7.0.0
+109 silly fetch manifest signal-exit@^4.0.1
+110 silly packumentCache full:https://registry.npmjs.org/signal-exit cache-miss
+111 http fetch GET 200 https://registry.npmjs.org/signal-exit 104ms (cache revalidated)
+112 silly packumentCache full:https://registry.npmjs.org/signal-exit set size:53489 disposed:false
+113 silly placeDep ROOT agent-base@7.1.4 OK for: https-proxy-agent@7.0.6 want: ^7.1.2
+114 silly placeDep ROOT debug@4.4.3 OK for: https-proxy-agent@7.0.6 want: 4
+115 silly fetch manifest ms@^2.1.3
+116 silly packumentCache full:https://registry.npmjs.org/ms cache-miss
+117 http fetch GET 200 https://registry.npmjs.org/ms 156ms (cache revalidated)
+118 silly packumentCache full:https://registry.npmjs.org/ms set size:92208 disposed:false
+119 silly placeDep ROOT ms@2.1.3 OK for: debug@4.4.3 want: ^2.1.3
+120 silly placeDep ROOT data-uri-to-buffer@4.0.1 OK for: node-fetch@3.3.2 want: ^4.0.0
+121 silly placeDep ROOT fetch-blob@3.2.0 OK for: node-fetch@3.3.2 want: ^3.1.4
+122 silly placeDep ROOT formdata-polyfill@4.0.10 OK for: node-fetch@3.3.2 want: ^4.0.10
+123 silly fetch manifest node-domexception@^1.0.0
+124 silly packumentCache full:https://registry.npmjs.org/node-domexception cache-miss
+125 silly fetch manifest web-streams-polyfill@^3.0.3
+126 silly packumentCache full:https://registry.npmjs.org/web-streams-polyfill cache-miss
+127 http fetch GET 200 https://registry.npmjs.org/node-domexception 110ms (cache revalidated)
+128 silly packumentCache full:https://registry.npmjs.org/node-domexception set size:11516 disposed:false
+129 http fetch GET 200 https://registry.npmjs.org/web-streams-polyfill 112ms (cache revalidated)
+130 silly packumentCache full:https://registry.npmjs.org/web-streams-polyfill set size:136634 disposed:false
+131 silly placeDep ROOT node-domexception@1.0.0 OK for: fetch-blob@3.2.0 want: ^1.0.0
+132 silly placeDep ROOT web-streams-polyfill@3.3.3 OK for: fetch-blob@3.2.0 want: ^3.0.3
+133 silly placeDep ROOT @isaacs/fs-minipass@4.0.1 OK for: tar@7.5.10 want: ^4.0.0
+134 silly placeDep ROOT chownr@3.0.0 OK for: tar@7.5.10 want: ^3.0.0
+135 silly placeDep ROOT minipass@7.1.3 OK for: tar@7.5.10 want: ^7.1.2
+136 silly placeDep ROOT minizlib@3.1.0 OK for: tar@7.5.10 want: ^3.1.0
+137 silly placeDep ROOT yallist@5.0.0 OK for: tar@7.5.10 want: ^5.0.0
+138 silly fetch manifest minipass@^7.0.4
+139 silly packumentCache full:https://registry.npmjs.org/minipass cache-hit
+140 silly placeDep ROOT signal-exit@4.1.0 OK for: write-file-atomic@7.0.1 want: ^4.0.1
+141 silly reify moves {}
+142 verbose Error: EPERM: operation not permitted, mkdir '/Users/igorvasin/ai-scout-final/.npm/_npx/aa8e5c70f9d8d161/node_modules/supabase'
+    at async mkdir (node:internal/fs/promises:861:10)
+    at async /usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:576:20
+    at async Promise.allSettled (index 0)
+    at async [reifyPackages] (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:313:11)
+    at async Arborist.reify (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:125:5)
+    at async /usr/local/lib/node_modules/npm/node_modules/libnpmexec/lib/with-lock.js:57:19
+143 verbose stack Error: EPERM: operation not permitted, mkdir '/Users/igorvasin/ai-scout-final/.npm/_npx/aa8e5c70f9d8d161/node_modules/supabase'
+143 verbose stack     at async mkdir (node:internal/fs/promises:861:10)
+143 verbose stack     at async /usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:576:20
+143 verbose stack     at async Promise.allSettled (index 0)
+143 verbose stack     at async [reifyPackages] (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:313:11)
+143 verbose stack     at async Arborist.reify (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:125:5)
+143 verbose stack     at async /usr/local/lib/node_modules/npm/node_modules/libnpmexec/lib/with-lock.js:57:19
+144 error code EPERM
+145 error syscall mkdir
+146 error path /Users/igorvasin/ai-scout-final/.npm/_npx/aa8e5c70f9d8d161/node_modules/supabase
+147 error errno -1
+148 error
+148 error Your cache folder contains root-owned files, due to a bug in
+148 error previous versions of npm which has since been addressed.
+148 error
+148 error To permanently fix this problem, please run:
+148 error   sudo chown -R 501:20 "/Users/igorvasin/ai-scout-final/.npm"
+149 silly unfinished npm timer reify 1772870099883
+150 silly unfinished npm timer reify:createSparse 1772870102788
+151 verbose cwd /Users/igorvasin/ai-scout-final
+152 verbose os Darwin 25.3.0
+153 verbose node v24.11.1
+154 verbose npm  v11.6.2
+155 verbose exit -1
+156 verbose code -1
+157 error A complete log of this run can be found in: /Users/igorvasin/ai-scout-final/.npm/_logs/2026-03-07T07_54_43_409Z-debug-0.log
