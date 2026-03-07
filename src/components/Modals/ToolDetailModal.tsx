@@ -36,142 +36,119 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0a0f1c]/80 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/90 backdrop-blur-xl animate-in fade-in duration-300"
             onClick={onClose}
         >
             <div
-                className="bg-[#111827] rounded-3xl max-w-[500px] w-full max-h-[90vh] overflow-y-auto border border-slate-800 shadow-2xl relative"
+                className="bg-[#0f172a] rounded-[2.5rem] max-w-[550px] w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative custom-scrollbar"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Кнопка закрытия */}
+                {/* Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+                    className="absolute top-6 right-6 p-2 rounded-xl bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white transition-all z-10"
                 >
-                    <X size={18} />
+                    <X size={20} />
                 </button>
 
-                <div className="p-8">
-                    {/* Заголовок и иконка */}
-                    <div className="flex items-start gap-5 mb-8">
-                        {/* Иконка */}
-                        <div className="w-20 h-20 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl flex items-center justify-center text-5xl shadow-inner border border-slate-700/50">
-                            {tool.icon}
+                {/* Content */}
+                <div className="p-8 sm:p-10">
+                    {/* Header: Icon & Main Info */}
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-10">
+                        {/* Icon Container with Glow */}
+                        <div className="relative group">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                            <div className="relative w-24 h-24 bg-slate-800 rounded-3xl flex items-center justify-center text-5xl shadow-2xl border border-white/5">
+                                {tool.icon}
+                            </div>
                         </div>
 
-                        {/* Информация */}
-                        <div className="flex flex-col items-start pt-1">
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className="px-3 py-1 bg-cyan-900/40 text-cyan-400 rounded-full text-xs font-bold uppercase tracking-wider border border-cyan-800/50">
-                                    {tool.category}
+                        {/* Title & Category Area */}
+                        <div className="flex-1 text-center sm:text-left pt-2">
+                            <div className="flex items-center justify-center sm:justify-start gap-3 mb-3">
+                                <span className="px-3 py-1 bg-cyan-500/10 text-cyan-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-cyan-500/20">
+                                    {tool.category || 'AI Service'}
                                 </span>
-                                <div className="flex items-center gap-1 text-yellow-400 font-bold text-sm">
-                                    <Star size={14} className="fill-current" />
-                                    <span>{tool.rating.toFixed(1)}</span>
+                                <div className="flex items-center gap-1.5 text-amber-400 font-black text-sm">
+                                    <Star size={16} className="fill-current" />
+                                    <span>{tool.rating > 0 ? tool.rating.toFixed(1) : '5.0'}</span>
                                 </div>
                             </div>
 
-                            <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
+                            <h2 className="text-3xl font-black text-white uppercase tracking-tight leading-none mb-4">
                                 {tool.name}
                             </h2>
 
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                                 {tool.hasApi && (
-                                    <span className="px-3 py-1 bg-indigo-900/40 text-indigo-300 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border border-indigo-800/50">
-                                        <Code2 size={12} />
+                                    <span className="px-3 py-1 bg-white/5 text-slate-300 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/5 transition-colors hover:border-white/10">
+                                        <Code2 size={12} className="text-blue-400" />
                                         API Access
                                     </span>
                                 )}
                                 {tool.hasMcp && (
-                                    <span className="px-3 py-1 bg-purple-900/40 text-purple-300 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border border-purple-800/50">
-                                        <TerminalSquare size={12} />
-                                        MCP Support
+                                    <span className="px-3 py-1 bg-white/5 text-slate-300 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/5 transition-colors hover:border-white/10">
+                                        <TerminalSquare size={12} className="text-emerald-400" />
+                                        MCP Ready
                                     </span>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Описание */}
-                    <div className="mb-8">
-                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
-                            Описание
-                        </h3>
-                        <p className="text-slate-200 text-lg leading-relaxed font-medium">
-                            {tool.description}
-                        </p>
-                    </div>
+                    <div className="space-y-10">
+                        {/* Description Section */}
+                        <section className="bg-slate-900/40 p-6 rounded-3xl border border-white/5">
+                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-1">
+                                Обзор инструмента
+                            </h3>
+                            <p className="text-slate-200 text-base leading-relaxed font-medium">
+                                {tool.description || "Информация об этом инструменте собирается и будет обновлена в ближайшее время."}
+                            </p>
+                        </section>
 
-                    {/* Лимиты и квоты (Квадратные карточки) */}
-                    {(tool.dailyCredits !== undefined || tool.monthlyCredits !== undefined) && (
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            {tool.dailyCredits !== undefined ? (
-                                <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60">
-                                    <div className="flex items-center gap-2 text-cyan-400 mb-2">
-                                        <Zap size={14} />
-                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                            Daily Limit
-                                        </h3>
-                                    </div>
-                                    <p className="text-2xl font-bold text-white">
-                                        {tool.dailyCredits || '∞'}
-                                    </p>
+                        {/* Limits Grid */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-6 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-3xl border border-white/5 shadow-inner">
+                                <div className="flex items-center gap-2 text-cyan-400 mb-2">
+                                    <Zap size={14} />
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        Дневной лимит
+                                    </h3>
                                 </div>
-                            ) : (
-                                <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60 opacity-50">
-                                    <div className="flex items-center gap-2 text-slate-500 mb-2">
-                                        <Zap size={14} />
-                                        <h3 className="text-[10px] font-bold uppercase tracking-widest">
-                                            Daily Limit
-                                        </h3>
-                                    </div>
-                                    <p className="text-2xl font-bold text-slate-500">
-                                        Н/Д
-                                    </p>
-                                </div>
-                            )}
+                                <p className="text-2xl font-black text-white uppercase tracking-tight">
+                                    {tool.dailyCredits || '∞'}
+                                </p>
+                            </div>
 
-                            {tool.monthlyCredits !== undefined ? (
-                                <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60">
-                                    <div className="flex items-center gap-2 text-indigo-400 mb-2">
-                                        <Clock size={14} />
-                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                            Monthly Credits
-                                        </h3>
-                                    </div>
-                                    <p className="text-2xl font-bold text-white">
-                                        {tool.monthlyCredits || '∞'}
-                                    </p>
+                            <div className="p-6 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-3xl border border-white/5 shadow-inner">
+                                <div className="flex items-center gap-2 text-indigo-400 mb-2">
+                                    <Clock size={14} />
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        Месячные кредиты
+                                    </h3>
                                 </div>
-                            ) : (
-                                <div className="p-5 bg-[#172033] rounded-2xl border border-slate-800/60 opacity-50">
-                                    <div className="flex items-center gap-2 text-slate-500 mb-2">
-                                        <Clock size={14} />
-                                        <h3 className="text-[10px] font-bold uppercase tracking-widest">
-                                            Monthly Credits
-                                        </h3>
-                                    </div>
-                                    <p className="text-2xl font-bold text-slate-500">
-                                        Н/Д
-                                    </p>
-                                </div>
-                            )}
+                                <p className="text-2xl font-black text-white uppercase tracking-tight">
+                                    {tool.monthlyCredits || '∞'}
+                                </p>
+                            </div>
                         </div>
-                    )}
 
-                    {/* Минимальный тариф (Широкая карточка) */}
-                    {tool.minPrice !== undefined && (
-                        <div className="flex items-center justify-between p-6 bg-[#131d2f]/80 rounded-2xl border border-slate-700/50 mb-8">
-                            <div>
-                                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                                    Минимальный тариф
+                        {/* Pricing Banner */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-[#0f172a] rounded-[2rem] border border-cyan-500/20 relative overflow-hidden group">
+                            {/* Inner Glow */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 blur-[50px] -mr-10 -mt-10 group-hover:bg-cyan-500/10 transition-all duration-700"></div>
+
+                            <div className="mb-4 sm:mb-0 relative z-10">
+                                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                                    <Star size={10} className="text-cyan-400" /> Минимальный тариф
                                 </h3>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl font-bold text-white tracking-tight">
-                                        {(tool.minPrice === 0 || !tool.minPrice) ? 'Бесплатно' : `$${tool.minPrice}`}
+                                    <span className="text-2xl font-black text-white tracking-tight">
+                                        {(!tool.min_price || tool.min_price === '$0' || tool.min_price === '0') ? 'БЕСПЛАТНО' : tool.min_price}
                                     </span>
-                                    {tool.minPrice !== 0 && tool.minPrice !== undefined && (
-                                        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-1">/ мес</span>
+                                    {tool.min_price && tool.min_price !== '$0' && !tool.min_price.includes('Бесплатно') && !tool.min_price.includes('Н/Д') && (
+                                        <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest ml-1">/ мес</span>
                                     )}
                                 </div>
                             </div>
@@ -180,56 +157,59 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                 href={tool.docsUrl || '#'}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase tracking-wider rounded-xl transition-all border border-slate-700 active:scale-95"
+                                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-cyan-500/20 active:scale-95 text-xs text-center relative z-10"
                             >
                                 Подписаться
                             </a>
                         </div>
-                    )}
 
-                    {/* Особенности */}
-                    {tool.pros && tool.pros.length > 0 && (
-                        <div className="mb-8">
-                            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
-                                Ключевые преимущества
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {tool.pros.map((pro, index) => (
-                                    <span
-                                        key={index}
-                                        className="px-3 py-1.5 bg-slate-800/50 text-slate-300 rounded-lg text-sm border border-slate-700/50 hover:border-slate-600 hover:bg-slate-800 transition-colors cursor-default"
-                                    >
-                                        {pro}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Нижние кнопки-действия */}
-                    <div className="flex gap-4 pt-4">
-                        <button
-                            onClick={() => toggleFavorite(tool.id, 'tool')}
-                            className={`flex flex-1 items-center justify-center gap-2 px-5 py-4 rounded-xl font-bold transition-all border ${favorite
-                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
-                                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
-                                }`}
-                        >
-                            <Heart size={18} className={favorite ? "fill-current" : ""} />
-                            {favorite ? 'В ИЗБРАННОМ' : 'В ИЗБРАННОЕ'}
-                        </button>
-
-                        {tool.docsUrl && (
-                            <a
-                                href={tool.docsUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex flex-1 items-center justify-center gap-2 px-5 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20"
-                            >
-                                ДОКУМЕНТАЦИЯ
-                                <ExternalLink size={18} />
-                            </a>
+                        {/* Benefits/Pros Section */}
+                        {tool.pros && tool.pros.length > 0 && (
+                            <section>
+                                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-1">
+                                    Ключевые преимущества
+                                </h3>
+                                <div className="flex flex-wrap gap-2.5">
+                                    {tool.pros.map((pro, index) => (
+                                        <div
+                                            key={index}
+                                            className="px-4 py-2 bg-white/5 text-slate-300 rounded-xl text-xs font-bold border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all cursor-default flex items-center gap-2"
+                                        >
+                                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/50"></div>
+                                            {pro}
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
                         )}
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                            <button
+                                onClick={() => toggleFavorite(tool.id.toString(), 'tool')}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-3 px-6 py-5 rounded-2xl font-black uppercase tracking-widest transition-all border text-xs",
+                                    favorite
+                                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
+                                        : 'bg-slate-800 text-slate-400 border-white/5 hover:bg-slate-700 hover:text-white'
+                                )}
+                            >
+                                <Heart size={18} className={cn(favorite && "fill-current")} />
+                                {favorite ? 'В ИЗБРАННОМ' : 'В ИЗБРАННОЕ'}
+                            </button>
+
+                            {tool.docsUrl && (
+                                <a
+                                    href={tool.docsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-1 flex items-center justify-center gap-3 px-6 py-5 bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-500 hover:to-blue-600 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 text-xs"
+                                >
+                                    ДОКУМЕНТАЦИЯ
+                                    <ExternalLink size={18} />
+                                </a>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
