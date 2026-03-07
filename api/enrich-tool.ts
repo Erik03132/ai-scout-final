@@ -78,7 +78,7 @@ async function generateEnrichmentWithCascade(name: string, prompt: string) {
     if (process.env.GEMINI_API_KEY) {
         try {
             console.log("[Enrichment] Attempting Gemini Direct...");
-            return { ...(await callGemini(prompt, 'v1beta', 'gemini-1.5-flash')), name };
+            return { ...(await callGemini(prompt, 'v1beta', 'gemini-flash-latest')), name };
         } catch (e) {
             console.error("Gemini Direct failed:", e);
             lastError = e;

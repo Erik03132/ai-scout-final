@@ -33,7 +33,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             return post.image;
         }
         // Fallback изображение
-        return 'https://placehold.co/400x200/1e293b/38bdf8?text=NO+IMAGE';
+        return '/telegram-placeholder.png';
     };
 
     return (

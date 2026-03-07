@@ -29,7 +29,7 @@ const VirtualizedPostCard: React.FC<{
 
     const getImageUrl = () => {
         if (post.image) return post.image;
-        return 'https://placehold.co/400x200/1e293b/38bdf8?text=NO+IMAGE';
+        return '/telegram-placeholder.png';
     };
 
     return (

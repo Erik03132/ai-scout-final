@@ -103,7 +103,7 @@ async function generateSummaryWithLLM(content: string): Promise<SummarizeRespons
     // 1. Gemini Direct
     if (hasGemini) {
         try {
-            return await callGemini(content, 'gemini-1.5-flash');
+            return await callGemini(content, 'gemini-flash-latest');
         } catch (e) {
             console.error("Gemini Direct failed:", e);
             lastError = e;
@@ -206,7 +206,7 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
 
     // Switching to v1 for stability
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: {
