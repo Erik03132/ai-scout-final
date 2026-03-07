@@ -503,36 +503,29 @@ export default function App() {
       if (!supabase) return;
 
       try {
-        // Выполняем запросы независимо, чтобы ошибка в одном не блокировала остальные
+        // Выполняем запросы независимо
         const fetchTools = async () => {
-          try {
-            const { data } = await supabase.from('tools').select('*').order('rating', { ascending: false });
-            if (data && data.length > 0) return data;
-          } catch (e) { console.error('Error fetching tools:', e); }
-          return null;
+          const { data, error } = await supabase.from('tools').select('*').order('rating', { ascending: false });
+          if (error) console.error('Error fetching tools:', error);
+          return data;
         };
 
         const fetchPosts = async () => {
-          try {
-            const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
-            if (data && data.length > 0) return data;
-          } catch (e) { console.error('Error fetching posts:', e); }
-          return null;
+          const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
+          if (error) console.error('Error fetching posts:', error);
+          return data;
         };
 
         const fetchChannels = async () => {
-          try {
-            const { data } = await supabase.from('channels').select('*').order('created_at', { ascending: false });
-            if (data && data.length > 0) return data;
-          } catch (e) { console.error('Error fetching channels:', e); }
-          return null;
+          const { data, error } = await supabase.from('channels').select('*').order('created_at', { ascending: false });
+          if (error) console.error('Error fetching channels:', error);
+          return data;
         };
 
         const fetchDetails = async () => {
-          try {
-            const { data } = await supabase.from('tool_details').select('*');
-            return data || [];
-          } catch (e) { console.error('Error fetching details:', e); return []; }
+          const { data, error } = await supabase.from('tool_details').select('*');
+          if (error) console.error('Error fetching details:', error);
+          return data || [];
         };
 
         const [toolsData, postsData, channelsData, detailsData] = await Promise.all([
@@ -1413,12 +1406,18 @@ export default function App() {
                     if (btn) btn.classList.add('animate-spin');
                     try {
                       const res = await fetch('/api/cron/fetch-news');
-                      if (res.ok) {
-                        // Перезагружаем страницу или стейт (для простоты — страницу)
+                      const data = await res.json();
+                      console.log('Refresh API Response:', data);
+                      if (res.ok && data.success) {
+                        alert('Успешно обновлено! Перезагружаю...');
                         window.location.reload();
+                      } else {
+                        console.error('Refresh API failed with:', data);
+                        alert(`Ошибка обновления: ${JSON.stringify(data.error || data)}`);
                       }
                     } catch (e) {
-                      console.error('Refresh failed:', e);
+                      console.error('Refresh throw error:', e);
+                      alert('Внутренняя ошибка. Откройте консоль браузера.');
                     } finally {
                       if (btn) btn.classList.remove('animate-spin');
                     }
