@@ -2084,15 +2084,7 @@ export default function App() {
             </div>
           )
         }
-      </main >
-
-
-      {/* Tool Detail Modal */}
-      <ToolDetailModal
-        tool={selectedTool as any}
-        isOpen={!!selectedTool}
-        onClose={() => setSelectedTool(null)}
-      />
+      </main>
 
       {/* Post Detail Modal (Summary & Guide) */}
       {
@@ -2232,11 +2224,14 @@ export default function App() {
                             } catch {
                               paragraphs = content.split('\n');
                             }
-                          } else {
+                          } else if (content) {
                             paragraphs = content.split('\n');
+                          } else {
+                            // Фоллбэк если нет детального описания
+                            paragraphs = [selectedPost.summary || "Детальное описание (расшифровка) для данного поста пока недоступно."];
                           }
 
-                          return paragraphs.filter(p => p.trim()).map((paragraph, idx) => (
+                          return paragraphs.filter(p => typeof p === 'string' && p.trim()).map((paragraph, idx) => (
                             <p key={idx} className="mb-3 last:mb-0">
                               {paragraph.replace(/^["']|["']$/g, '')}
                             </p>
@@ -2735,6 +2730,13 @@ export default function App() {
           </div>
         )
       }
+
+      {/* Tool Detail Modal (Moved to the very end to ensure topmost z-index layering) */}
+      <ToolDetailModal
+        tool={selectedTool as any}
+        isOpen={!!selectedTool}
+        onClose={() => setSelectedTool(null)}
+      />
     </div >
   );
 }

@@ -16,6 +16,7 @@ import {
     Code2,
     TerminalSquare
 } from 'lucide-react';
+import { cn } from '../../utils/cn';
 
 interface ToolDetailModalProps {
     tool: Tool | null;
@@ -36,7 +37,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/90 backdrop-blur-xl animate-in fade-in duration-300"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#020617]/90 backdrop-blur-xl animate-in fade-in duration-300"
             onClick={onClose}
         >
             <div
@@ -71,7 +72,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                 </span>
                                 <div className="flex items-center gap-1.5 text-amber-400 font-black text-sm">
                                     <Star size={16} className="fill-current" />
-                                    <span>{tool.rating > 0 ? tool.rating.toFixed(1) : '5.0'}</span>
+                                    <span>{Number(tool.rating) > 0 ? Number(tool.rating).toFixed(1) : '5.0'}</span>
                                 </div>
                             </div>
 
@@ -102,7 +103,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-1">
                                 Обзор инструмента
                             </h3>
-                            <p className="text-slate-200 text-base leading-relaxed font-medium">
+                            <p className="text-slate-200 text-base leading-relaxed font-medium whitespace-pre-wrap">
                                 {tool.description || "Информация об этом инструменте собирается и будет обновлена в ближайшее время."}
                             </p>
                         </section>
@@ -145,9 +146,9 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                 </h3>
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-2xl font-black text-white tracking-tight">
-                                        {(!tool.min_price || tool.min_price === '$0' || tool.min_price === '0') ? 'БЕСПЛАТНО' : tool.min_price}
+                                        {(!tool.minPrice || String(tool.minPrice) === '$0' || String(tool.minPrice) === '0') ? 'БЕСПЛАТНО' : tool.minPrice}
                                     </span>
-                                    {tool.min_price && tool.min_price !== '$0' && !tool.min_price.includes('Бесплатно') && !tool.min_price.includes('Н/Д') && (
+                                    {tool.minPrice && String(tool.minPrice) !== '$0' && !String(tool.minPrice).includes('Бесплатно') && !String(tool.minPrice).includes('Н/Д') && (
                                         <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest ml-1">/ мес</span>
                                     )}
                                 </div>
@@ -164,7 +165,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                         </div>
 
                         {/* Benefits/Pros Section */}
-                        {tool.pros && tool.pros.length > 0 && (
+                        {Array.isArray(tool.pros) && tool.pros.length > 0 && (
                             <section>
                                 <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-1">
                                     Ключевые преимущества
@@ -176,7 +177,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                             className="px-4 py-2 bg-white/5 text-slate-300 rounded-xl text-xs font-bold border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all cursor-default flex items-center gap-2"
                                         >
                                             <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/50"></div>
-                                            {pro}
+                                            {String(pro)}
                                         </div>
                                     ))}
                                 </div>
@@ -198,7 +199,7 @@ export const ToolDetailModal: React.FC<ToolDetailModalProps> = ({
                                 {favorite ? 'В ИЗБРАННОМ' : 'В ИЗБРАННОЕ'}
                             </button>
 
-                            {tool.docsUrl && (
+                            {tool.docsUrl && tool.docsUrl !== '#' && (
                                 <a
                                     href={tool.docsUrl}
                                     target="_blank"

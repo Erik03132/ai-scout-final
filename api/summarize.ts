@@ -172,9 +172,9 @@ async function callOpenAI(content: string): Promise<SummarizeResponse> {
 ИНСТРУКЦИИ (КРИТИЧЕСКИ ВАЖНО):
 1. ПЕРЕВЕДИ заголовок контента на русский язык в поле "titleRu".
 2. Весь текст в полях "summary", "detailedUsage" и "usageTips" должен быть ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.
-3. В "detailedUsage" напиши МИНИМУМ 500 слов. Разбери всё до мелочей, все этапы и ключевые мысли. Это должен быть полноценный экспертный разбор.
+3. В "detailedUsage" напиши МАКСИМАЛЬНО ОБЪЕМНЫЙ разбор (МИНИМУМ 500-800 слов, 8-10 абзацев). Если текст длинный — причеши его и структурируй. ЕСЛИ ИСХОДНЫЙ ТЕКСТ КОРОТКИЙ (пара предложений) — РАЗВЕЙ ТЕМУ самостоятельно! Опиши перспективы этого сервиса/новости, возможные юзкейсы, как это меняет рынок и какие проблемы решает.
 4. В "mentions" включай ТОЛЬКО профессиональные ИИ-приложения, языковые модели (LLM) и готовые сервисы. 
-   КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО включать названия частных демо-проектов, игр или скриптов, созданных в самом видео (например, '3D аквариум', 'игра выживание' и т.д.).
+   КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО включать названия частных демо-проектов, игр или скриптов.
 
 ВЕРНИ ТОЛЬКО ЧИСТЫЙ JSON.`
                 },
@@ -217,16 +217,21 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
                     parts: [{
                         text: `Ты — элитный ИИ-аналитик. Составь МАКСИМАЛЬНО подробный и глубокий анализ контента СТРОГО НА РУССКОМ ЯЗЫКЕ.
 
+КРИТИЧЕСКИ ВАЖНО:
+- ЗАГОЛОВОК — это главный источник информации о теме. Анализируй именно тему, указанную в заголовке.
+- Описание часто содержит МУСОР (рекламу, ссылки на курсы, промокоды). ПОЛНОСТЬЮ ИГНОРИРУЙ этот мусор.
+- Из описания бери ТОЛЬКО те части, которые непосредственно связаны с темой заголовка.
+
 ОБЯЗАТЕЛЬНЫЕ ПОЛЯ (JSON):
 - titleRu: Перевод заголовка на русский.
-- summary: Краткая суть (3 предложения).
-- detailedUsage: ГИГАНТСКИЙ развернутый текст на ПОЛ-СТРАНИЦЫ (минимум 10 абзацев). Расскажи подробно о каждом пункте.
-- mentions: Список ИИ-тулзов (ТОЛЬКО проф. сервисы, модели и приложения. НЕ ДОБАВЛЯЙ названия демо-проектов из ролика вроде 'игра', 'аквариум' и т.д.).
-- usageTips: 5 советов по применению.
+- summary: Краткая суть ИМЕННО ТЕМЫ (3 предложения).
+- detailedUsage: МАКСИМАЛЬНО ОБЪЕМНЫЙ разбор (МИНИМУМ 500-800 слов, 8-10 абзацев). Если текст большой — структурируй и разбери до мелочей. ЕСЛИ ТЕКСТ КОРОТКИЙ (пара строк) — самостоятельно РАЗВЕЙ тему. Опиши потенциал инструмента, его сценарии использования, ценность для пользователей и как это меняет рынок.
+- mentions: Список ИИ-тулзов и технологий из поста (ТОЛЬКО проф. сервисы. НЕ ДОБАВЛЯЙ демо-проекты).
+- usageTips: 5 советов по применению технологий из видео/поста.
 
 ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ. ВЕРНИ ТОЛЬКО JSON.
 
-Контент: ${content.substring(0, 10000)}`
+Контент: ${content.substring(0, 10000)}\`
                     }]
                 }],
                 generationConfig: {
@@ -239,7 +244,7 @@ async function callGemini(content: string, model: string): Promise<SummarizeResp
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Gemini API error ${response.status}: ${errorText.substring(0, 200)}`);
+        throw new Error(`Gemini API error ${ response.status }: ${ errorText.substring(0, 200) }`);
     }
 
     const data = await response.json();
@@ -254,7 +259,7 @@ async function callOpenRouter(content: string, model: string = 'google/gemini-2.
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Authorization': `Bearer ${ process.env.OPENROUTER_API_KEY }`,
             'Content-Type': 'application/json',
             'HTTP-Referer': 'https://ai-scout.vercel.app',
         },
@@ -262,7 +267,7 @@ async function callOpenRouter(content: string, model: string = 'google/gemini-2.
             model,
             messages: [{
                 role: 'system',
-                content: 'Ты — элитный аналитик на русском языке. Верни JSON с полями: titleRu, summary, detailedUsage (минимум 10 абзацев), mentions, usageTips. В "mentions" пиши только названия реальных ИИ-сервисов и моделей, игнорируй названия игр/демок из видео.'
+                content: 'Ты — элитный аналитик на русском языке. Верни JSON с полями: titleRu, summary, detailedUsage, mentions, usageTips. В "detailedUsage" пиши МАКСИМАЛЬНО ОБЪЕМНО (500+ слов). Если текст короткий — развивай тему сам: описывай перспективы развития упомянутого приложения/сервиса и кейсы применения. В "mentions" пиши только реальные ИИ-сервисы.'
             }, {
                 role: 'user',
                 content: content
@@ -273,7 +278,7 @@ async function callOpenRouter(content: string, model: string = 'google/gemini-2.
 
     if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`OpenRouter error ${response.status}: ${errText.substring(0, 100)}`);
+        throw new Error(`OpenRouter error ${ response.status }: ${ errText.substring(0, 100) }`);
     }
     const data = await response.json();
     return parseLLMResponse(data.choices[0]?.message?.content || '');
@@ -288,14 +293,14 @@ async function callKimi(content: string): Promise<SummarizeResponse> {
     const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${process.env.MOONSHOT_API_KEY}`,
+            'Authorization': `Bearer ${ process.env.MOONSHOT_API_KEY }`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             model: 'moonshot-v1-8k',
             messages: [{
                 role: 'system',
-                content: 'Ты — эксперт по AI. Сделай глубокий разбор на русском в формате JSON (titleRu, summary, detailedUsage, mentions, usageTips). "detailedUsage" максимально длинный. В "mentions" только реальные ИИ-инструменты и модели (никаких частных демо-проектов из ролика).'
+                content: 'Ты — эксперт по AI. Верни JSON (titleRu, summary, detailedUsage, mentions, usageTips). "detailedUsage" ДОЛЖЕН БЫТЬ МАКСИМАЛЬНО ОГРОМНЫМ (500+ слов). Если новость короткая — ДОДУМАЙ детали на базе своих знаний (перспективы, применение). В "mentions" только реальные AI инструменты.'
             }, {
                 role: 'user',
                 content: content
@@ -303,7 +308,7 @@ async function callKimi(content: string): Promise<SummarizeResponse> {
         })
     });
 
-    if (!response.ok) throw new Error(`Moonshot error ${response.status}`);
+    if (!response.ok) throw new Error(`Moonshot error ${ response.status }`);
     const data = await response.json();
     return parseLLMResponse(data.choices[0]?.message?.content || '');
 }
@@ -354,24 +359,24 @@ function generateFallbackSummary(content: string, errorMessage?: string): Summar
         summary: 'Краткое описание временно недоступно из-за ошибки лимитов ИИ.',
         tags: tags.length > 0 ? tags : ['AI'],
         mentions,
-        detailedUsage: `⚠️ ОШИБКА АНАЛИЗА: Мы не смогли подключиться к нейросети (Gemini/OpenAI).
+        detailedUsage: `⚠️ ОШИБКА АНАЛИЗА: Мы не смогли подключиться к нейросети(Gemini / OpenAI).
 
 ТЕХНИЧЕСКАЯ ОШИБКА:
-${errorMessage || 'Неизвестная ошибка'}
+                        ${ errorMessage || 'Неизвестная ошибка'}
         
 Это может произойти, если:
-1. Вы не добавили ключи GEMINI_API_KEY или OPENAI_API_KEY в переменные окружения Vercel.
-2. У вашего аккаунта закончились бесплатные лимиты (Google или OpenAI).
+                    1. Вы не добавили ключи GEMINI_API_KEY или OPENAI_API_KEY в переменные окружения Vercel.
+2. У вашего аккаунта закончились бесплатные лимиты(Google или OpenAI).
 3. Произошел сбой в работе API.
 
-СТАТУС КЛЮЧЕЙ (ДЛЯ ВАС):
-- Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
-- OpenRouter Key: ${process.env.OPENROUTER_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
-- OpenAI API Key: ${process.env.OPENAI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
-- Moonshot Key: ${process.env.MOONSHOT_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ'}
+СТАТУС КЛЮЧЕЙ(ДЛЯ ВАС):
+                - Gemini API Key: ${ process.env.GEMINI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ' }
+                - OpenRouter Key: ${ process.env.OPENROUTER_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ' }
+                - OpenAI API Key: ${ process.env.OPENAI_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ' }
+                - Moonshot Key: ${ process.env.MOONSHOT_API_KEY ? '✅ УСТАНОВЛЕН' : '❌ ОТСУТСТВУЕТ' }
 
 ИНСТРУКЦИЯ:
-Зайдите в панель управления Vercel -> Settings -> Environment Variables. Добавьте эти ключи. Затем сделайте "Redeploy" в разделе Deployments.`,
+                    Зайдите в панель управления Vercel -> Settings -> Environment Variables.Добавьте эти ключи.Затем сделайте "Redeploy" в разделе Deployments.`,
         usageTips: ["Добавьте MOONSHOT_API_KEY", "Проверьте заголовок", "Используйте GPT-4 как альтернативу"]
     };
 }
