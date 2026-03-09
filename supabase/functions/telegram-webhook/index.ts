@@ -128,7 +128,18 @@ async function handleStart(chatId: number, firstName?: string) {
 
 🔍 Просто напиши запрос и я найду нужные инструменты!`;
 
-    await sendMessage(chatId, welcomeText);
+    const keyboard = [
+        [
+            { text: '📰 Новости', callback_data: 'cmd_news' },
+            { text: '🔄 Обновить', callback_data: 'cmd_refresh' }
+        ],
+        [
+            { text: '🔍 Поиск', callback_data: 'cmd_search' },
+            { text: '⭐ Избранное', callback_data: 'cmd_favorites' }
+        ]
+    ];
+
+    await sendMessageWithKeyboard(chatId, welcomeText, keyboard);
 }
 
 // Обработка команды /help
@@ -470,6 +481,28 @@ async function handleCallbackQuery(chatId: number, data: string, queryId: string
             body: JSON.stringify({ callback_query_id: queryId, text }),
         });
     };
+
+    // Обработка кнопок меню
+    if (data.startsWith('cmd_')) {
+        switch (data) {
+            case 'cmd_news':
+                await handleNews(chatId);
+                await answerCallback('📰 Загружаю новости...');
+                return;
+            case 'cmd_refresh':
+                await handleRefresh(chatId);
+                await answerCallback('🔄 Обновляю...');
+                return;
+            case 'cmd_search':
+                await sendMessage(chatId, '🔍 Напишите запрос для поиска AI-инструментов.\n\nПример: `image generation`');
+                await answerCallback('🔍 Готов к поиску!');
+                return;
+            case 'cmd_favorites':
+                await handleFavorites(chatId);
+                await answerCallback('⭐ Загружаю избранное...');
+                return;
+        }
+    }
 
     if (data.startsWith('fav_')) {
         const postId = data.replace('fav_', '');
