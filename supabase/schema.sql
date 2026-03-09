@@ -224,42 +224,41 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 -- Telegram API: нет жёстких ограничений для webhook
 -- ============================================
 
--- Сбор YouTube видео: каждые 6 часов
+-- Сбор YouTube видео: каждые 30 минут
 SELECT cron.schedule(
     'fetch-youtube-videos',
-    '0 */6 * * *',
+    '*/30 * * * *',
     $$
     SELECT net.http_post(
         url := 'https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/fetch-youtube',
-        headers := '{"Content-Type": "application/json"}'::jsonb,
+        headers := '{"Content-Type": "application/json", "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3dGxla2R5bmhmY3Fnd2hvY2lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2Mzg3OTUsImV4cCI6MjA4NzIxNDc5NX0.JcvGznt4sF0UJ8Ms426eaVlMsrd2_X15p-F-Zp5aMHU"}'::jsonb,
         body := '{}'::jsonb
     );
     $$
 );
 
--- Сбор Telegram постов: каждые 4 часа
+-- Сбор Telegram постов: каждые 15 минут
 SELECT cron.schedule(
     'fetch-telegram-posts',
-    '0 */4 * * *',
+    '*/15 * * * *',
     $$
     SELECT net.http_post(
         url := 'https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/fetch-telegram',
-        headers := '{"Content-Type": "application/json"}'::jsonb,
+        headers := '{"Content-Type": "application/json", "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3dGxla2R5bmhmY3Fnd2hvY2lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2Mzg3OTUsImV4cCI6MjA4NzIxNDc5NX0.JcvGznt4sF0UJ8Ms426eaVlMsrd2_X15p-F-Zp5aMHU"}'::jsonb,
         body := '{}'::jsonb
     );
     $$
 );
 
--- Анализ постов: каждые 2 часа
--- Обрабатывает неанализированные посты из БД
+-- Анализ постов: каждые 10 минут
 SELECT cron.schedule(
     'analyze-posts',
-    '0 */2 * * *', -- каждые 2 часа
+    '*/10 * * * *',
     $$
     SELECT
         net.http_post(
             url := 'https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/analyze-post',
-            headers := '{"Content-Type": "application/json"}'::jsonb,
+            headers := '{"Content-Type": "application/json", "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3dGxla2R5bmhmY3Fnd2hvY2lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2Mzg3OTUsImV4cCI6MjA4NzIxNDc5NX0.JcvGznt4sF0UJ8Ms426eaVlMsrd2_X15p-F-Zp5aMHU"}'::jsonb,
             body := '{}'::jsonb
         );
     $$

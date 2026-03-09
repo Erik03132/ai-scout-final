@@ -101,6 +101,16 @@ serve(async (req) => {
             }
         }
 
+        if (newPosts.length > 0) {
+            fetch(`${supabaseUrl}/functions/v1/analyze-post`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${supabaseKey}`,
+                    "apikey": supabaseKey
+                }
+            }).catch(e => console.error("Error triggering analysis:", e));
+        }
+
         return new Response(
             JSON.stringify({ success: true, newPostsCount: newPosts.length }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
