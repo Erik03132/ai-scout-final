@@ -15,6 +15,7 @@ interface VirtualizedFeedProps {
     height?: number;
     itemHeight?: number;
     onPostClick?: (postId: number) => void;
+    onMentionClick?: (mention: string) => void;
 }
 
 // Внутренний компонент карточки для виртуализации
@@ -23,7 +24,8 @@ const VirtualizedPostCard: React.FC<{
     isFavorite: boolean;
     onFavoriteToggle: () => void;
     onClick?: () => void;
-}> = ({ post, isFavorite, onFavoriteToggle, onClick }) => {
+    onMentionClick?: (mention: string) => void;
+}> = ({ post, isFavorite, onFavoriteToggle, onClick, onMentionClick }) => {
     const sourceIcon = post.source === 'YouTube' ? '🎬' : '📱';
     const sourceColor = post.source === 'YouTube' ? 'text-red-400' : 'text-blue-400';
 
@@ -94,12 +96,16 @@ const VirtualizedPostCard: React.FC<{
                                             return '✨';
                                         };
                                         return (
-                                            <span
+                                            <button
                                                 key={`mention-${index}`}
-                                                className="px-1.5 py-0 text-[9px] bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full font-medium inline-flex items-center gap-1 whitespace-nowrap"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onMentionClick?.(mention);
+                                                }}
+                                                className="px-1.5 py-0 text-[9px] bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full font-medium inline-flex items-center gap-1 whitespace-nowrap hover:border-cyan-400/50 hover:scale-105 transition-all"
                                             >
                                                 {getIcon(mention)} {mention}
-                                            </span>
+                                            </button>
                                         );
                                     })}
                                 </div>
