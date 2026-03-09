@@ -1089,16 +1089,32 @@ export default function App() {
   );
   // Посты в избранном больше не используем — посты идут в Архив
 
-  // Уникальные теги и упоминания для фильтров
+  // Уникальные теги и упоминания для фильтров (топ-20 по популярности)
   const uniqueTags = useMemo(() => {
     const allTags = posts.flatMap(p => p.tags || []);
-    return Array.from(new Set(allTags)).sort();
+    const tagCounts = allTags.reduce((acc, tag) => {
+      acc[tag] = (acc[tag] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1]) // Сортируем по убыванию частоты
+      .slice(0, 20) // Берем топ-20
+      .map(([tag]) => tag);
   }, [posts]);
 
   const uniqueMentions = useMemo(() => {
-    const excludeList = ['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express'];
+    const excludeList = ['react', 'python', 'go', 'javascript', 'typescript', 'java', 'c++', 'c#', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'vue', 'angular', 'svelte', 'html', 'css', 'node.js', 'nodejs', 'express', 'fullstack', 'frontend', 'backend', 'developer', 'engineer', 'api', 'database', 'cloud', 'deployment'];
     const allMentions = posts.flatMap(p => (p.mentions || []).filter(m => !excludeList.includes(m.trim().toLowerCase())));
-    return Array.from(new Set(allMentions)).sort();
+    const mentionCounts = allMentions.reduce((acc, mention) => {
+      acc[mention] = (acc[mention] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(mentionCounts)
+      .sort((a, b) => b[1] - a[1]) // Сортируем по убыванию частоты
+      .slice(0, 20) // Берем топ-20
+      .map(([mention]) => mention);
   }, [posts]);
 
   // Архивирование и удаление
@@ -1488,20 +1504,23 @@ export default function App() {
                       >
                         Все
                       </button>
-                      {uniqueTags.map(tag => (
-                        <button
-                          key={tag}
-                          onClick={() => setFilterTag(filterTag === tag ? null : tag)}
-                          className={cn(
-                            "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
-                            filterTag === tag
-                              ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
-                              : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white"
-                          )}
-                        >
-                          #{tag}
-                        </button>
-                      ))}
+                      {uniqueTags.map(tag => {
+                        const tagCount = posts.filter(p => p.tags?.includes(tag)).length;
+                        return (
+                          <button
+                            key={tag}
+                            onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+                            className={cn(
+                              "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
+                              filterTag === tag
+                                ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                                : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white"
+                            )}
+                          >
+                            #{tag} <span className="opacity-60 text-[9px]">({tagCount})</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1522,20 +1541,23 @@ export default function App() {
                       >
                         Все
                       </button>
-                      {uniqueMentions.map(mention => (
-                        <button
-                          key={mention}
-                          onClick={() => setFilterMention(filterMention === mention ? null : mention)}
-                          className={cn(
-                            "px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1",
-                            filterMention === mention
-                              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                              : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white"
-                          )}
-                        >
-                          ⚡ {mention}
-                        </button>
-                      ))}
+                      {uniqueMentions.map(mention => {
+                        const mentionCount = posts.filter(p => p.mentions?.includes(mention)).length;
+                        return (
+                          <button
+                            key={mention}
+                            onClick={() => setFilterMention(filterMention === mention ? null : mention)}
+                            className={cn(
+                              "px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1",
+                              filterMention === mention
+                                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                                : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white"
+                            )}
+                          >
+                            ⚡ {mention} <span className="opacity-60 text-[9px]">({mentionCount})</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
