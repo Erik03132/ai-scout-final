@@ -108,8 +108,7 @@ export const Favorites: React.FC = () => {
                                     <PostCard
                                         key={post.id}
                                         post={post}
-                                        isFavorite={true}
-                                        onFavoriteToggle={() => toggleFavorite(post.id, 'post')}
+                                        onClick={() => onPostClick?.(post.id)}
                                     />
                                 ))}
                             </div>

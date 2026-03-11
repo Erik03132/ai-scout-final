@@ -8,15 +8,11 @@ import { Post } from '../../hooks/usePosts';
 
 interface PostCardProps {
     post: Post;
-    isFavorite: boolean;
-    onFavoriteToggle: () => void;
     onClick?: () => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
     post,
-    isFavorite,
-    onFavoriteToggle,
     onClick
 }) => {
     // Определяем источник для отображения
@@ -65,19 +61,6 @@ export const PostCard: React.FC<PostCardProps> = ({
                     <span>{sourceIcon}</span>
                     <span>{post.source}</span>
                 </div>
-
-                {/* Кнопка избранного */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onFavoriteToggle();
-                    }}
-                    className="absolute top-2 right-2 p-2 rounded-full bg-slate-900/80 hover:bg-slate-700 transition-colors"
-                >
-                    <span className={isFavorite ? 'text-yellow-400' : 'text-slate-400'}>
-                        {isFavorite ? '★' : '☆'}
-                    </span>
-                </button>
             </div>
 
             {/* Контент */}

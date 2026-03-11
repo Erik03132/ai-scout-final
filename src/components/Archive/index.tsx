@@ -6,7 +6,6 @@
 import React, { useState, useMemo } from 'react';
 import { usePosts } from '../../hooks/usePosts';
 import { PostCard } from '../Feed/PostCard';
-import { useFavorites } from '../../hooks/useFavorites';
 
 interface ArchiveProps {
     onPostClick?: (postId: number) => void;
@@ -17,7 +16,6 @@ export const Archive: React.FC<ArchiveProps> = ({ onPostClick }) => {
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
     const { posts, isLoading, error } = usePosts({ limit: 100 });
-    const { toggleFavorite, isFavorite } = useFavorites();
 
     // Группировка постов по месяцам
     const postsByMonth = useMemo(() => {
@@ -126,8 +124,6 @@ export const Archive: React.FC<ArchiveProps> = ({ onPostClick }) => {
                             <PostCard
                                 key={post.id}
                                 post={post}
-                                isFavorite={isFavorite(post.id)}
-                                onFavoriteToggle={() => toggleFavorite(post.id, 'post')}
                                 onClick={() => onPostClick?.(post.id)}
                             />
                         ))}
@@ -150,8 +146,6 @@ export const Archive: React.FC<ArchiveProps> = ({ onPostClick }) => {
                                     <PostCard
                                         key={post.id}
                                         post={post}
-                                        isFavorite={isFavorite(post.id)}
-                                        onFavoriteToggle={() => toggleFavorite(post.id, 'post')}
                                         onClick={() => onPostClick?.(post.id)}
                                     />
                                 ))}

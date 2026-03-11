@@ -6,7 +6,6 @@
 
 import React, { useCallback } from 'react';
 import { FixedSizeList, ListChildComponentProps } from 'react-window';
-import { useFavorites } from '../../hooks/useFavorites';
 import { Post } from '../../hooks/usePosts';
 
 interface VirtualizedFeedProps {
@@ -21,11 +20,9 @@ interface VirtualizedFeedProps {
 // Внутренний компонент карточки для виртуализации
 const VirtualizedPostCard: React.FC<{
     post: Post;
-    isFavorite: boolean;
-    onFavoriteToggle: () => void;
     onClick?: () => void;
     onMentionClick?: (mention: string) => void;
-}> = ({ post, isFavorite, onFavoriteToggle, onClick, onMentionClick }) => {
+}> = ({ post, onClick, onMentionClick }) => {
     const sourceIcon = post.source === 'YouTube' ? '🎬' : '📱';
     const sourceColor = post.source === 'YouTube' ? 'text-red-400' : 'text-blue-400';
 
@@ -111,15 +108,6 @@ const VirtualizedPostCard: React.FC<{
                                 </div>
                             ) : null}
                         </div>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onFavoriteToggle();
-                            }}
-                            className={`text-sm ${isFavorite ? 'text-yellow-400' : 'text-slate-400 hover:text-yellow-400'}`}
-                        >
-                            {isFavorite ? '★' : '☆'}
-                        </button>
                     </div>
                 </div>
             </div>
@@ -134,8 +122,6 @@ export const VirtualizedFeed: React.FC<VirtualizedFeedProps> = ({
     itemHeight = 120,
     onPostClick
 }) => {
-    const { toggleFavorite, isFavorite } = useFavorites();
-
     // Row renderer для react-window
     const Row = useCallback(
         ({ index, style }: ListChildComponentProps) => {
@@ -144,14 +130,12 @@ export const VirtualizedFeed: React.FC<VirtualizedFeedProps> = ({
                 <div style={style}>
                     <VirtualizedPostCard
                         post={post}
-                        isFavorite={isFavorite(post.id)}
-                        onFavoriteToggle={() => toggleFavorite(post.id, 'post')}
                         onClick={() => onPostClick?.(post.id)}
                     />
                 </div>
             );
         },
-        [posts, isFavorite, toggleFavorite, onPostClick]
+        [posts, onPostClick]
     );
 
     return (

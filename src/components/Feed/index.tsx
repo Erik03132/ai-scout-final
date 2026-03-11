@@ -6,7 +6,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { usePosts } from '../../hooks/usePosts';
-import { useFavorites } from '../../hooks/useFavorites';
 import { PostCard } from './PostCard';
 import { PostFilters } from './PostFilters';
 import { VirtualizedFeed } from './VirtualizedFeed';
@@ -34,8 +33,6 @@ export const Feed: React.FC<FeedProps> = ({
         source,
         tag: selectedTag
     });
-
-    const { toggleFavorite, isFavorite } = useFavorites();
 
     // Определяем, нужно ли использовать виртуализацию
     const shouldVirtualize = useMemo(() => {
@@ -92,8 +89,6 @@ export const Feed: React.FC<FeedProps> = ({
                         <PostCard
                             key={post.id}
                             post={post}
-                            isFavorite={isFavorite(post.id)}
-                            onFavoriteToggle={() => toggleFavorite(post.id, 'post')}
                             onClick={() => onPostClick?.(post.id)}
                         />
                     ))}

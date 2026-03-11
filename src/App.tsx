@@ -1740,18 +1740,6 @@ export default function App() {
                       >
                         <FileText className="w-5 h-5" />
                       </button>
-                      <button
-                        onClick={() => toggleFavorite(`post-${post.id}`)}
-                        className={cn(
-                          "p-2 rounded-xl transition-all border border-transparent",
-                          favorites.includes(`post-${post.id}`) || post.isFavorite
-                            ? "text-red-500 bg-red-500/10 border-red-500/20"
-                            : "text-slate-500 hover:text-red-400 hover:bg-slate-700/50 hover:border-red-500/20"
-                        )}
-                        title="В избранное"
-                      >
-                        <Heart className={cn("w-5 h-5", (favorites.includes(`post-${post.id}`) || post.isFavorite) && "fill-current")} />
-                      </button>
                     </div>
                   </div>
                 </div>
