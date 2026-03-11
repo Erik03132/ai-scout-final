@@ -475,7 +475,7 @@ export default function App() {
             id: `dyn-${cleanMention}` as any,
             name: cleanMention, // Используем ОЧИЩЕННОЕ имя
             category: "AI/Tech",
-            description: `Инструмент ${cleanMention} был упомянут в этом посте. Детальная информация и обзоры для него пока собираются нашей системой.`,
+            description: `${cleanMention} — AI-инструмент, упомянутый в этом материале. Для получения подробной информации о возможностях, тарифах и функциях перейдите к официальной документации или откройте описание поста для просмотра контекста использования.`,
             icon: "✨",
             rating: 4.5,
             dailyCredits: "Н/Д",
@@ -484,8 +484,8 @@ export default function App() {
             hasApi: false,
             hasMcp: false,
             details: [],
-            pros: ["Упоминается экспертами"],
-            docsUrl: `https://www.google.com/search?q=${encodeURIComponent(cleanMention + ' AI tool')}`
+            pros: ["Упоминается в AI-сообществе", "Актуальный инструмент"],
+            docsUrl: `https://www.google.com/search?q=${encodeURIComponent(cleanMention + ' AI tool official site')}`
           });
           hasChanges = true;
         }
@@ -1695,7 +1695,7 @@ export default function App() {
                                     id: `dyn-${cleanMention}`,
                                     name: cleanMention,
                                     category: "AI Service",
-                                    description: `Интеллектуальный анализ применения ${cleanMention} в современных рабочих процессах. Сейчас наша система собирает подробные данные об API, тарифах и реальных кейсах.`,
+                                    description: `${cleanMention} — AI-инструмент, упомянутый в этом материале. Для получения подробной информации о возможностях, тарифах и функциях перейдите к официальной документации или откройте описание поста для просмотра контекста использования.`,
                                     icon: getToolIcon(cleanMention),
                                     rating: 4.8,
                                     dailyCredits: "Уточняется",
@@ -1704,8 +1704,8 @@ export default function App() {
                                     hasApi: false,
                                     hasMcp: false,
                                     details: [],
-                                    pros: ["Перспективно", "Упоминается экспертами", "Тренд"],
-                                    docsUrl: `https://www.google.com/search?q=${encodeURIComponent(cleanMention + ' AI')}`
+                                    pros: ["Упоминается в AI-сообществе", "Актуальный инструмент", "Заслуживает внимания"],
+                                    docsUrl: `https://www.google.com/search?q=${encodeURIComponent(cleanMention + ' AI tool official site')}`
                                   };
 
                                   const displayName = toolObj.name;
