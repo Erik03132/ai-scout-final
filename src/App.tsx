@@ -1042,51 +1042,61 @@ export default function App() {
   // toggleFavorite — работает ТОЛЬКО для инструментов
   const toggleFavorite = async (id: string) => {
     const isCurrentlyFav = favorites.includes(id);
+
+    // Получаем timestamp для сортировки
+    const timestamp = Date.now();
     const newFav = isCurrentlyFav
       ? favorites.filter(f => f !== id)
-      : [...favorites, id];
+      : [...favorites, `${id}|${timestamp}`]; // Сохраняем с timestamp для сортировки
     setFavorites(newFav);
 
     const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(str);
     const supabase = getClient();
 
     if (supabase) {
+      const cleanId = id.split('|')[0]; // Убираем timestamp если есть
+
       if (isCurrentlyFav) {
         // Удаляем из таблицы favorites
-        await supabase.from('favorites').delete().eq('item_id', id);
+        await supabase.from('favorites').delete().eq('item_id', cleanId);
 
         // Обновляем колонку для обратной совместимости
-        if (id.startsWith('tool-')) {
-          const toolId = id.replace('tool-', '');
+        if (cleanId.startsWith('tool-')) {
+          const toolId = cleanId.replace('tool-', '');
           if (isUUID(toolId)) await supabase.from('tools').update({ is_favorite: false }).eq('id', toolId);
-        } else if (id.startsWith('post-')) {
-          // Для постов тоже обновляем флаг, если это UUID
-          // Примечание: post-id может быть цифровым из-за Date.now()
         }
       } else {
         // Добавляем в таблицу favorites
         await supabase.from('favorites').upsert({
           user_id: 'public_user',
-          item_id: id,
-          item_type: id.startsWith('tool-') ? 'tool' : 'post'
+          item_id: cleanId,
+          item_type: cleanId.startsWith('tool-') ? 'tool' : 'post'
         });
 
         // Обновляем колонку для обратной совместимости
-        if (id.startsWith('tool-')) {
-          const toolId = id.replace('tool-', '');
+        if (cleanId.startsWith('tool-')) {
+          const toolId = cleanId.replace('tool-', '');
           if (isUUID(toolId)) await supabase.from('tools').update({ is_favorite: true }).eq('id', toolId);
         }
       }
     }
   };
 
-  const favoriteTools = useMemo(() =>
-    allTools.filter(tool =>
-      favorites.includes(`tool-${tool.id}`) &&
-      (favoriteCategory === 'all' || getToolGroup(tool.category) === favoriteCategory)
-    ),
-    [allTools, favorites, favoriteCategory]
-  );
+  // Функция для получения чистого ID (без timestamp)
+  const getCleanId = (fav: string) => fav.split('|')[0];
+
+  const favoriteTools = useMemo(() => {
+    // Сортируем по времени добавления (новые первые)
+    const sortedFavorites = [...favorites].sort((a, b) => {
+      const aTime = a.includes('|') ? parseInt(a.split('|')[1]) : 0;
+      const bTime = b.includes('|') ? parseInt(b.split('|')[1]) : 0;
+      return bTime - aTime; // По убыванию
+    });
+
+    return allTools
+      .filter(tool => sortedFavorites.some(fav => getCleanId(fav) === `tool-${tool.id}`))
+      .filter(tool => favoriteCategory === 'all' || getToolGroup(tool.category) === favoriteCategory);
+  }, [allTools, favorites, favoriteCategory]);
   // Посты в избранном больше не используем — посты идут в Архив
 
   // Уникальные теги и упоминания для фильтров (топ-20 по популярности)
@@ -1988,10 +1998,15 @@ export default function App() {
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleFavorite(`tool-${tool.id}`); }}
-                          className="p-3 rounded-2xl text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20 shadow-lg shadow-red-500/5"
-                          title="Убрать из избранного"
+                          className={cn(
+                            "p-3 rounded-2xl transition-all duration-200 border shadow-lg",
+                            favorites.some(f => f.split('|')[0] === `tool-${tool.id}`)
+                              ? 'text-red-400 bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
+                              : 'text-slate-400 bg-slate-800 border-white/5 hover:bg-slate-700'
+                          )}
+                          title={favorites.some(f => f.split('|')[0] === `tool-${tool.id}`) ? 'В избранном' : 'В избранное'}
                         >
-                          <Heart className="w-5 h-5 fill-current" />
+                          <Heart className={cn("w-5 h-5", favorites.some(f => f.split('|')[0] === `tool-${tool.id}`) && "fill-current")} />
                         </button>
                       </div>
 
