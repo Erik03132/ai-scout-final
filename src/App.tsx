@@ -1,4 +1,4 @@
-import { ArrowRight, Brain, Clock, Code, ExternalLink, FileText, Filter, Heart, Layers, Lightbulb, Loader2, MessageCircle, Plus, Search, Sparkles, Terminal, TrendingUp, Wrench, X, Youtube, Zap } from 'lucide-react';
+import { Archive, ArrowRight, Brain, Clock, Code, ExternalLink, FileText, Filter, Heart, Layers, Lightbulb, Loader2, MessageCircle, Plus, Search, Sparkles, Terminal, TrendingUp, Wrench, X, Youtube, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
@@ -1739,6 +1739,16 @@ export default function App() {
                         title="Подробный саммари"
                       >
                         <FileText className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          archivePost(post.id);
+                        }}
+                        className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-emerald-500/20"
+                        title="В архив"
+                      >
+                        <Archive className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
