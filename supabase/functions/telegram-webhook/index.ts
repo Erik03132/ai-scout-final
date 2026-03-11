@@ -83,33 +83,10 @@ async function sendMessageWithKeyboard(
 
 // Сохранение сообщения в Supabase
 async function saveTelegramMessage(update: TelegramUpdate) {
-    if (!update.message) return null;
-
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/telegram_messages`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_SERVICE_ROLE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({
-            telegram_id: update.message.message_id,
-            chat_id: update.message.chat.id,
-            user_id: update.message.from?.id,
-            username: update.message.from?.username,
-            first_name: update.message.from?.first_name,
-            text: update.message.text,
-            created_at: new Date().toISOString(),
-        }),
-    });
-
-    if (!response.ok) {
-        const error = await response.text();
-        console.error('Error saving message:', error);
-        return null;
-    }
-    return response;
+    // ОТКЛЮЧЕНО - таблица telegram_messages не существует
+    // if (!update.message) return null;
+    // ... код закомментирован ...
+    return null;
 }
 
 // Обработка команды /start
@@ -447,8 +424,8 @@ Deno.serve(async (req) => {
         const chatId = update.message.chat.id;
         const text = update.message.text || '';
 
-        // Сохраняем сообщение в БД
-        await saveTelegramMessage(update);
+        // Сохраняем сообщение в БД (ОТКЛЮЧЕНО - таблица не существует)
+        // await saveTelegramMessage(update);
 
         // Обрабатываем сообщение
         await handleTextMessage(chatId, text);
