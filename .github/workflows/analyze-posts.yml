@@ -1,0 +1,37 @@
+name: Analyze Posts
+
+on:
+  schedule:
+    # Запускается каждый день в 09:00 UTC (12:00 MSK)
+    - cron: '0 9 * * *'
+  
+  # Позволяет запустить вручную из GitHub Actions
+  workflow_dispatch:
+
+jobs:
+  analyze-posts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Trigger AI Analysis
+        run: |
+          echo "🧠 Запуск AI-анализа постов..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/analyze-post" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"triggered_by": "github_actions", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}')
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Posts analyzed successfully!"
+          else
+            echo "❌ Failed to analyze posts"
+            exit 1
+          fi

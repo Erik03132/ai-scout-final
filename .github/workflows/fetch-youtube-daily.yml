@@ -1,0 +1,37 @@
+name: Fetch YouTube Daily
+
+on:
+  schedule:
+    # Запускается каждый день в 06:00 UTC (09:00 MSK)
+    - cron: '0 6 * * *'
+  
+  # Позволяет запустить вручную из GitHub Actions
+  workflow_dispatch:
+
+jobs:
+  fetch-youtube:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Trigger YouTube Fetch
+        run: |
+          echo "🚀 Запуск сбора видео с YouTube..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/fetch-youtube" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"triggered_by": "github_actions", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}')
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ YouTube videos fetched successfully!"
+          else
+            echo "❌ Failed to fetch YouTube videos"
+            exit 1
+          fi

@@ -1,0 +1,37 @@
+name: Fetch Telegram Daily
+
+on:
+  schedule:
+    # Запускается каждый день в 07:00 UTC (10:00 MSK)
+    - cron: '0 7 * * *'
+  
+  # Позволяет запустить вручную из GitHub Actions
+  workflow_dispatch:
+
+jobs:
+  fetch-telegram:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Trigger Telegram Fetch
+        run: |
+          echo "🚀 Запуск сбора постов из Telegram..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://iwtlekdynhfcqgwhocik.supabase.co/functions/v1/fetch-telegram" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"triggered_by": "github_actions", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}')
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Telegram posts fetched successfully!"
+          else
+            echo "❌ Failed to fetch Telegram posts"
+            exit 1
+          fi
