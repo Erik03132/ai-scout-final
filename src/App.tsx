@@ -1099,8 +1099,9 @@ export default function App() {
   const favoriteTools = useMemo(() => {
     console.log('[favoriteTools] Computing...');
     console.log('[favoriteTools] favoriteToolsFromHook (array of IDs):', favoriteToolsFromHook);
+    console.log('[favoriteTools] cachedDynamicTools:', cachedDynamicTools);
     console.log('[favoriteTools] allTools count:', allTools.length);
-    console.log('[favoriteTools] allTools sample IDs:', allTools.slice(0, 5).map(t => t.id));
+    console.log('[favoriteTools] allTools IDs:', allTools.map(t => t.id));
 
     // favoriteToolsFromHook — это массив ID (строк), а не объектов!
     const result = allTools
@@ -1119,9 +1120,13 @@ export default function App() {
     console.log('[favoriteTools] Result count:', result.length);
     if (result.length > 0) {
       console.log('[favoriteTools] Result:', result.map(t => t.name));
+    } else {
+      console.log('[favoriteTools] No matches. Checking if dyn tools exist...');
+      console.log('[favoriteTools] Looking for:', favoriteToolsFromHook);
+      console.log('[favoriteTools] In allTools:', allTools.filter(t => favoriteToolsFromHook.includes(String(t.id))));
     }
     return result;
-  }, [allTools, favoriteToolsFromHook, favoriteCategory]);
+  }, [allTools, favoriteToolsFromHook, favoriteCategory, cachedDynamicTools]);
   // Посты в избранном больше не используем — посты идут в Архив
 
   // Уникальные теги и упоминания для фильтров (топ-20 по популярности)
