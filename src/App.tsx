@@ -2082,7 +2082,12 @@ export default function App() {
                           ) : tool.icon}
                         </div>
                         <button
-                          onClick={(e) => { e.stopPropagation(); toggleFavorite(`tool-${tool.id}`); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log('BUTTON CLICKED! tool.id:', tool.id);
+                            alert('BUTTON CLICKED!');
+                            toggleFavorite(`tool-${tool.id}`);
+                          }}
                           className={cn(
                             "p-3 rounded-2xl transition-all duration-200 border shadow-lg",
                             favorites.some(f => f.split('|')[0] === `tool-${tool.id}`)
