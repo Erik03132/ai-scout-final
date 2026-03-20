@@ -1,4 +1,4 @@
-import { Archive, ArrowRight, Brain, Clock, Code, ExternalLink, FileText, Filter, Heart, Layers, Lightbulb, Loader2, MessageCircle, Plus, Search, Sparkles, Terminal, TrendingUp, Wrench, X, Youtube, Zap } from 'lucide-react';
+import { Archive, ArrowRight, Brain, Clock, Code, ExternalLink, FileText, Filter, Heart, Layers, Loader2, MessageCircle, Plus, Search, Sparkles, Terminal, Trash2, TrendingUp, X, Youtube, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { getClient } from './lib/supabase/client';
@@ -8,7 +8,7 @@ import { ToolDetailModal } from './components/Modals/ToolDetailModal';
 
 // Types
 interface Post {
-  id: number;
+  id: number | string;
   title: string;
   summary: string;
   source: string;
@@ -423,9 +423,12 @@ export default function App() {
   const [cachedDynamicTools, setCachedDynamicTools] = useLocalStorage<typeof mockTools>('ai-scout-dynamic-tools', []);
   const [isLoadingChannel, setIsLoadingChannel] = useState(false);
   const [addChannelError, setAddChannelError] = useState<string | null>(null);
+  const [isLoadingTool, setIsLoadingTool] = useState(false);
+  const [addToolError, setAddToolError] = useState<string | null>(null);
+  const [addModalTab, setAddModalTab] = useState<'channel' | 'tool'>('channel');
   const [enrichmentError, setEnrichmentError] = useState<{ name: string, message: string, details?: string } | null>(null);
   const [failedEnrichmentNames, setFailedEnrichmentNames] = useState<Set<string>>(new Set());
-  const [dismissedPostIds, setDismissedPostIds] = useLocalStorage<number[]>('ai-scout-dismissed-posts', []);
+  const [dismissedPostIds, setDismissedPostIds] = useLocalStorage<(number | string)[]>('ai-scout-dismissed-posts', []);
   const [showFilters, setShowFilters] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [filterMention, setFilterMention] = useState<string | null>(null);
@@ -511,7 +514,7 @@ export default function App() {
         };
 
         const fetchPosts = async () => {
-          const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
+          const { data, error } = await supabase.from('posts').select('*').order('date', { ascending: false }).limit(200);
           if (error) console.error('Error fetching posts:', error);
           return data;
         };
@@ -568,13 +571,13 @@ export default function App() {
         // Посты
         if (postsData) {
           const formattedPosts = postsData.map(p => ({
-            id: typeof p.id === 'string' ? parseInt(p.id.slice(0, 8), 16) : p.id,
+            id: p.id, // Используем UUID как есть
             supabaseId: p.id,
             title: p.title,
             summary: p.summary || '',
             source: p.source,
             channel: p.channel,
-            date: p.date ? new Date(p.date).toLocaleDateString() : '',
+            date: p.date ? new Date(p.date).toLocaleDateString('ru-RU') : '',
             tags: p.tags || [],
             mentions: p.mentions || [],
             views: p.views || '0',
@@ -584,7 +587,7 @@ export default function App() {
             usageTips: p.usage_tips || [],
             isFavorite: p.is_favorite || false,
             isArchived: p.is_archived || false,
-            isAnalyzed: p.is_analyzed ?? true, // если нет поля, считаем что проанализировано, чтоб не ломать моки
+            isAnalyzed: p.is_analyzed ?? true,
           }));
           setPosts(formattedPosts);
         }
@@ -1039,43 +1042,49 @@ export default function App() {
     }
   };
 
-  // toggleFavorite — работает ТОЛЬКО для инструментов
+  // toggleFavorite — работает для инструментов и постов
   const toggleFavorite = async (id: string) => {
-    const isCurrentlyFav = favorites.includes(id);
+    // Получаем чистый ID для поиска
+    const cleanIdFromInput = id.split('|')[0];
+    const isCurrentlyFav = favorites.some(f => getCleanId(f) === cleanIdFromInput);
 
     // Получаем timestamp для сортировки
     const timestamp = Date.now();
-    const newFav = isCurrentlyFav
-      ? favorites.filter(f => f !== id)
-      : [...favorites, `${id}|${timestamp}`]; // Сохраняем с timestamp для сортировки
+    let newFav: string[];
+
+    if (isCurrentlyFav) {
+      newFav = favorites.filter(f => getCleanId(f) !== cleanIdFromInput);
+    } else {
+      // Сохраняем с timestamp для сортировки
+      newFav = [...favorites, `${cleanIdFromInput}|${timestamp}`];
+    }
+
     setFavorites(newFav);
 
     const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(str);
     const supabase = getClient();
 
     if (supabase) {
-      const cleanId = id.split('|')[0]; // Убираем timestamp если есть
-
       if (isCurrentlyFav) {
         // Удаляем из таблицы favorites
-        await supabase.from('favorites').delete().eq('item_id', cleanId);
+        await supabase.from('favorites').delete().eq('item_id', cleanIdFromInput);
 
         // Обновляем колонку для обратной совместимости
-        if (cleanId.startsWith('tool-')) {
-          const toolId = cleanId.replace('tool-', '');
+        if (cleanIdFromInput.startsWith('tool-')) {
+          const toolId = cleanIdFromInput.replace('tool-', '');
           if (isUUID(toolId)) await supabase.from('tools').update({ is_favorite: false }).eq('id', toolId);
         }
       } else {
         // Добавляем в таблицу favorites
         await supabase.from('favorites').upsert({
           user_id: 'public_user',
-          item_id: cleanId,
-          item_type: cleanId.startsWith('tool-') ? 'tool' : 'post'
+          item_id: cleanIdFromInput,
+          item_type: cleanIdFromInput.startsWith('tool-') ? 'tool' : 'post'
         });
 
         // Обновляем колонку для обратной совместимости
-        if (cleanId.startsWith('tool-')) {
-          const toolId = cleanId.replace('tool-', '');
+        if (cleanIdFromInput.startsWith('tool-')) {
+          const toolId = cleanIdFromInput.replace('tool-', '');
           if (isUUID(toolId)) await supabase.from('tools').update({ is_favorite: true }).eq('id', toolId);
         }
       }
@@ -1088,8 +1097,10 @@ export default function App() {
   const favoriteTools = useMemo(() => {
     // Сортируем по времени добавления (новые первые)
     const sortedFavorites = [...favorites].sort((a, b) => {
-      const aTime = a.includes('|') ? parseInt(a.split('|')[1]) : 0;
-      const bTime = b.includes('|') ? parseInt(b.split('|')[1]) : 0;
+      const aParts = a?.split('|') || [];
+      const bParts = b?.split('|') || [];
+      const aTime = aParts.length > 1 ? parseInt(aParts[1]) : 0;
+      const bTime = bParts.length > 1 ? parseInt(bParts[1]) : 0;
       return bTime - aTime; // По убыванию
     });
 
@@ -1128,7 +1139,7 @@ export default function App() {
   }, [posts]);
 
   // Архивирование и удаление
-  const archivePost = async (postId: number) => {
+  const archivePost = async (postId: string | number) => {
     console.log('Attempting to archive post:', postId);
     // Находим пост для получения его Supabase ID
     const post = posts.find(p => p.id === postId);
@@ -1136,7 +1147,11 @@ export default function App() {
 
     // Оптимистичное обновление UI
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: true } : p));
-    setSelectedPost(null);
+
+    // Обновляем выбранный пост, чтобы UI в модалке синхронизировался
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost(prev => prev ? { ...prev, isArchived: true } : null);
+    }
 
     // Синхронизируем с Supabase
     if (dbId) {
@@ -1151,16 +1166,62 @@ export default function App() {
     }
   };
 
-  const dismissPost = (postId: number) => {
-    setDismissedPostIds(prev => prev.includes(postId) ? prev : [...prev, postId]);
-    setSelectedPost(null);
+  const dismissPost = (postId: string | number) => {
+    setDismissedPostIds(prev => [...prev, postId]);
   };
 
-  const removeFromArchive = async (postId: number) => {
+  const deletePostInSupabase = async (post: Post) => {
+    const supabase = getClient();
+    if (!supabase) return;
+    try {
+      if (post.supabaseId) {
+        const { error } = await supabase.from('posts').delete().eq('id', post.supabaseId);
+        if (error) throw error;
+      }
+      setPosts(prev => prev.filter(p => p.id !== post.id));
+      alert('Пост успешно удален из базы данных');
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка при удалении поста');
+    }
+  };
+
+  const deleteChannel = async (channelId: string) => {
+    const supabase = getClient();
+    if (!supabase) return;
+    if (!window.confirm('Вы действительно хотите удалить канал? Все посты этого канала также будут скрыты.')) return;
+
+    try {
+      const channelToDelete = channels.find(c => c.id === channelId);
+      const { error } = await supabase.from('channels').delete().eq('id', channelId);
+      if (error) throw error;
+
+      setChannels(prev => prev.filter(c => c.id !== channelId));
+
+      // Также удаляем посты из локального стейта если они принадлежат этому каналу (или просто скрываем/удаляем их из БД если нужно)
+      if (channelToDelete) {
+        const { error: postsError } = await supabase.from('posts').delete().eq('channel', channelToDelete.name);
+        if (!postsError) {
+          setPosts(prev => prev.filter(p => p.channel !== channelToDelete.name));
+        }
+      }
+      alert('Канал и его материалы успешно удалены');
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка при удалении канала');
+    }
+  };
+
+  const removeFromArchive = async (postId: string | number) => {
     const post = posts.find(p => p.id === postId);
     const dbId = post?.supabaseId;
 
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: false } : p));
+
+    // Обновляем выбранный пост
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost(prev => prev ? { ...prev, isArchived: false } : null);
+    }
 
     if (dbId) {
       const supabase = getClient();
@@ -1178,7 +1239,6 @@ export default function App() {
   const filteredPosts = useMemo(() => {
     return posts.filter(p => {
       if (dismissedPostIds.includes(p.id)) return false;
-      if ((p as any).isArchived) return false;
       if (filterSource !== 'all' && p.source !== filterSource) return false;
       if (filterTag && !(p.tags || []).includes(filterTag)) return false;
       if (filterMention && !(p.mentions || []).map(m => m.toLowerCase()).includes(filterMention.toLowerCase())) return false;
@@ -1253,7 +1313,7 @@ export default function App() {
               {[
                 { id: 'feed', label: 'Лента', icon: TrendingUp },
                 { id: 'insights', label: 'История', icon: Clock },
-                { id: 'archive', label: 'Архив', icon: Wrench },
+                { id: 'archive', label: 'Архив', icon: Archive },
                 { id: 'favorites', label: 'Избранное', icon: Heart },
               ].map(tab => (
                 <button
@@ -1307,7 +1367,7 @@ export default function App() {
         {[
           { id: 'feed', label: 'Лента', icon: TrendingUp },
           { id: 'insights', label: 'История', icon: Clock },
-          { id: 'archive', label: 'Архив', icon: Wrench },
+          { id: 'archive', label: 'Архив', icon: Archive },
           { id: 'favorites', label: 'Списки', icon: Heart },
         ].map(tab => (
           <button
@@ -1753,10 +1813,15 @@ export default function App() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          archivePost(post.id);
+                          (post as any).isArchived ? removeFromArchive(post.id) : archivePost(post.id);
                         }}
-                        className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-slate-700/50 transition-all border border-transparent hover:border-emerald-500/20"
-                        title="В архив"
+                        className={cn(
+                          "p-2 rounded-xl transition-all border border-transparent",
+                          (post as any).isArchived
+                            ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)]"
+                            : "text-slate-500 hover:text-emerald-400 hover:bg-slate-700/50 hover:border-emerald-500/20"
+                        )}
+                        title={(post as any).isArchived ? "В архиве" : "В архив"}
                       >
                         <Archive className="w-5 h-5" />
                       </button>
@@ -2310,12 +2375,18 @@ export default function App() {
                     <div className="flex flex-wrap items-center justify-center gap-3 w-full sm:w-auto">
                       <button
                         onClick={() => dismissPost(selectedPost.id)}
-                        className="h-12 sm:h-14 px-4 sm:px-5 bg-slate-800 hover:bg-red-500/10 border border-slate-700 hover:border-red-500/40 text-slate-400 hover:text-red-400 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition-all flex-1 sm:flex-none"
+                        className={cn(
+                          "h-12 sm:h-14 px-4 sm:px-5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition-all border flex-1 sm:flex-none",
+                          dismissedPostIds.includes(selectedPost.id as any)
+                            ? "bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)]"
+                            : "bg-slate-800 border-slate-700 hover:bg-red-500/10 hover:border-red-500/40 text-slate-400 hover:text-red-400"
+                        )}
                       >
-                        <X size={14} /> Удалить
+                        {dismissedPostIds.includes(selectedPost.id as any) ? <TrendingUp size={14} /> : <X size={14} />}
+                        {dismissedPostIds.includes(selectedPost.id as any) ? 'Вернуть' : 'Удалить'}
                       </button>
                       <button
-                        onClick={() => archivePost(selectedPost.id)}
+                        onClick={() => (selectedPost as any).isArchived ? removeFromArchive(selectedPost.id) : archivePost(selectedPost.id)}
                         className={cn(
                           "h-12 sm:h-14 px-4 sm:px-5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition-all border flex-1 sm:flex-none",
                           (selectedPost as any).isArchived
@@ -2476,290 +2547,429 @@ export default function App() {
       {/* Add Channel Modal */}
       {
         isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => { setIsAddModalOpen(false); setAddChannelError(null); }}
-            />
-            <div className="relative bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
+            <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-8 relative shadow-2xl">
               <button
-                onClick={() => { setIsAddModalOpen(false); setAddChannelError(null); }}
+                onClick={() => setIsAddModalOpen(false)}
                 className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
 
-              <h2 className="text-xl font-bold text-white mb-2">Добавить канал</h2>
-              <p className="text-slate-400 text-sm mb-6">Добавьте @username или URL канала YouTube/Telegram</p>
+              {/* Tab Switcher */}
+              <div className="flex p-1 bg-slate-800/50 rounded-xl mb-6 border border-white/5">
+                <button
+                  onClick={() => setAddModalTab('channel')}
+                  className={cn(
+                    "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
+                    addModalTab === 'channel' ? "bg-cyan-500 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Канал
+                </button>
+                <button
+                  onClick={() => setAddModalTab('tool')}
+                  className={cn(
+                    "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
+                    addModalTab === 'tool' ? "bg-cyan-500 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Инструмент
+                </button>
+              </div>
 
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  let url = (formData.get('channelUrl') as string).trim();
-                  const source = formData.get('source') as 'YouTube' | 'Telegram';
+              <h2 className="text-xl font-bold text-white mb-2">
+                {addModalTab === 'channel' ? 'Добавить канал' : 'Предложить инструмент'}
+              </h2>
+              <p className="text-slate-400 text-sm mb-6">
+                {addModalTab === 'channel'
+                  ? 'Добавьте @username или URL канала YouTube/Telegram'
+                  : 'Добавьте новый ИИ-сервис в наш каталог'}
+              </p>
 
-                  setAddChannelError(null);
+              {addModalTab === 'channel' ? (
+                <>
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      let url = (formData.get('channelUrl') as string).trim();
+                      const source = formData.get('source') as 'YouTube' | 'Telegram';
 
-                  if (url) {
-                    // Нормализация Telegram @username -> https://t.me/username
-                    if (source === 'Telegram' && url.startsWith('@')) {
-                      url = `https://t.me/${url.substring(1)}`;
-                    }
+                      setAddChannelError(null);
 
-                    // Проверка на дубликат в стейте (после нормализации)
-                    const normalizedUrl = url.toLowerCase();
-                    const exists = channels.some(c => c.url.toLowerCase() === normalizedUrl);
-                    if (exists) {
-                      setAddChannelError('Этот канал уже добавлен в ваш список!');
+                      if (url) {
+                        // Нормализация Telegram @username -> https://t.me/username
+                        if (source === 'Telegram' && url.startsWith('@')) {
+                          url = `https://t.me/${url.substring(1)}`;
+                        }
+
+                        // Проверка на дубликат в стейте (после нормализации)
+                        const normalizedUrl = url.toLowerCase();
+                        const exists = channels.some(c => c.url.toLowerCase() === normalizedUrl);
+                        if (exists) {
+                          setAddChannelError('Этот канал уже добавлен в ваш список!');
+                          return;
+                        }
+
+                        // Extract channel name from URL
+                        let name = url;
+                        if (url.includes('t.me/')) {
+                          name = url.split('t.me/')[1];
+                        } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                          const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
+                          if (match) name = match[1];
+                        }
+
+                        const newChannel = {
+                          id: `channel-${Date.now()}`,
+                          url: url.trim(),
+                          source,
+                          name
+                        };
+
+                        setIsLoadingChannel(true);
+
+                        try {
+                          const supabase = getClient();
+                          if (supabase) {
+                            try {
+                              // Сначала пробуем найти, есть ли такой канал
+                              const { data: existing } = await supabase
+                                .from('channels')
+                                .select('id')
+                                .eq('url', newChannel.url)
+                                .maybeSingle();
+
+                              if (existing) {
+                                console.log('Channel already exists in DB with ID:', existing.id);
+                                newChannel.id = existing.id;
+                              } else {
+                                // Если нет — вставляем новый
+                                const { data: insertedChannel, error: channelError } = await supabase
+                                  .from('channels')
+                                  .insert([{
+                                    name: newChannel.name,
+                                    source: newChannel.source,
+                                    url: newChannel.url,
+                                    is_active: true
+                                  }])
+                                  .select()
+                                  .single();
+
+                                if (channelError) {
+                                  console.error('Error inserting channel to Supabase:', channelError);
+                                  setAddChannelError(`Ошибка БД при сохранении канала: ${channelError.message}`);
+                                } else if (insertedChannel) {
+                                  console.log('Successfully saved channel to DB:', insertedChannel.id);
+                                  newChannel.id = insertedChannel.id;
+                                }
+                              }
+                            } catch (e) {
+                              console.error('Exception during channel persistence:', e);
+                            }
+                          }
+
+                          // Получаем последнюю новость с канала через API
+                          const latestPost = await fetchLatestPost(newChannel);
+                          const aiSummary = await generateAISummary(latestPost);
+
+                          if (latestPost.summary && aiSummary.summary === 'Контент недоступен') {
+                            aiSummary.summary = latestPost.summary;
+                          }
+
+                          const formatDate = (dateStr: string): string => {
+                            if (!dateStr) return 'Только что';
+                            try {
+                              const date = new Date(dateStr);
+                              const now = new Date();
+                              const diffMs = now.getTime() - date.getTime();
+                              const diffMins = Math.floor(diffMs / 60000);
+                              const diffHours = Math.floor(diffMins / 60);
+                              const diffDays = Math.floor(diffHours / 24);
+
+                              if (diffMins < 1) return 'Только что';
+                              if (diffMins < 60) return `${diffMins} мин. назад`;
+                              if (diffHours < 24) return `${diffHours} ч. назад`;
+                              if (diffDays < 7) return `${diffDays} дн. назад`;
+                              return date.toLocaleDateString('ru-RU');
+                            } catch {
+                              return 'Только что';
+                            }
+                          };
+
+                          const newPost: Post = {
+                            id: Date.now(),
+                            title: aiSummary.titleRu || latestPost.title || 'Без названия',
+                            summary: aiSummary.summary,
+                            source: source,
+                            channel: latestPost.channel || name,
+                            date: formatDate(latestPost.date || ''),
+                            tags: aiSummary.tags,
+                            mentions: aiSummary.mentions,
+                            views: '0',
+                            image: latestPost.image || 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=400&h=200',
+                            url: latestPost.url || url.trim(),
+                            detailedUsage: aiSummary.detailedUsage,
+                            usageTips: aiSummary.usageTips
+                          };
+
+                          if (supabase) {
+                            try {
+                              const { data: existingPost } = await supabase
+                                .from('posts')
+                                .select('id')
+                                .eq('url', newPost.url)
+                                .maybeSingle();
+
+                              if (existingPost) {
+                                newPost.id = typeof existingPost.id === 'string' ? parseInt(existingPost.id.slice(0, 8), 16) : existingPost.id;
+                              } else {
+                                const { data: insertedPost, error } = await supabase.from('posts').insert([{
+                                  title: newPost.title,
+                                  summary: newPost.summary,
+                                  source: newPost.source,
+                                  channel: newPost.channel,
+                                  date: new Date(latestPost.date || Date.now()).toISOString(),
+                                  tags: newPost.tags,
+                                  mentions: newPost.mentions,
+                                  views: newPost.views || '0',
+                                  image: newPost.image,
+                                  url: newPost.url,
+                                  detailed_usage: typeof newPost.detailedUsage === 'string' ? newPost.detailedUsage : JSON.stringify(newPost.detailedUsage),
+                                  usage_tips: newPost.usageTips,
+                                  is_analyzed: true
+                                }]).select().single();
+
+                                if (insertedPost) {
+                                  newPost.id = typeof insertedPost.id === 'string' ? parseInt(insertedPost.id.slice(0, 8), 16) : insertedPost.id;
+                                }
+                              }
+                            } catch (dbError) {
+                              console.error('Exception saving post to DB:', dbError);
+                            }
+                          }
+
+                          setChannels(prev => [newChannel, ...prev]);
+                          setPosts(prev => [newPost, ...prev]);
+                        } catch (error) {
+                          console.error('Error fetching channel data:', error);
+                          setChannels(prev => [newChannel, ...prev]);
+                        } finally {
+                          setIsLoadingChannel(false);
+                          setIsAddModalOpen(false);
+                        }
+                      }
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">URL канала</label>
+                      <input
+                        name="channelUrl"
+                        type="text"
+                        placeholder="@channel или https://t.me/channel"
+                        className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                        required
+                      />
+                    </div>
+
+                    {addChannelError && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <p className="text-red-400 text-xs font-bold flex items-center gap-2">
+                          <X size={14} /> {addChannelError}
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Платформа</label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-red-500/50 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-500/10">
+                          <input type="radio" name="source" value="YouTube" className="sr-only" defaultChecked />
+                          <Youtube className="w-5 h-5 text-red-400" />
+                          <span className="text-sm font-medium">YouTube</span>
+                        </label>
+                        <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-500/10">
+                          <input type="radio" name="source" value="Telegram" className="sr-only" />
+                          <MessageCircle className="w-5 h-5 text-blue-400" />
+                          <span className="text-sm font-medium">Telegram</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isLoadingChannel}
+                      className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isLoadingChannel ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Загрузка...
+                        </>
+                      ) : (
+                        'Добавить канал'
+                      )}
+                    </button>
+                  </form>
+
+                  {channels.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-white/10">
+                      <h3 className="text-sm font-medium text-slate-400 mb-3">Добавленные каналы</h3>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {channels.map(channel => (
+                          <div key={channel.id} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              {channel.source === 'YouTube'
+                                ? <Youtube className="w-4 h-4 text-red-400" />
+                                : <MessageCircle className="w-4 h-4 text-blue-400" />
+                              }
+                              <span className="text-sm text-white truncate max-w-[150px]">{channel.name}</span>
+                            </div>
+                            <button
+                              onClick={() => setChannels(prev => prev.filter(c => c.id !== channel.id))}
+                              className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setAddToolError(null);
+                    setIsLoadingTool(true);
+
+                    const formData = new FormData(e.currentTarget);
+                    const name = (formData.get('toolName') as string).trim();
+                    const url = (formData.get('toolUrl') as string).trim();
+                    const description = (formData.get('toolDesc') as string).trim();
+                    const category = formData.get('toolCategory') as string;
+
+                    if (!name || !url) {
+                      setAddToolError('Название и URL обязательны');
+                      setIsLoadingTool(false);
                       return;
                     }
 
-                    // Extract channel name from URL
-                    let name = url;
-                    if (url.includes('t.me/')) {
-                      name = url.split('t.me/')[1];
-                    } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-                      const match = url.match(/@([^/?]+)/) || url.match(/channel\/([^/?]+)/);
-                      if (match) name = match[1];
-                    }
-
-                    const newChannel = {
-                      id: `channel-${Date.now()}`,
-                      url: url.trim(),
-                      source,
-                      name
-                    };
-
-                    setIsLoadingChannel(true);
-
                     try {
-                      // Сохраняем канал в БД
                       const supabase = getClient();
                       if (supabase) {
-                        try {
-                          console.log('Sending channel to Supabase:', newChannel);
+                        const { error } = await supabase
+                          .from('dynamic_tools')
+                          .insert([{
+                            name,
+                            url,
+                            description,
+                            category,
+                            is_approved: false
+                          }]);
 
-                          // Сначала пробуем найти, есть ли такой канал (чтобы не зависеть от UNIQUE индекса в upsert)
-                          const { data: existing } = await supabase
-                            .from('channels')
-                            .select('id')
-                            .eq('url', newChannel.url)
-                            .maybeSingle();
-
-                          if (existing) {
-                            console.log('Channel already exists in DB with ID:', existing.id);
-                            newChannel.id = existing.id;
-                          } else {
-                            // Если нет — вставляем новый
-                            const { data: insertedChannel, error: channelError } = await supabase
-                              .from('channels')
-                              .insert([{
-                                name: newChannel.name,
-                                source: newChannel.source,
-                                url: newChannel.url,
-                                is_active: true
-                              }])
-                              .select()
-                              .single();
-
-                            if (channelError) {
-                              console.error('Error inserting channel to Supabase:', channelError);
-                              // Если произошла ошибка "No index/unique constraint found" или подобные
-                              setAddChannelError(`Ошибка БД при сохранении канала: ${channelError.message}`);
-                            } else if (insertedChannel) {
-                              console.log('Successfully saved channel to DB:', insertedChannel.id);
-                              newChannel.id = insertedChannel.id;
-                            }
-                          }
-                        } catch (e) {
-                          console.error('Exception during channel persistence:', e);
+                        if (error) {
+                          console.error('Error submitting tool:', error);
+                          setAddToolError('Ошибка при отправке: ' + error.message);
+                        } else {
+                          // Local state update for feedback
+                          const newTool = {
+                            id: Date.now(),
+                            name,
+                            description,
+                            url,
+                            category,
+                            type: category.toLowerCase().includes('agent') ? 'Agent' : 'Tool',
+                            rating: '5.0',
+                            users: '1',
+                            image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=200&h=200'
+                          };
+                          setCachedDynamicTools(prev => [newTool as any, ...prev]);
+                          setIsAddModalOpen(false);
                         }
                       }
-
-                      // Получаем последнюю новость с канала через API
-                      const latestPost = await fetchLatestPost(newChannel);
-
-                      // Всегда генерируем полное AI-саммари через API, чтобы получить теги и упомянутые сервисы
-                      const aiSummary = await generateAISummary(latestPost);
-
-                      // Если API канала уже вернуло хорошее саммари, а у нас заглушка, берем API саммари
-                      if (latestPost.summary && aiSummary.summary === 'Контент недоступен') {
-                        aiSummary.summary = latestPost.summary;
-                      }
-
-                      // Форматируем дату
-                      const formatDate = (dateStr: string): string => {
-                        if (!dateStr) return 'Только что';
-                        try {
-                          const date = new Date(dateStr);
-                          const now = new Date();
-                          const diffMs = now.getTime() - date.getTime();
-                          const diffMins = Math.floor(diffMs / 60000);
-                          const diffHours = Math.floor(diffMins / 60);
-                          const diffDays = Math.floor(diffHours / 24);
-
-                          if (diffMins < 1) return 'Только что';
-                          if (diffMins < 60) return `${diffMins} мин. назад`;
-                          if (diffHours < 24) return `${diffHours} ч. назад`;
-                          if (diffDays < 7) return `${diffDays} дн. назад`;
-                          return date.toLocaleDateString('ru-RU');
-                        } catch {
-                          return 'Только что';
-                        }
-                      };
-
-                      // Создаем новый пост с реальными данными
-                      const newPost: Post = {
-                        id: Date.now(),
-                        title: aiSummary.titleRu || latestPost.title || 'Без названия',
-                        summary: aiSummary.summary,
-                        source: source,
-                        channel: latestPost.channel || name,
-                        date: formatDate(latestPost.date || ''),
-                        tags: aiSummary.tags,
-                        mentions: aiSummary.mentions,
-                        views: '0',
-                        image: latestPost.image || 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=400&h=200',
-                        url: latestPost.url || url.trim(),
-                        detailedUsage: aiSummary.detailedUsage,
-                        usageTips: aiSummary.usageTips
-                      };
-
-                      // Сохраняем в Supabase
-                      if (supabase) {
-                        try {
-                          console.log('Sending post to Supabase:', newPost.title);
-
-                          // Проверяем существование поста по URL
-                          const { data: existingPost } = await supabase
-                            .from('posts')
-                            .select('id')
-                            .eq('url', newPost.url)
-                            .maybeSingle();
-
-                          if (existingPost) {
-                            console.log('Post already exists in DB with ID:', existingPost.id);
-                            // Обновляем id в объекте (для корректной работы Избранного)
-                            newPost.id = typeof existingPost.id === 'string' ? parseInt(existingPost.id.slice(0, 8), 16) : existingPost.id;
-                          } else {
-                            const { data: insertedPost, error } = await supabase.from('posts').insert([{
-                              title: newPost.title,
-                              summary: newPost.summary,
-                              source: newPost.source,
-                              channel: newPost.channel,
-                              date: new Date(latestPost.date || Date.now()).toISOString(),
-                              tags: newPost.tags,
-                              mentions: newPost.mentions,
-                              views: newPost.views || '0',
-                              image: newPost.image,
-                              url: newPost.url,
-                              detailed_usage: typeof newPost.detailedUsage === 'string' ? newPost.detailedUsage : JSON.stringify(newPost.detailedUsage),
-                              usage_tips: newPost.usageTips,
-                              is_analyzed: true
-                            }]).select().single();
-
-                            if (error) {
-                              console.error('Error inserting post to Supabase:', error);
-                            } else if (insertedPost) {
-                              console.log('Successfully saved post to DB:', insertedPost.id);
-                              newPost.id = typeof insertedPost.id === 'string' ? parseInt(insertedPost.id.slice(0, 8), 16) : insertedPost.id;
-                            }
-                          }
-                        } catch (dbError) {
-                          console.error('Exception saving post to DB:', dbError);
-                        }
-                      }
-
-                      // Добавляем канал и новую новость в начало списка
-                      setChannels(prev => [newChannel, ...prev]);
-                      setPosts(prev => [newPost, ...prev]);
-                    } catch (error) {
-                      console.error('Error fetching channel data:', error);
-                      // Добавляем канал даже если произошла ошибка
-                      setChannels(prev => [newChannel, ...prev]);
+                    } catch (err: any) {
+                      setAddToolError(err.message || 'Произошла ошибка');
                     } finally {
-                      setIsLoadingChannel(false);
-                      setIsAddModalOpen(false);
+                      setIsLoadingTool(false);
                     }
-                  }
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">URL канала</label>
-                  <input
-                    name="channelUrl"
-                    type="text"
-                    placeholder="@channel или https://t.me/channel"
-                    className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
-                    required
-                  />
-                </div>
-
-                {addChannelError && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-                    <p className="text-red-400 text-xs font-bold flex items-center gap-2">
-                      <X size={14} /> {addChannelError}
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Платформа</label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-red-500/50 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-500/10">
-                      <input type="radio" name="source" value="YouTube" className="sr-only" defaultChecked />
-                      <Youtube className="w-5 h-5 text-red-400" />
-                      <span className="text-sm font-medium">YouTube</span>
-                    </label>
-                    <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-500/10">
-                      <input type="radio" name="source" value="Telegram" className="sr-only" />
-                      <MessageCircle className="w-5 h-5 text-blue-400" />
-                      <span className="text-sm font-medium">Telegram</span>
-                    </label>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoadingChannel}
-                  className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  }}
+                  className="space-y-4"
                 >
-                  {isLoadingChannel ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Загрузка...
-                    </>
-                  ) : (
-                    'Добавить канал'
-                  )}
-                </button>
-              </form>
-
-              {channels.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <h3 className="text-sm font-medium text-slate-400 mb-3">Добавленные каналы</h3>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {channels.map(channel => (
-                      <div key={channel.id} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          {channel.source === 'YouTube'
-                            ? <Youtube className="w-4 h-4 text-red-400" />
-                            : <MessageCircle className="w-4 h-4 text-blue-400" />
-                          }
-                          <span className="text-sm text-white truncate max-w-[150px]">{channel.name}</span>
-                        </div>
-                        <button
-                          onClick={() => setChannels(prev => prev.filter(c => c.id !== channel.id))}
-                          className="p-1 text-slate-400 hover:text-red-400 transition-colors"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Название инструмента</label>
+                    <input
+                      name="toolName"
+                      type="text"
+                      placeholder="Напр. ChatGPT, Midjourney..."
+                      className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                      required
+                    />
                   </div>
-                </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">URL сайта</label>
+                    <input
+                      name="toolUrl"
+                      type="url"
+                      placeholder="https://..."
+                      className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Категория</label>
+                    <select
+                      name="toolCategory"
+                      className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors appearance-none"
+                    >
+                      <option value="LLM & Chat">LLM & Chat</option>
+                      <option value="Image Generation">Image Generation</option>
+                      <option value="Audio & Video">Audio & Video</option>
+                      <option value="Coding & Dev">Coding & Dev</option>
+                      <option value="Agents & Frameworks">Agents & Frameworks</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Краткое описание (необязательно)</label>
+                    <textarea
+                      name="toolDesc"
+                      rows={2}
+                      placeholder="О чем этот сервис?"
+                      className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors resize-none"
+                    />
+                  </div>
+
+                  {addToolError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                      <p className="text-red-400 text-xs">{addToolError}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoadingTool}
+                    className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black uppercase tracking-wider rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isLoadingTool ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Отправка...
+                      </>
+                    ) : (
+                      'Предложить инструмент'
+                    )}
+                  </button>
+                  <p className="text-[10px] text-center text-slate-500 uppercase tracking-widest font-bold">
+                    После проверки инструмент появится в каталоге
+                  </p>
+                </form>
               )}
             </div>
           </div>
