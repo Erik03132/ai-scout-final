@@ -1,0 +1,1416 @@
+#!/usr/bin/env python3
+"""Extruct API CLI.
+
+Supported command groups:
+- auth
+- companies
+- tables
+- rows
+- columns
+- deep-search
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from typing import Any
+
+
+DEFAULT_BASE_URL = "https://api.extruct.ai"
+DEFAULT_TIMEOUT_SECONDS = 30
+DEFAULT_LIST_OFFSET = 0
+DEFAULT_LIST_LIMIT = 20
+DEFAULT_TABLE_DATA_LIMIT = 50
+DEFAULT_POLL_INTERVAL_SECONDS = 5.0
+DEFAULT_POLL_MAX_ATTEMPTS = 60
+DEFAULT_DEEP_SEARCH_RESULTS_LIMIT = 50
+DEFAULT_DEEP_SEARCH_POLL_INTERVAL_SECONDS = 10.0
+DEFAULT_DEEP_SEARCH_POLL_MAX_ATTEMPTS = 120
+
+EXIT_SUCCESS = 0
+EXIT_REQUEST_FAILURE = 1
+EXIT_AUTH_CONFIG_ERROR = 2
+EXIT_UNEXPECTED_RUNTIME = 3
+
+ALLOWED_FILTER_TOP_LEVEL_KEYS = {"include", "exclude", "range"}
+ALLOWED_FILTER_INCLUDE_EXCLUDE_KEYS = {"size", "country", "city"}
+ALLOWED_FILTER_FOUNDED_KEYS = {"min", "max"}
+ALLOWED_FILTER_SIZE_VALUES = {
+    "1-10",
+    "11-50",
+    "51-200",
+    "201-500",
+    "501-1000",
+    "1001-5000",
+    "5001-10000",
+    "10001+",
+}
+
+
+def _json_print(payload: Any, pretty: bool) -> None:
+    if pretty:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+    print(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+
+
+def _error_payload(
+    *,
+    code: str,
+    message: str,
+    method: str,
+    path: str,
+    status_code: int | None = None,
+    details: Any = None,
+) -> dict[str, Any]:
+    error: dict[str, Any] = {
+        "code": code,
+        "message": message,
+        "method": method,
+        "path": path,
+    }
+    if status_code is not None:
+        error["status_code"] = status_code
+    if details is not None:
+        error["details"] = details
+    return {"error": error}
+
+
+def _cli_error(*, message: str, path: str, details: Any = None) -> tuple[dict[str, Any], int]:
+    return (
+        _error_payload(
+            code="cli_error",
+            message=message,
+            method="CLI",
+            path=path,
+            details=details,
+        ),
+        EXIT_REQUEST_FAILURE,
+    )
+
+
+def _parse_response_body(raw: bytes) -> Any:
+    if not raw:
+        return None
+    text = raw.decode("utf-8", errors="replace")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {"text": text}
+
+
+def _make_request(
+    *,
+    base_url: str,
+    token: str | None,
+    method: str,
+    path: str,
+    timeout: float,
+    query: dict[str, Any] | None = None,
+    payload: Any = None,
+) -> tuple[Any, int]:
+    normalized_base = base_url.rstrip("/")
+    url = normalized_base + path
+    if query:
+        encoded_query = urllib.parse.urlencode(query, doseq=True)
+        if encoded_query:
+            url = f"{url}?{encoded_query}"
+
+    body_bytes = None
+    if payload is not None:
+        body_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+    headers = {
+        "Accept": "application/json",
+    }
+    if token is not None:
+        headers["Authorization"] = f"Bearer {token}"
+    if body_bytes is not None:
+        headers["Content-Type"] = "application/json"
+
+    request = urllib.request.Request(
+        url=url,
+        data=body_bytes,
+        headers=headers,
+        method=method,
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            parsed = _parse_response_body(response.read())
+            return parsed, EXIT_SUCCESS
+    except urllib.error.HTTPError as exc:
+        parsed_error = _parse_response_body(exc.read())
+        code = "auth_error" if exc.code in (401, 403) else "http_error"
+        message = "Authentication failed." if code == "auth_error" else "HTTP request failed."
+        error = _error_payload(
+            code=code,
+            message=message,
+            method=method,
+            path=path,
+            status_code=exc.code,
+            details=parsed_error,
+        )
+        exit_code = EXIT_AUTH_CONFIG_ERROR if code == "auth_error" else EXIT_REQUEST_FAILURE
+        return error, exit_code
+    except urllib.error.URLError as exc:
+        error = _error_payload(
+            code="network_error",
+            message="Network request failed.",
+            method=method,
+            path=path,
+            details={"reason": str(exc.reason)},
+        )
+        return error, EXIT_REQUEST_FAILURE
+    except TimeoutError:
+        error = _error_payload(
+            code="network_error",
+            message="Network request timed out.",
+            method=method,
+            path=path,
+            details={"reason": "timeout"},
+        )
+        return error, EXIT_REQUEST_FAILURE
+    except Exception as exc:  # noqa: BLE001
+        error = _error_payload(
+            code="parse_error",
+            message="Unexpected request handling error.",
+            method=method,
+            path=path,
+            details={"reason": str(exc)},
+        )
+        return error, EXIT_UNEXPECTED_RUNTIME
+
+
+def _resolve_token(*, method: str, path: str) -> tuple[str | None, Any, int]:
+    token = os.getenv("EXTRUCT_API_TOKEN")
+    if token:
+        return token, None, EXIT_SUCCESS
+    error = _error_payload(
+        code="auth_error",
+        message="Missing EXTRUCT_API_TOKEN environment variable.",
+        method=method,
+        path=path,
+    )
+    return None, error, EXIT_AUTH_CONFIG_ERROR
+
+
+def _validate_non_empty(value: str, *, flag: str, path: str) -> tuple[Any | None, int]:
+    if value.strip():
+        return None, EXIT_SUCCESS
+    return _cli_error(
+        message=f"Invalid {flag}: value must be a non-empty string.",
+        path=path,
+    )
+
+
+def _validate_yes(confirmed: bool, *, flag: str, path: str) -> tuple[Any | None, int]:
+    if confirmed:
+        return None, EXIT_SUCCESS
+    return _cli_error(
+        message=f"Missing {flag}: destructive command requires explicit confirmation.",
+        path=path,
+    )
+
+
+def _validate_pagination(offset: int, limit: int, *, path: str) -> tuple[Any | None, int]:
+    if offset < 0:
+        return _cli_error(
+            message="Invalid --offset: value must be >= 0.",
+            path=path,
+            details={"offset": offset},
+        )
+    if limit <= 0:
+        return _cli_error(
+            message="Invalid --limit: value must be > 0.",
+            path=path,
+            details={"limit": limit},
+        )
+    return None, EXIT_SUCCESS
+
+
+def _validate_positive_number(value: float | int, *, flag: str, path: str) -> tuple[Any | None, int]:
+    if value > 0:
+        return None, EXIT_SUCCESS
+    return _cli_error(
+        message=f"Invalid {flag}: value must be > 0.",
+        path=path,
+        details={flag.lstrip("-"): value},
+    )
+
+
+def _validate_integer_range(
+    value: Any,
+    *,
+    field: str,
+    minimum: int,
+    maximum: int,
+    path: str,
+) -> tuple[Any | None, int]:
+    if not isinstance(value, int):
+        return _cli_error(
+            message=f"Invalid payload: '{field}' must be an integer.",
+            path=path,
+            details={field: value},
+        )
+    if minimum <= value <= maximum:
+        return None, EXIT_SUCCESS
+    return _cli_error(
+        message=f"Invalid payload: '{field}' must be between {minimum} and {maximum}.",
+        path=path,
+        details={field: value, "minimum": minimum, "maximum": maximum},
+    )
+
+
+def _validate_filters_shape(filters: Any, *, path: str) -> tuple[Any | None, int]:
+    if not isinstance(filters, dict):
+        return _cli_error(
+            message="Invalid --filters: top-level JSON value must be an object.",
+            path=path,
+        )
+
+    unknown_top_keys = sorted(set(filters.keys()) - ALLOWED_FILTER_TOP_LEVEL_KEYS)
+    if unknown_top_keys:
+        return _cli_error(
+            message="Invalid --filters: unsupported top-level keys.",
+            path=path,
+            details={"unsupported_keys": unknown_top_keys},
+        )
+
+    for section in ("include", "exclude"):
+        value = filters.get(section)
+        if value is None:
+            continue
+        if not isinstance(value, dict):
+            return _cli_error(
+                message=f"Invalid --filters: '{section}' must be an object.",
+                path=path,
+            )
+
+        unknown_keys = sorted(set(value.keys()) - ALLOWED_FILTER_INCLUDE_EXCLUDE_KEYS)
+        if unknown_keys:
+            return _cli_error(
+                message=f"Invalid --filters: unsupported keys under '{section}'.",
+                path=path,
+                details={"unsupported_keys": unknown_keys},
+            )
+
+        for key, items in value.items():
+            if not isinstance(items, list) or not all(isinstance(item, str) for item in items):
+                return _cli_error(
+                    message=f"Invalid --filters: '{section}.{key}' must be an array of strings.",
+                    path=path,
+                )
+            if key == "size":
+                invalid_sizes = sorted(set(items) - ALLOWED_FILTER_SIZE_VALUES)
+                if invalid_sizes:
+                    return _cli_error(
+                        message=f"Invalid --filters: unsupported size values in '{section}.size'.",
+                        path=path,
+                        details={"invalid_values": invalid_sizes},
+                    )
+
+    range_value = filters.get("range")
+    if range_value is not None:
+        if not isinstance(range_value, dict):
+            return _cli_error(
+                message="Invalid --filters: 'range' must be an object.",
+                path=path,
+            )
+        unknown_range_keys = sorted(set(range_value.keys()) - {"founded"})
+        if unknown_range_keys:
+            return _cli_error(
+                message="Invalid --filters: unsupported keys under 'range'.",
+                path=path,
+                details={"unsupported_keys": unknown_range_keys},
+            )
+
+        founded = range_value.get("founded")
+        if founded is not None:
+            if not isinstance(founded, dict):
+                return _cli_error(
+                    message="Invalid --filters: 'range.founded' must be an object.",
+                    path=path,
+                )
+            unknown_founded_keys = sorted(set(founded.keys()) - ALLOWED_FILTER_FOUNDED_KEYS)
+            if unknown_founded_keys:
+                return _cli_error(
+                    message="Invalid --filters: unsupported keys under 'range.founded'.",
+                    path=path,
+                    details={"unsupported_keys": unknown_founded_keys},
+                )
+            for key, item in founded.items():
+                if not isinstance(item, int):
+                    return _cli_error(
+                        message=f"Invalid --filters: 'range.founded.{key}' must be an integer.",
+                        path=path,
+                    )
+
+    return None, EXIT_SUCCESS
+
+
+def _parse_json_input(raw: str, *, flag: str, path: str) -> tuple[Any | None, Any | None, int]:
+    try:
+        return json.loads(raw), None, EXIT_SUCCESS
+    except json.JSONDecodeError as exc:
+        error, code = _cli_error(
+            message=f"Invalid {flag}: malformed JSON.",
+            path=path,
+            details={"reason": str(exc)},
+        )
+        return None, error, code
+
+
+def _parse_filters(filters_input: str | None, *, path: str) -> tuple[dict[str, Any] | None, Any | None, int]:
+    if filters_input is None:
+        return None, None, EXIT_SUCCESS
+
+    parsed, error, code = _parse_json_input(filters_input, flag="--filters", path=path)
+    if error is not None:
+        return None, error, code
+
+    validation_error, validation_code = _validate_filters_shape(parsed, path=path)
+    if validation_error is not None:
+        return None, validation_error, validation_code
+    return parsed, None, EXIT_SUCCESS
+
+
+def _parse_columns(columns_input: str | None, *, path: str) -> tuple[list[str] | None, Any | None, int]:
+    if columns_input is None:
+        return None, None, EXIT_SUCCESS
+
+    raw_items = [item.strip() for item in columns_input.split(",")]
+    columns = [item for item in raw_items if item]
+    if not columns:
+        error, code = _cli_error(
+            message="Invalid --columns: provide one or more comma-separated column keys.",
+            path=path,
+        )
+        return None, error, code
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for column in columns:
+        if column not in seen:
+            seen.add(column)
+            deduped.append(column)
+
+    return deduped, None, EXIT_SUCCESS
+
+
+def _load_payload(
+    payload_input: str | None,
+    payload_file: str | None,
+    *,
+    path: str,
+) -> tuple[Any | None, Any | None, int]:
+    if payload_input and payload_file:
+        error, code = _cli_error(
+            message="Invalid payload arguments: use either --payload or --payload-file, not both.",
+            path=path,
+        )
+        return None, error, code
+
+    if not payload_input and not payload_file:
+        error, code = _cli_error(
+            message="Missing payload: use --payload or --payload-file.",
+            path=path,
+        )
+        return None, error, code
+
+    if payload_input is not None:
+        return _parse_json_input(payload_input, flag="--payload", path=path)
+
+    assert payload_file is not None
+    try:
+        if payload_file == "-":
+            raw = sys.stdin.read()
+        else:
+            with open(payload_file, encoding="utf-8") as handle:
+                raw = handle.read()
+    except OSError as exc:
+        error, code = _cli_error(
+            message="Invalid --payload-file: unable to read file.",
+            path=path,
+            details={"reason": str(exc), "path": payload_file},
+        )
+        return None, error, code
+
+    return _parse_json_input(raw, flag="--payload-file", path=path)
+
+
+def _table_is_idle(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+
+    status = payload.get("status")
+    if isinstance(status, dict):
+        run_status = status.get("run_status")
+        in_progress = status.get("num_cells_in_progress")
+    else:
+        run_status = payload.get("run_status")
+        in_progress = payload.get("num_cells_in_progress")
+
+    return run_status == "idle" and in_progress == 0
+
+
+def _deep_search_is_complete(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    return payload.get("status") == "done" or payload.get("is_exhausted") is True
+
+
+def _validate_payload_object(payload: Any, *, path: str) -> tuple[Any | None, int]:
+    if isinstance(payload, dict):
+        return None, EXIT_SUCCESS
+    return _cli_error(
+        message="Invalid payload: top-level JSON value must be an object.",
+        path=path,
+    )
+
+
+def _validate_deep_search_create_payload(payload: Any, *, path: str) -> tuple[Any | None, int]:
+    payload_error, payload_code = _validate_payload_object(payload, path=path)
+    if payload_error is not None:
+        return payload_error, payload_code
+
+    query = payload.get("query")
+    if not isinstance(query, str) or not query.strip():
+        return _cli_error(
+            message="Invalid payload: 'query' is required and must be a non-empty string.",
+            path=path,
+        )
+
+    if "desired_num_results" in payload:
+        return _validate_integer_range(
+            payload["desired_num_results"],
+            field="desired_num_results",
+            minimum=1,
+            maximum=250,
+            path=path,
+        )
+
+    return None, EXIT_SUCCESS
+
+
+def _validate_deep_search_resume_payload(payload: Any, *, path: str) -> tuple[Any | None, int]:
+    payload_error, payload_code = _validate_payload_object(payload, path=path)
+    if payload_error is not None:
+        return payload_error, payload_code
+
+    if "desired_new_results" in payload:
+        return _validate_integer_range(
+            payload["desired_new_results"],
+            field="desired_new_results",
+            minimum=0,
+            maximum=250,
+            path=path,
+        )
+
+    return None, EXIT_SUCCESS
+
+
+def _validate_rows_delete_payload(payload: Any, *, path: str) -> tuple[Any | None, int]:
+    payload_error, payload_code = _validate_payload_object(payload, path=path)
+    if payload_error is not None:
+        return payload_error, payload_code
+
+    rows = payload.get("rows")
+    if rows is None:
+        return _cli_error(
+            message="Invalid payload: 'rows' is required.",
+            path=path,
+        )
+    if not isinstance(rows, list):
+        return _cli_error(
+            message="Invalid payload: 'rows' must be an array of row IDs.",
+            path=path,
+            details={"rows": rows},
+        )
+    if not rows:
+        return _cli_error(
+            message="Invalid payload: 'rows' must contain at least one row ID.",
+            path=path,
+        )
+
+    invalid_row_ids = [row_id for row_id in rows if not isinstance(row_id, str) or not row_id.strip()]
+    if invalid_row_ids:
+        return _cli_error(
+            message="Invalid payload: every item in 'rows' must be a non-empty string.",
+            path=path,
+            details={"invalid_rows": invalid_row_ids},
+        )
+
+    return None, EXIT_SUCCESS
+
+
+def _extract_columns(payload: Any, *, path: str) -> tuple[Any | None, Any | None, int]:
+    if isinstance(payload, dict) and "columns" in payload:
+        return payload["columns"], None, EXIT_SUCCESS
+    error, code = _cli_error(
+        message="Unexpected response: missing 'columns' field on table payload.",
+        path=path,
+    )
+    return None, error, code
+
+
+def _project_table_data(
+    payload: Any,
+    *,
+    requested_columns: list[str],
+    path: str,
+) -> tuple[Any | None, Any | None, int]:
+    if not isinstance(payload, dict):
+        error, code = _cli_error(
+            message="Unexpected response: table data projection requires an object response.",
+            path=path,
+        )
+        return None, error, code
+
+    columns = payload.get("columns")
+    if not isinstance(columns, list):
+        error, code = _cli_error(
+            message="Unexpected response: missing 'columns' field on table data payload.",
+            path=path,
+        )
+        return None, error, code
+
+    available_keys: list[str] = []
+    for column in columns:
+        if not isinstance(column, dict):
+            continue
+        config = column.get("config")
+        if not isinstance(config, dict):
+            continue
+        key = config.get("key")
+        if isinstance(key, str):
+            available_keys.append(key)
+
+    available_key_set = set(available_keys)
+    unknown_columns = [key for key in requested_columns if key not in available_key_set]
+    if unknown_columns:
+        error, code = _cli_error(
+            message="Unknown column keys requested for projection.",
+            path=path,
+            details={
+                "unknown_columns": unknown_columns,
+                "valid_columns": available_keys,
+            },
+        )
+        return None, error, code
+
+    requested_key_set = set(requested_columns)
+    projected_payload = dict(payload)
+    projected_payload["columns"] = [
+        column
+        for column in columns
+        if isinstance(column, dict)
+        and isinstance(column.get("config"), dict)
+        and column["config"].get("key") in requested_key_set
+    ]
+
+    rows = payload.get("rows")
+    if isinstance(rows, list):
+        projected_rows = []
+        for row in rows:
+            if not isinstance(row, dict):
+                projected_rows.append(row)
+                continue
+            projected_row = dict(row)
+            data = row.get("data")
+            if isinstance(data, dict):
+                projected_row["data"] = {
+                    key: value for key, value in data.items() if key in requested_key_set
+                }
+            projected_rows.append(projected_row)
+        projected_payload["rows"] = projected_rows
+
+    return projected_payload, None, EXIT_SUCCESS
+
+
+def _execute_request(
+    args: argparse.Namespace,
+    *,
+    method: str,
+    path: str,
+    query: dict[str, Any] | None = None,
+    payload: Any = None,
+    transform: str | None = None,
+    requires_auth: bool = True,
+) -> int:
+    token: str | None = None
+    if requires_auth:
+        token, token_error, token_exit = _resolve_token(method=method, path=path)
+        if token is None:
+            _json_print(token_error, args.pretty)
+            return token_exit
+
+    response_payload, exit_code = _make_request(
+        base_url=args.base_url,
+        token=token,
+        method=method,
+        path=path,
+        timeout=args.timeout,
+        query=query,
+        payload=payload,
+    )
+    if exit_code != EXIT_SUCCESS:
+        _json_print(response_payload, args.pretty)
+        return exit_code
+
+    if transform == "columns":
+        transformed, transform_error, transform_code = _extract_columns(response_payload, path=path)
+        if transform_error is not None:
+            _json_print(transform_error, args.pretty)
+            return transform_code
+        response_payload = transformed
+
+    _json_print(response_payload, args.pretty)
+    return exit_code
+
+
+def _add_payload_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--payload", help="Inline JSON payload string.")
+    parser.add_argument("--payload-file", help="Path to JSON payload file, or '-' for stdin.")
+
+
+def _build_global_options_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
+    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("--pretty", action="store_true")
+    return parser
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    global_options = _build_global_options_parser()
+    parser = argparse.ArgumentParser(prog="extruct-api", parents=[global_options])
+
+    resources = parser.add_subparsers(dest="resource", required=True)
+
+    auth = resources.add_parser("auth", parents=[global_options])
+    auth_actions = auth.add_subparsers(dest="action", required=True)
+    auth_actions.add_parser("user", parents=[global_options])
+
+    healthcheck = resources.add_parser(
+        "healthcheck",
+        help="Run an unauthenticated service health check.",
+        parents=[global_options],
+    )
+    healthcheck.set_defaults(action="healthcheck")
+
+    companies = resources.add_parser("companies", help="Company discovery commands.", parents=[global_options])
+    companies_actions = companies.add_subparsers(dest="action", required=True)
+
+    companies_search = companies_actions.add_parser(
+        "search",
+        help="Search companies by natural-language query.",
+        parents=[global_options],
+    )
+    companies_search.add_argument("--query", required=True, help="Natural-language search query.")
+    companies_search.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
+    companies_search.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
+    companies_search.add_argument("--filters", help="Search filters JSON string.")
+
+    companies_similar = companies_actions.add_parser(
+        "similar",
+        help="Find companies similar to a seed company. Prefer domain identifiers in normal usage.",
+        parents=[global_options],
+    )
+    companies_similar.add_argument(
+        "--company-identifier",
+        required=True,
+        help="Seed company identifier (domain preferred, UUID also supported).",
+    )
+    companies_similar.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
+    companies_similar.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
+    companies_similar.add_argument("--filters", help="Search filters JSON string.")
+
+    tables = resources.add_parser("tables", help="Table commands.", parents=[global_options])
+    tables_actions = tables.add_subparsers(dest="action", required=True)
+
+    tables_list = tables_actions.add_parser("list", help="List tables.", parents=[global_options])
+    tables_list.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
+    tables_list.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
+    tables_list.add_argument("--view", choices=("full", "minimal"))
+    tables_list.add_argument("--kind", choices=("generic", "company", "people"))
+    tables_list.add_argument("--scope", choices=("personal", "organization"))
+
+    tables_create = tables_actions.add_parser("create", help="Create a table.", parents=[global_options])
+    _add_payload_args(tables_create)
+
+    tables_get = tables_actions.add_parser("get", help="Get a table.", parents=[global_options])
+    tables_get.add_argument("table_id")
+
+    tables_update = tables_actions.add_parser("update", help="Update a table.", parents=[global_options])
+    tables_update.add_argument("table_id")
+    _add_payload_args(tables_update)
+
+    tables_delete = tables_actions.add_parser("delete", help="Delete a table.", parents=[global_options])
+    tables_delete.add_argument("table_id")
+    tables_delete.add_argument("--yes", action="store_true", help="Confirm deletion.")
+
+    tables_clone = tables_actions.add_parser("clone", help="Clone a table.", parents=[global_options])
+    tables_clone.add_argument("table_id")
+    tables_clone.add_argument("--schema-only", action="store_true", help="Clone schema only.")
+
+    tables_run = tables_actions.add_parser("run", help="Run a table.", parents=[global_options])
+    tables_run.add_argument("table_id")
+    _add_payload_args(tables_run)
+
+    tables_poll = tables_actions.add_parser("poll", help="Poll table execution until idle.", parents=[global_options])
+    tables_poll.add_argument("table_id")
+    tables_poll.add_argument("--interval", type=float, default=DEFAULT_POLL_INTERVAL_SECONDS)
+    tables_poll.add_argument("--max-attempts", type=int, default=DEFAULT_POLL_MAX_ATTEMPTS)
+
+    tables_data = tables_actions.add_parser("data", help="Get paginated table data.", parents=[global_options])
+    tables_data.add_argument("table_id")
+    tables_data.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
+    tables_data.add_argument("--limit", type=int, default=DEFAULT_TABLE_DATA_LIMIT)
+    tables_data.add_argument(
+        "--columns",
+        help="Comma-separated column keys to include in the returned table data.",
+    )
+
+    rows = resources.add_parser("rows", help="Row commands.", parents=[global_options])
+    rows_actions = rows.add_subparsers(dest="action", required=True)
+
+    rows_create = rows_actions.add_parser("create", help="Create rows in a table.", parents=[global_options])
+    rows_create.add_argument("table_id")
+    _add_payload_args(rows_create)
+
+    rows_get = rows_actions.add_parser("get", help="Get a single row.", parents=[global_options])
+    rows_get.add_argument("table_id")
+    rows_get.add_argument("row_id")
+
+    rows_update = rows_actions.add_parser("update", help="Update rows in a table.", parents=[global_options])
+    rows_update.add_argument("table_id")
+    _add_payload_args(rows_update)
+
+    rows_delete = rows_actions.add_parser("delete", help="Delete rows from a table.", parents=[global_options])
+    rows_delete.add_argument("table_id")
+    rows_delete.add_argument("--yes", action="store_true", help="Confirm deletion.")
+    _add_payload_args(rows_delete)
+
+    columns = resources.add_parser("columns", help="Column commands.", parents=[global_options])
+    columns_actions = columns.add_subparsers(dest="action", required=True)
+
+    columns_list = columns_actions.add_parser("list", help="List columns for a table.", parents=[global_options])
+    columns_list.add_argument("table_id")
+
+    columns_add = columns_actions.add_parser("add", help="Add columns to a table.", parents=[global_options])
+    columns_add.add_argument("table_id")
+    _add_payload_args(columns_add)
+
+    columns_update = columns_actions.add_parser("update", help="Update a table column.", parents=[global_options])
+    columns_update.add_argument("table_id")
+    columns_update.add_argument("column_id")
+    _add_payload_args(columns_update)
+
+    columns_delete = columns_actions.add_parser("delete", help="Delete a table column.", parents=[global_options])
+    columns_delete.add_argument("table_id")
+    columns_delete.add_argument("column_id")
+    columns_delete.add_argument("--yes", action="store_true", help="Confirm deletion.")
+
+    deep_search = resources.add_parser(
+        "deep-search",
+        help="Deep Search task commands. Tasks are asynchronous and results can be fetched while running.",
+        parents=[global_options],
+    )
+    deep_search_actions = deep_search.add_subparsers(dest="action", required=True)
+
+    deep_search_list = deep_search_actions.add_parser("list", help="List Deep Search tasks.", parents=[global_options])
+    deep_search_list.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
+    deep_search_list.add_argument("--limit", type=int, default=DEFAULT_LIST_LIMIT)
+
+    deep_search_create = deep_search_actions.add_parser(
+        "create",
+        help="Create a Deep Search task. Requires payload with non-empty query.",
+        parents=[global_options],
+    )
+    _add_payload_args(deep_search_create)
+
+    deep_search_get = deep_search_actions.add_parser("get", help="Get a Deep Search task.", parents=[global_options])
+    deep_search_get.add_argument("task_id")
+
+    deep_search_results = deep_search_actions.add_parser(
+        "results",
+        help="Get paginated Deep Search results. Results can be fetched while the task is running.",
+        parents=[global_options],
+    )
+    deep_search_results.add_argument("task_id")
+    deep_search_results.add_argument("--offset", type=int, default=DEFAULT_LIST_OFFSET)
+    deep_search_results.add_argument("--limit", type=int, default=DEFAULT_DEEP_SEARCH_RESULTS_LIMIT)
+
+    deep_search_resume = deep_search_actions.add_parser(
+        "resume",
+        help="Resume a Deep Search task with a payload.",
+        parents=[global_options],
+    )
+    deep_search_resume.add_argument("task_id")
+    _add_payload_args(deep_search_resume)
+
+    deep_search_poll = deep_search_actions.add_parser(
+        "poll",
+        help="Poll a Deep Search task until status=done or is_exhausted=true.",
+        parents=[global_options],
+    )
+    deep_search_poll.add_argument("task_id")
+    deep_search_poll.add_argument("--interval", type=float, default=DEFAULT_DEEP_SEARCH_POLL_INTERVAL_SECONDS)
+    deep_search_poll.add_argument("--max-attempts", type=int, default=DEFAULT_DEEP_SEARCH_POLL_MAX_ATTEMPTS)
+
+    return parser
+
+
+def _auth_method_path(action: str) -> tuple[str, str]:
+    if action == "user":
+        return "GET", "/v1/user"
+    raise ValueError(f"Unsupported auth action: {action}")
+
+
+def _healthcheck_method_path() -> tuple[str, str]:
+    return "GET", "/v1/healthcheck"
+
+
+def _companies_method_path(action: str, company_identifier: str | None = None) -> tuple[str, str]:
+    if action == "search":
+        return "GET", "/v1/companies/search"
+    if action == "similar":
+        if company_identifier is None:
+            raise ValueError("company_identifier is required for similar action.")
+        encoded_identifier = urllib.parse.quote(company_identifier, safe="")
+        return "GET", f"/v1/companies/{encoded_identifier}/similar"
+    raise ValueError(f"Unsupported companies action: {action}")
+
+
+def _tables_method_path(action: str, table_id: str | None = None) -> tuple[str, str]:
+    if action == "list":
+        return "GET", "/v1/tables"
+    if action == "create":
+        return "POST", "/v1/tables"
+    if table_id is None:
+        raise ValueError("table_id is required for this tables action.")
+    if action == "get":
+        return "GET", f"/v1/tables/{table_id}"
+    if action == "update":
+        return "PATCH", f"/v1/tables/{table_id}"
+    if action == "delete":
+        return "DELETE", f"/v1/tables/{table_id}"
+    if action == "clone":
+        return "POST", f"/v1/tables/{table_id}/clone"
+    if action == "run":
+        return "POST", f"/v1/tables/{table_id}/run"
+    if action == "poll":
+        return "GET", f"/v1/tables/{table_id}"
+    if action == "data":
+        return "GET", f"/v1/tables/{table_id}/data"
+    raise ValueError(f"Unsupported tables action: {action}")
+
+
+def _rows_method_path(action: str, table_id: str, row_id: str | None = None) -> tuple[str, str]:
+    if action == "create":
+        return "POST", f"/v1/tables/{table_id}/rows"
+    if action == "get":
+        if row_id is None:
+            raise ValueError("row_id is required for rows get action.")
+        return "GET", f"/v1/tables/{table_id}/rows/{row_id}"
+    if action == "update":
+        return "PATCH", f"/v1/tables/{table_id}/rows"
+    if action == "delete":
+        return "DELETE", f"/v1/tables/{table_id}/rows"
+    raise ValueError(f"Unsupported rows action: {action}")
+
+
+def _columns_method_path(action: str, table_id: str, column_id: str | None = None) -> tuple[str, str]:
+    if action == "list":
+        return "GET", f"/v1/tables/{table_id}"
+    if action == "add":
+        return "POST", f"/v1/tables/{table_id}/columns"
+    if action == "update":
+        if column_id is None:
+            raise ValueError("column_id is required for columns update action.")
+        return "PATCH", f"/v1/tables/{table_id}/columns/{column_id}"
+    if action == "delete":
+        if column_id is None:
+            raise ValueError("column_id is required for columns delete action.")
+        return "DELETE", f"/v1/tables/{table_id}/columns/{column_id}"
+    raise ValueError(f"Unsupported columns action: {action}")
+
+
+def _deep_search_method_path(action: str, task_id: str | None = None) -> tuple[str, str]:
+    if action == "list":
+        return "GET", "/v1/discovery_tasks"
+    if action == "create":
+        return "POST", "/v1/discovery_tasks"
+    if task_id is None:
+        raise ValueError("task_id is required for this deep-search action.")
+    if action == "get":
+        return "GET", f"/v1/discovery_tasks/{task_id}"
+    if action == "results":
+        return "GET", f"/v1/discovery_tasks/{task_id}/results"
+    if action == "resume":
+        return "POST", f"/v1/discovery_tasks/{task_id}/resume"
+    if action == "poll":
+        return "GET", f"/v1/discovery_tasks/{task_id}"
+    raise ValueError(f"Unsupported deep-search action: {action}")
+
+
+def _handle_auth(args: argparse.Namespace) -> int:
+    method, path = _auth_method_path(args.action)
+    return _execute_request(args, method=method, path=path)
+
+
+def _handle_healthcheck(args: argparse.Namespace) -> int:
+    method, path = _healthcheck_method_path()
+    return _execute_request(args, method=method, path=path, requires_auth=False)
+
+
+def _handle_companies(args: argparse.Namespace) -> int:
+    query_params: dict[str, Any] = {}
+    if args.action == "search":
+        method, path = _companies_method_path("search")
+        query_error, query_error_code = _validate_non_empty(args.query, flag="--query", path=path)
+        if query_error is not None:
+            _json_print(query_error, args.pretty)
+            return query_error_code
+        query_params["q"] = args.query
+    elif args.action == "similar":
+        identifier_error, identifier_error_code = _validate_non_empty(
+            args.company_identifier,
+            flag="--company-identifier",
+            path="/v1/companies/{company_identifier}/similar",
+        )
+        if identifier_error is not None:
+            _json_print(identifier_error, args.pretty)
+            return identifier_error_code
+        method, path = _companies_method_path("similar", company_identifier=args.company_identifier)
+    else:
+        error, code = _cli_error(message="Unsupported companies action.", path="/v1/companies")
+        _json_print(error, args.pretty)
+        return code
+
+    pagination_error, pagination_error_code = _validate_pagination(args.offset, args.limit, path=path)
+    if pagination_error is not None:
+        _json_print(pagination_error, args.pretty)
+        return pagination_error_code
+
+    parsed_filters, filters_error, filters_error_code = _parse_filters(args.filters, path=path)
+    if filters_error is not None:
+        _json_print(filters_error, args.pretty)
+        return filters_error_code
+
+    query_params["offset"] = args.offset
+    query_params["limit"] = args.limit
+    if parsed_filters is not None:
+        query_params["filters"] = json.dumps(parsed_filters, separators=(",", ":"))
+
+    return _execute_request(args, method=method, path=path, query=query_params)
+
+
+def _handle_tables(args: argparse.Namespace) -> int:
+    if args.action == "list":
+        method, path = _tables_method_path("list")
+        pagination_error, pagination_error_code = _validate_pagination(args.offset, args.limit, path=path)
+        if pagination_error is not None:
+            _json_print(pagination_error, args.pretty)
+            return pagination_error_code
+        query = {
+            "offset": args.offset,
+            "limit": args.limit,
+        }
+        if args.view is not None:
+            query["view"] = args.view
+        if args.kind is not None:
+            query["kind"] = args.kind
+        if args.scope is not None:
+            query["scope"] = args.scope
+        return _execute_request(args, method=method, path=path, query=query)
+
+    if args.action == "create":
+        method, path = _tables_method_path("create")
+        payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+        if payload_error is not None:
+            _json_print(payload_error, args.pretty)
+            return payload_code
+        return _execute_request(args, method=method, path=path, payload=payload)
+
+    identifier_error, identifier_error_code = _validate_non_empty(
+        args.table_id,
+        flag="table_id",
+        path="/v1/tables/{table_id}",
+    )
+    if identifier_error is not None:
+        _json_print(identifier_error, args.pretty)
+        return identifier_error_code
+
+    method, path = _tables_method_path(args.action, table_id=args.table_id)
+
+    if args.action == "get":
+        return _execute_request(args, method=method, path=path)
+
+    if args.action == "update":
+        payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+        if payload_error is not None:
+            _json_print(payload_error, args.pretty)
+            return payload_code
+        return _execute_request(args, method=method, path=path, payload=payload)
+
+    if args.action == "delete":
+        yes_error, yes_code = _validate_yes(args.yes, flag="--yes", path=path)
+        if yes_error is not None:
+            _json_print(yes_error, args.pretty)
+            return yes_code
+        return _execute_request(args, method=method, path=path)
+
+    if args.action == "clone":
+        query = {"schema_only": "true"} if args.schema_only else None
+        return _execute_request(args, method=method, path=path, query=query)
+
+    if args.action == "run":
+        if args.payload is None and args.payload_file is None:
+            payload = {"mode": "new"}
+        else:
+            payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+            if payload_error is not None:
+                _json_print(payload_error, args.pretty)
+                return payload_code
+        return _execute_request(args, method=method, path=path, payload=payload)
+
+    if args.action == "poll":
+        interval_error, interval_code = _validate_positive_number(args.interval, flag="--interval", path=path)
+        if interval_error is not None:
+            _json_print(interval_error, args.pretty)
+            return interval_code
+        attempts_error, attempts_code = _validate_positive_number(
+            args.max_attempts,
+            flag="--max-attempts",
+            path=path,
+        )
+        if attempts_error is not None:
+            _json_print(attempts_error, args.pretty)
+            return attempts_code
+
+        token, token_error, token_exit = _resolve_token(method=method, path=path)
+        if token is None:
+            _json_print(token_error, args.pretty)
+            return token_exit
+
+        for attempt in range(args.max_attempts):
+            response_payload, exit_code = _make_request(
+                base_url=args.base_url,
+                token=token,
+                method=method,
+                path=path,
+                timeout=args.timeout,
+            )
+            if exit_code != EXIT_SUCCESS:
+                _json_print(response_payload, args.pretty)
+                return exit_code
+            if _table_is_idle(response_payload):
+                _json_print(response_payload, args.pretty)
+                return EXIT_SUCCESS
+            if attempt + 1 < args.max_attempts:
+                time.sleep(args.interval)
+
+        timeout_error, timeout_code = _cli_error(
+            message="Table polling timed out before reaching idle state.",
+            path=path,
+            details={"max_attempts": args.max_attempts, "interval": args.interval},
+        )
+        _json_print(timeout_error, args.pretty)
+        return timeout_code
+
+    if args.action == "data":
+        pagination_error, pagination_error_code = _validate_pagination(args.offset, args.limit, path=path)
+        if pagination_error is not None:
+            _json_print(pagination_error, args.pretty)
+            return pagination_error_code
+        requested_columns, columns_error, columns_code = _parse_columns(args.columns, path=path)
+        if columns_error is not None:
+            _json_print(columns_error, args.pretty)
+            return columns_code
+
+        token, token_error, token_exit = _resolve_token(method=method, path=path)
+        if token is None:
+            _json_print(token_error, args.pretty)
+            return token_exit
+
+        response_payload, exit_code = _make_request(
+            base_url=args.base_url,
+            token=token,
+            method=method,
+            path=path,
+            timeout=args.timeout,
+            query={"offset": args.offset, "limit": args.limit},
+        )
+        if exit_code != EXIT_SUCCESS:
+            _json_print(response_payload, args.pretty)
+            return exit_code
+
+        if requested_columns is not None:
+            response_payload, projection_error, projection_code = _project_table_data(
+                response_payload,
+                requested_columns=requested_columns,
+                path=path,
+            )
+            if projection_error is not None:
+                _json_print(projection_error, args.pretty)
+                return projection_code
+
+        _json_print(response_payload, args.pretty)
+        return EXIT_SUCCESS
+
+    error, code = _cli_error(message="Unsupported tables action.", path="/v1/tables")
+    _json_print(error, args.pretty)
+    return code
+
+
+def _handle_rows(args: argparse.Namespace) -> int:
+    table_error, table_code = _validate_non_empty(args.table_id, flag="table_id", path="/v1/tables/{table_id}/rows")
+    if table_error is not None:
+        _json_print(table_error, args.pretty)
+        return table_code
+
+    if args.action == "get":
+        row_error, row_code = _validate_non_empty(
+            args.row_id,
+            flag="row_id",
+            path="/v1/tables/{table_id}/rows/{row_id}",
+        )
+        if row_error is not None:
+            _json_print(row_error, args.pretty)
+            return row_code
+        method, path = _rows_method_path("get", args.table_id, row_id=args.row_id)
+        return _execute_request(args, method=method, path=path)
+
+    method, path = _rows_method_path(args.action, args.table_id)
+    if args.action == "delete":
+        yes_error, yes_code = _validate_yes(args.yes, flag="--yes", path=path)
+        if yes_error is not None:
+            _json_print(yes_error, args.pretty)
+            return yes_code
+
+    payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+    if payload_error is not None:
+        _json_print(payload_error, args.pretty)
+        return payload_code
+
+    if args.action == "delete":
+        validation_error, validation_code = _validate_rows_delete_payload(payload, path=path)
+        if validation_error is not None:
+            _json_print(validation_error, args.pretty)
+            return validation_code
+
+    return _execute_request(args, method=method, path=path, payload=payload)
+
+
+def _handle_columns(args: argparse.Namespace) -> int:
+    table_error, table_code = _validate_non_empty(
+        args.table_id,
+        flag="table_id",
+        path="/v1/tables/{table_id}/columns",
+    )
+    if table_error is not None:
+        _json_print(table_error, args.pretty)
+        return table_code
+
+    if args.action == "list":
+        method, path = _columns_method_path("list", args.table_id)
+        return _execute_request(args, method=method, path=path, transform="columns")
+
+    if args.action == "add":
+        method, path = _columns_method_path("add", args.table_id)
+        payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+        if payload_error is not None:
+            _json_print(payload_error, args.pretty)
+            return payload_code
+        return _execute_request(args, method=method, path=path, payload=payload)
+
+    column_error, column_code = _validate_non_empty(
+        args.column_id,
+        flag="column_id",
+        path="/v1/tables/{table_id}/columns/{column_id}",
+    )
+    if column_error is not None:
+        _json_print(column_error, args.pretty)
+        return column_code
+
+    method, path = _columns_method_path(args.action, args.table_id, column_id=args.column_id)
+
+    if args.action == "update":
+        payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+        if payload_error is not None:
+            _json_print(payload_error, args.pretty)
+            return payload_code
+        return _execute_request(args, method=method, path=path, payload=payload)
+
+    if args.action == "delete":
+        yes_error, yes_code = _validate_yes(args.yes, flag="--yes", path=path)
+        if yes_error is not None:
+            _json_print(yes_error, args.pretty)
+            return yes_code
+        return _execute_request(args, method=method, path=path)
+
+    error, code = _cli_error(message="Unsupported columns action.", path="/v1/tables/{table_id}/columns")
+    _json_print(error, args.pretty)
+    return code
+
+
+def _handle_deep_search(args: argparse.Namespace) -> int:
+    if args.action == "list":
+        method, path = _deep_search_method_path("list")
+        pagination_error, pagination_error_code = _validate_pagination(args.offset, args.limit, path=path)
+        if pagination_error is not None:
+            _json_print(pagination_error, args.pretty)
+            return pagination_error_code
+        return _execute_request(
+            args,
+            method=method,
+            path=path,
+            query={"offset": args.offset, "limit": args.limit},
+        )
+
+    if args.action == "create":
+        method, path = _deep_search_method_path("create")
+        payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+        if payload_error is not None:
+            _json_print(payload_error, args.pretty)
+            return payload_code
+        validation_error, validation_code = _validate_deep_search_create_payload(payload, path=path)
+        if validation_error is not None:
+            _json_print(validation_error, args.pretty)
+            return validation_code
+        return _execute_request(args, method=method, path=path, payload=payload)
+
+    task_error, task_code = _validate_non_empty(
+        args.task_id,
+        flag="task_id",
+        path="/v1/discovery_tasks/{task_id}",
+    )
+    if task_error is not None:
+        _json_print(task_error, args.pretty)
+        return task_code
+
+    method, path = _deep_search_method_path(args.action, task_id=args.task_id)
+
+    if args.action == "get":
+        return _execute_request(args, method=method, path=path)
+
+    if args.action == "results":
+        pagination_error, pagination_error_code = _validate_pagination(args.offset, args.limit, path=path)
+        if pagination_error is not None:
+            _json_print(pagination_error, args.pretty)
+            return pagination_error_code
+        return _execute_request(
+            args,
+            method=method,
+            path=path,
+            query={"offset": args.offset, "limit": args.limit},
+        )
+
+    if args.action == "resume":
+        payload, payload_error, payload_code = _load_payload(args.payload, args.payload_file, path=path)
+        if payload_error is not None:
+            _json_print(payload_error, args.pretty)
+            return payload_code
+        validation_error, validation_code = _validate_deep_search_resume_payload(payload, path=path)
+        if validation_error is not None:
+            _json_print(validation_error, args.pretty)
+            return validation_code
+        return _execute_request(args, method=method, path=path, payload=payload)
+
+    if args.action == "poll":
+        interval_error, interval_code = _validate_positive_number(args.interval, flag="--interval", path=path)
+        if interval_error is not None:
+            _json_print(interval_error, args.pretty)
+            return interval_code
+        attempts_error, attempts_code = _validate_positive_number(
+            args.max_attempts,
+            flag="--max-attempts",
+            path=path,
+        )
+        if attempts_error is not None:
+            _json_print(attempts_error, args.pretty)
+            return attempts_code
+
+        token, token_error, token_exit = _resolve_token(method=method, path=path)
+        if token is None:
+            _json_print(token_error, args.pretty)
+            return token_exit
+
+        for attempt in range(args.max_attempts):
+            response_payload, exit_code = _make_request(
+                base_url=args.base_url,
+                token=token,
+                method=method,
+                path=path,
+                timeout=args.timeout,
+            )
+            if exit_code != EXIT_SUCCESS:
+                _json_print(response_payload, args.pretty)
+                return exit_code
+            if _deep_search_is_complete(response_payload):
+                _json_print(response_payload, args.pretty)
+                return EXIT_SUCCESS
+            if attempt + 1 < args.max_attempts:
+                time.sleep(args.interval)
+
+        timeout_error, timeout_code = _cli_error(
+            message="Deep Search polling timed out before reaching a terminal state.",
+            path=path,
+            details={"max_attempts": args.max_attempts, "interval": args.interval},
+        )
+        _json_print(timeout_error, args.pretty)
+        return timeout_code
+
+    error, code = _cli_error(message="Unsupported deep-search action.", path="/v1/discovery_tasks")
+    _json_print(error, args.pretty)
+    return code
+
+
+def main() -> int:
+    parser = _build_parser()
+    args = parser.parse_args()
+
+    try:
+        if args.resource == "auth":
+            return _handle_auth(args)
+        if args.resource == "healthcheck":
+            return _handle_healthcheck(args)
+        if args.resource == "companies":
+            return _handle_companies(args)
+        if args.resource == "tables":
+            return _handle_tables(args)
+        if args.resource == "rows":
+            return _handle_rows(args)
+        if args.resource == "columns":
+            return _handle_columns(args)
+        if args.resource == "deep-search":
+            return _handle_deep_search(args)
+
+        error, code = _cli_error(message="Unsupported resource.", path="/")
+        _json_print(error, args.pretty)
+        return code
+    except Exception as exc:  # noqa: BLE001
+        _json_print(
+            _error_payload(
+                code="cli_error",
+                message="Unexpected CLI runtime failure.",
+                method="CLI",
+                path="/",
+                details={"reason": str(exc)},
+            ),
+            getattr(args, "pretty", False),
+        )
+        return EXIT_UNEXPECTED_RUNTIME
+
+
+if __name__ == "__main__":
+    sys.exit(main())

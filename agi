@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Antigravity CLI Wrapper
+# Add to ~/.zshrc or ~/.bashrc:
+#   export PATH="$HOME/.antigravity:$PATH"
+#   alias agi="launch-antigravity.cjs"
+#   alias agi-list="launch-antigravity.cjs --list"
+#   alias agi-set="launch-antigravity.cjs --set"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec node "$SCRIPT_DIR/launch-antigravity.cjs" "$@"

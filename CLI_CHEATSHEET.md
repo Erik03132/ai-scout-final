@@ -108,5 +108,17 @@ npx supabase gen types typescript --linked > src/lib/supabase/types.ts
 
 # Миграции
 npx supabase migration new my_migration
-npx supabase db push
 ```
+
+---
+
+## 🤖 Gemini CLI (Fallback Mode)
+
+```bash
+gemini                        # Запуск интерактивного чата
+gemini --yolo                 # Режим "Агента" (авто-правки файлов)
+gemini --approval-mode auto_edit # Правки файлов без подтверждения
+gemini --resume latest        # Продолжить последнюю сессию
+gemini -p "Текст запроса"     # Одиночный запрос из терминала
+```
+
