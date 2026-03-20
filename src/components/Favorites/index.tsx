@@ -11,7 +11,11 @@ import { PostCard } from '../Feed/PostCard';
 
 type TabType = 'all' | 'posts' | 'tools';
 
-export const Favorites: React.FC = () => {
+interface FavoritesProps {
+    onMentionClick?: (mention: string) => void;
+}
+
+export const Favorites: React.FC<FavoritesProps> = ({ onMentionClick }) => {
     const [activeTab, setActiveTab] = useState<TabType>('all');
 
     const { favorites, toggleFavorite, isFavorite, clearFavorites } = useFavorites();
@@ -108,7 +112,8 @@ export const Favorites: React.FC = () => {
                                     <PostCard
                                         key={post.id}
                                         post={post}
-                                        onClick={() => onPostClick?.(post.id)}
+                                        onClick={() => { }}
+                                        onMentionClick={onMentionClick}
                                     />
                                 ))}
                             </div>

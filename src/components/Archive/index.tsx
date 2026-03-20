@@ -9,9 +9,10 @@ import { PostCard } from '../Feed/PostCard';
 
 interface ArchiveProps {
     onPostClick?: (postId: number) => void;
+    onMentionClick?: (mention: string) => void;
 }
 
-export const Archive: React.FC<ArchiveProps> = ({ onPostClick }) => {
+export const Archive: React.FC<ArchiveProps> = ({ onPostClick, onMentionClick }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
@@ -88,8 +89,8 @@ export const Archive: React.FC<ArchiveProps> = ({ onPostClick }) => {
                 <button
                     onClick={() => setSelectedMonth(null)}
                     className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${!selectedMonth
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600'
                         }`}
                 >
                     Все
@@ -99,8 +100,8 @@ export const Archive: React.FC<ArchiveProps> = ({ onPostClick }) => {
                         key={month}
                         onClick={() => setSelectedMonth(month)}
                         className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedMonth === month
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600'
                             }`}
                     >
                         {month} ({postsByMonth[month].length})
@@ -125,6 +126,7 @@ export const Archive: React.FC<ArchiveProps> = ({ onPostClick }) => {
                                 key={post.id}
                                 post={post}
                                 onClick={() => onPostClick?.(post.id)}
+                                onMentionClick={onMentionClick}
                             />
                         ))}
                     </div>
@@ -147,6 +149,7 @@ export const Archive: React.FC<ArchiveProps> = ({ onPostClick }) => {
                                         key={post.id}
                                         post={post}
                                         onClick={() => onPostClick?.(post.id)}
+                                        onMentionClick={onMentionClick}
                                     />
                                 ))}
                             </div>

@@ -9,11 +9,13 @@ import { Post } from '../../hooks/usePosts';
 interface PostCardProps {
     post: Post;
     onClick?: () => void;
+    onMentionClick?: (mention: string) => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
     post,
-    onClick
+    onClick,
+    onMentionClick
 }) => {
     // Определяем источник для отображения
     const sourceIcon = post.source === 'YouTube' ? '🎬' : '📱';
@@ -123,7 +125,11 @@ export const PostCard: React.FC<PostCardProps> = ({
                                 return (
                                     <span
                                         key={`mention-${index}`}
-                                        className="px-2 py-0.5 text-[10px] bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full font-medium flex items-center gap-1"
+                                        className="px-2 py-0.5 text-[10px] bg-gradient-to-r from-cyan-500/10 to-blue-500/10 text-cyan-400 border border-cyan-500/20 rounded-full font-medium flex items-center gap-1 cursor-pointer hover:bg-cyan-500/20 transition-all"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onMentionClick?.(mention);
+                                        }}
                                     >
                                         {getIcon(mention)} {mention}
                                     </span>

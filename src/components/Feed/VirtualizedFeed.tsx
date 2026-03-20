@@ -120,7 +120,8 @@ export const VirtualizedFeed: React.FC<VirtualizedFeedProps> = ({
     width = '100%',
     height = 600,
     itemHeight = 120,
-    onPostClick
+    onPostClick,
+    onMentionClick
 }) => {
     // Row renderer для react-window
     const Row = useCallback(
@@ -131,11 +132,12 @@ export const VirtualizedFeed: React.FC<VirtualizedFeedProps> = ({
                     <VirtualizedPostCard
                         post={post}
                         onClick={() => onPostClick?.(post.id)}
+                        onMentionClick={onMentionClick}
                     />
                 </div>
             );
         },
-        [posts, onPostClick]
+        [posts, onPostClick, onMentionClick]
     );
 
     return (

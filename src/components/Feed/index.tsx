@@ -12,6 +12,7 @@ import { VirtualizedFeed } from './VirtualizedFeed';
 
 interface FeedProps {
     onPostClick?: (postId: number) => void;
+    onMentionClick?: (mention: string) => void;
     /** Использовать виртуализацию (автоматически включается при > 50 постов) */
     virtualized?: boolean;
     /** Высота виртуализированного списка */
@@ -23,6 +24,7 @@ const VIRTUALIZATION_THRESHOLD = 50;
 
 export const Feed: React.FC<FeedProps> = ({
     onPostClick,
+    onMentionClick,
     virtualized,
     listHeight = 600
 }) => {
@@ -81,6 +83,7 @@ export const Feed: React.FC<FeedProps> = ({
                     posts={posts}
                     height={listHeight}
                     onPostClick={onPostClick}
+                    onMentionClick={onMentionClick}
                 />
             ) : (
                 // Обычная сетка для небольших списков
@@ -90,6 +93,7 @@ export const Feed: React.FC<FeedProps> = ({
                             key={post.id}
                             post={post}
                             onClick={() => onPostClick?.(post.id)}
+                            onMentionClick={onMentionClick}
                         />
                     ))}
                 </div>
