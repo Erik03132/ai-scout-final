@@ -1047,6 +1047,7 @@ export default function App() {
   // toggleFavorite — вызывает хук useFavorites для синхронизации с модальными окнами
   const toggleFavorite = async (id: string | number, type: 'tool' | 'post' = 'tool') => {
     console.log('[toggleFavorite] Called with ID:', id, 'type:', type);
+    alert(`Adding to favorites: ${id} (${type})`);
 
     // Вызываем хук (он сам разберётся с localStorage)
     toggleFavoriteFromHook(id, type);
