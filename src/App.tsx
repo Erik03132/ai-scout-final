@@ -1044,9 +1044,15 @@ export default function App() {
 
   // toggleFavorite — работает для инструментов и постов
   const toggleFavorite = async (id: string) => {
+    console.log('[toggleFavorite] Called with ID:', id);
+    console.log('[toggleFavorite] Current favorites:', favorites);
+
     // Получаем чистый ID для поиска
     const cleanIdFromInput = id.split('|')[0];
     const isCurrentlyFav = favorites.some(f => getCleanId(f) === cleanIdFromInput);
+
+    console.log('[toggleFavorite] cleanIdFromInput:', cleanIdFromInput);
+    console.log('[toggleFavorite] isCurrentlyFav:', isCurrentlyFav);
 
     // Получаем timestamp для сортировки
     const timestamp = Date.now();
@@ -1054,11 +1060,14 @@ export default function App() {
 
     if (isCurrentlyFav) {
       newFav = favorites.filter(f => getCleanId(f) !== cleanIdFromInput);
+      console.log('[toggleFavorite] Removing from favorites');
     } else {
       // Сохраняем с timestamp для сортировки
       newFav = [...favorites, `${cleanIdFromInput}|${timestamp}`];
+      console.log('[toggleFavorite] Adding to favorites');
     }
 
+    console.log('[toggleFavorite] New favorites:', newFav);
     setFavorites(newFav);
 
     const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(str);
@@ -1095,6 +1104,10 @@ export default function App() {
   const getCleanId = (fav: string) => fav.split('|')[0];
 
   const favoriteTools = useMemo(() => {
+    console.log('[favoriteTools] Computing...');
+    console.log('[favoriteTools] favorites:', favorites);
+    console.log('[favoriteTools] allTools count:', allTools.length);
+
     // Сортируем по времени добавления (новые первые)
     const sortedFavorites = [...favorites].sort((a, b) => {
       const aParts = a?.split('|') || [];
@@ -1104,9 +1117,24 @@ export default function App() {
       return bTime - aTime; // По убыванию
     });
 
-    return allTools
-      .filter(tool => sortedFavorites.some(fav => getCleanId(fav) === `tool-${tool.id}`))
+    console.log('[favoriteTools] sortedFavorites:', sortedFavorites);
+
+    const result = allTools
+      .filter(tool => {
+        const isFav = sortedFavorites.some(fav => {
+          const cleanFav = getCleanId(fav);
+          const toolId = `tool-${tool.id}`;
+          return cleanFav === toolId;
+        });
+        if (isFav) {
+          console.log('[favoriteTools] Found favorite tool:', tool.name, 'with ID:', tool.id);
+        }
+        return isFav;
+      })
       .filter(tool => favoriteCategory === 'all' || getToolGroup(tool.category) === favoriteCategory);
+
+    console.log('[favoriteTools] Result count:', result.length);
+    return result;
   }, [allTools, favorites, favoriteCategory]);
   // Посты в избранном больше не используем — посты идут в Архив
 
