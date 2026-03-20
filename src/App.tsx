@@ -1,6 +1,7 @@
 import { Archive, ArrowRight, Brain, Clock, Code, ExternalLink, FileText, Filter, Heart, Layers, Loader2, MessageCircle, Plus, Search, Sparkles, Terminal, Trash2, TrendingUp, X, Youtube, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useFavorites } from './hooks/useFavorites';
 import { getClient } from './lib/supabase/client';
 import { cn } from './utils/cn';
 import { ToolDetailModal } from './components/Modals/ToolDetailModal';
@@ -407,6 +408,7 @@ export default function App() {
   // favorites: список ID постов/инструментов в избранном (string[]) — будем хранить в localStorage для инструментов
   // но для постов — будем писать в Supabase через поле is_favorite
   const [favorites, setFavorites] = useLocalStorage<string[]>('ai-scout-favorites', []);
+  const { toggleFavorite: toggleFavoriteFromHook } = useFavorites();
   const [isSearching, setIsSearching] = useState(false);
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
@@ -1042,56 +1044,48 @@ export default function App() {
     }
   };
 
-  // toggleFavorite — работает для инструментов и постов
-  const toggleFavorite = async (id: string) => {
-    console.log('[toggleFavorite] Called with ID:', id);
-    console.log('[toggleFavorite] Current favorites:', favorites);
+  // toggleFavorite — вызывает хук useFavorites для синхронизации с модальными окнами
+  const toggleFavorite = async (id: string | number, type: 'tool' | 'post' = 'tool') => {
+    console.log('[toggleFavorite] Called with ID:', id, 'type:', type);
 
-    // Получаем чистый ID для поиска
-    const cleanIdFromInput = id.split('|')[0];
-    const isCurrentlyFav = favorites.some(f => getCleanId(f) === cleanIdFromInput);
+    // Вызываем хук (он сам разберётся с localStorage)
+    toggleFavoriteFromHook(id, type);
 
-    console.log('[toggleFavorite] cleanIdFromInput:', cleanIdFromInput);
-    console.log('[toggleFavorite] isCurrentlyFav:', isCurrentlyFav);
-
-    // Получаем timestamp для сортировки
+    // Дополнительно сохраняем в старом формате для обратной совместимости
+    const cleanId = String(id);
     const timestamp = Date.now();
+    const favKey = type === 'tool' ? `tool-${cleanId}` : `post-${cleanId}`;
+
+    const isCurrentlyFav = favorites.some(f => f.split('|')[0] === favKey);
     let newFav: string[];
 
     if (isCurrentlyFav) {
-      newFav = favorites.filter(f => getCleanId(f) !== cleanIdFromInput);
-      console.log('[toggleFavorite] Removing from favorites');
+      newFav = favorites.filter(f => f.split('|')[0] !== favKey);
     } else {
-      // Сохраняем с timestamp для сортировки
-      newFav = [...favorites, `${cleanIdFromInput}|${timestamp}`];
-      console.log('[toggleFavorite] Adding to favorites');
+      newFav = [...favorites, `${favKey}|${timestamp}`];
     }
 
-    console.log('[toggleFavorite] New favorites:', newFav);
     setFavorites(newFav);
+    console.log('[toggleFavorite] Updated favorites:', newFav);
 
+    // Сохраняем в Supabase если это инструмент
     const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(str);
     const supabase = getClient();
 
-    if (supabase) {
+    if (supabase && type === 'tool') {
+      const cleanIdFromInput = favKey;
       if (isCurrentlyFav) {
-        // Удаляем из таблицы favorites
         await supabase.from('favorites').delete().eq('item_id', cleanIdFromInput);
-
-        // Обновляем колонку для обратной совместимости
         if (cleanIdFromInput.startsWith('tool-')) {
           const toolId = cleanIdFromInput.replace('tool-', '');
           if (isUUID(toolId)) await supabase.from('tools').update({ is_favorite: false }).eq('id', toolId);
         }
       } else {
-        // Добавляем в таблицу favorites
         await supabase.from('favorites').upsert({
           user_id: 'public_user',
           item_id: cleanIdFromInput,
-          item_type: cleanIdFromInput.startsWith('tool-') ? 'tool' : 'post'
+          item_type: 'tool'
         });
-
-        // Обновляем колонку для обратной совместимости
         if (cleanIdFromInput.startsWith('tool-')) {
           const toolId = cleanIdFromInput.replace('tool-', '');
           if (isUUID(toolId)) await supabase.from('tools').update({ is_favorite: true }).eq('id', toolId);
@@ -1100,42 +1094,21 @@ export default function App() {
     }
   };
 
-  // Функция для получения чистого ID (без timestamp)
-  const getCleanId = (fav: string) => fav.split('|')[0];
+  const { favoriteTools: favoriteToolsFromHook } = useFavorites();
 
   const favoriteTools = useMemo(() => {
     console.log('[favoriteTools] Computing...');
-    console.log('[favoriteTools] favorites:', favorites);
+    console.log('[favoriteTools] favoriteToolsFromHook:', favoriteToolsFromHook);
     console.log('[favoriteTools] allTools count:', allTools.length);
 
-    // Сортируем по времени добавления (новые первые)
-    const sortedFavorites = [...favorites].sort((a, b) => {
-      const aParts = a?.split('|') || [];
-      const bParts = b?.split('|') || [];
-      const aTime = aParts.length > 1 ? parseInt(aParts[1]) : 0;
-      const bTime = bParts.length > 1 ? parseInt(bParts[1]) : 0;
-      return bTime - aTime; // По убыванию
-    });
-
-    console.log('[favoriteTools] sortedFavorites:', sortedFavorites);
-
+    // Используем favoriteTools из хука + фильтруем по категории
     const result = allTools
-      .filter(tool => {
-        const isFav = sortedFavorites.some(fav => {
-          const cleanFav = getCleanId(fav);
-          const toolId = `tool-${tool.id}`;
-          return cleanFav === toolId;
-        });
-        if (isFav) {
-          console.log('[favoriteTools] Found favorite tool:', tool.name, 'with ID:', tool.id);
-        }
-        return isFav;
-      })
+      .filter(tool => favoriteToolsFromHook.some(favTool => String(favTool.id) === String(tool.id)))
       .filter(tool => favoriteCategory === 'all' || getToolGroup(tool.category) === favoriteCategory);
 
     console.log('[favoriteTools] Result count:', result.length);
     return result;
-  }, [allTools, favorites, favoriteCategory]);
+  }, [allTools, favoriteToolsFromHook, favoriteCategory]);
   // Посты в избранном больше не используем — посты идут в Архив
 
   // Уникальные теги и упоминания для фильтров (топ-20 по популярности)
