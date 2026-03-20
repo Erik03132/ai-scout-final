@@ -1098,18 +1098,17 @@ export default function App() {
 
   const favoriteTools = useMemo(() => {
     console.log('[favoriteTools] Computing...');
-    console.log('[favoriteTools] favoriteToolsFromHook:', favoriteToolsFromHook);
-    console.log('[favoriteTools] favoriteToolsFromHook IDs:', favoriteToolsFromHook.map(t => t.id));
+    console.log('[favoriteTools] favoriteToolsFromHook (array of IDs):', favoriteToolsFromHook);
     console.log('[favoriteTools] allTools count:', allTools.length);
     console.log('[favoriteTools] allTools sample IDs:', allTools.slice(0, 5).map(t => t.id));
 
-    // Используем favoriteTools из хука + фильтруем по категории
+    // favoriteToolsFromHook — это массив ID (строк), а не объектов!
     const result = allTools
       .filter(tool => {
-        const isFav = favoriteToolsFromHook.some(favTool => {
-          const match = String(favTool.id) === String(tool.id);
+        const isFav = favoriteToolsFromHook.some(favId => {
+          const match = String(favId) === String(tool.id);
           if (match) {
-            console.log('[favoriteTools] MATCH FOUND:', tool.name, 'favTool.id:', favTool.id, 'tool.id:', tool.id);
+            console.log('[favoriteTools] MATCH FOUND:', tool.name, 'favId:', favId, 'tool.id:', tool.id);
           }
           return match;
         });
