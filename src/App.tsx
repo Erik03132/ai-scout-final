@@ -1099,14 +1099,28 @@ export default function App() {
   const favoriteTools = useMemo(() => {
     console.log('[favoriteTools] Computing...');
     console.log('[favoriteTools] favoriteToolsFromHook:', favoriteToolsFromHook);
+    console.log('[favoriteTools] favoriteToolsFromHook IDs:', favoriteToolsFromHook.map(t => t.id));
     console.log('[favoriteTools] allTools count:', allTools.length);
+    console.log('[favoriteTools] allTools sample IDs:', allTools.slice(0, 5).map(t => t.id));
 
     // Используем favoriteTools из хука + фильтруем по категории
     const result = allTools
-      .filter(tool => favoriteToolsFromHook.some(favTool => String(favTool.id) === String(tool.id)))
+      .filter(tool => {
+        const isFav = favoriteToolsFromHook.some(favTool => {
+          const match = String(favTool.id) === String(tool.id);
+          if (match) {
+            console.log('[favoriteTools] MATCH FOUND:', tool.name, 'favTool.id:', favTool.id, 'tool.id:', tool.id);
+          }
+          return match;
+        });
+        return isFav;
+      })
       .filter(tool => favoriteCategory === 'all' || getToolGroup(tool.category) === favoriteCategory);
 
     console.log('[favoriteTools] Result count:', result.length);
+    if (result.length > 0) {
+      console.log('[favoriteTools] Result:', result.map(t => t.name));
+    }
     return result;
   }, [allTools, favoriteToolsFromHook, favoriteCategory]);
   // Посты в избранном больше не используем — посты идут в Архив
