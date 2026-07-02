@@ -2875,7 +2875,7 @@ export default function App() {
                     const name = (formData.get('toolName') as string).trim();
                     const url = (formData.get('toolUrl') as string).trim();
                     const description = (formData.get('toolDesc') as string).trim();
-                    const category = formData.get('toolCategory') as string;
+                    const category = formData.get('selectedCategory') as string || 'LLM & Chat';
 
                     if (!name || !url) {
                       setAddToolError('Название и URL обязательны');
@@ -2948,17 +2948,34 @@ export default function App() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">Категория</label>
-                    <select
-                      name="toolCategory"
-                      className="w-full px-4 py-3 bg-slate-800 border border-white/10 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors appearance-none"
-                    >
-                      <option value="LLM & Chat">LLM & Chat</option>
-                      <option value="Image Generation">Image Generation</option>
-                      <option value="Audio & Video">Audio & Video</option>
-                      <option value="Coding & Dev">Coding & Dev</option>
-                      <option value="Agents & Frameworks">Agents & Frameworks</option>
-                      <option value="Other">Other</option>
-                    </select>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: 'LLM & Chat', label: '💬 LLM & Chat' },
+                        { value: 'Image Generation', label: '🎨 Image Gen' },
+                        { value: 'Audio & Video', label: '🎬 Audio & Video' },
+                        { value: 'Coding & Dev', label: '💻 Coding & Dev' },
+                        { value: 'Agents & Frameworks', label: '🤖 Agents' },
+                        { value: 'Other', label: '📦 Other' }
+                      ].map((cat) => (
+                        <button
+                          key={cat.value}
+                          type="button"
+                          name="toolCategory"
+                          value={cat.value}
+                          onClick={(e) => {
+                            const form = (e.target as HTMLElement).closest('form');
+                            if (form) {
+                              const input = form.querySelector('input[name="selectedCategory"]') as HTMLInputElement;
+                              if (input) input.value = cat.value;
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-sm transition-colors bg-slate-700/50 text-slate-300 hover:bg-cyan-500/20 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30"
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                      <input type="hidden" name="selectedCategory" defaultValue="LLM & Chat" />
+                    </div>
                   </div>
 
                   <div>
